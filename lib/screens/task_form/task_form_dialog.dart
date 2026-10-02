@@ -682,20 +682,13 @@ class _ReminderPickerDialogState extends State<_ReminderPickerDialog> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: const [
-                  (0, 'A la hora'),
-                  (10, '10 min antes'),
-                  (30, '30 min antes'),
-                  (60, '1 h antes'),
-                  (1440, '1 día antes'),
-                ].map((item) {
-                  final offset = item.$1;
-                  final label = item.$2;
-                  return _ReminderPresetChoice(
-                    offset: offset,
-                    label: label,
-                  );
-                }).toList(growable: false),
+                children: [
+                  _presetChip(0, 'A la hora'),
+                  _presetChip(10, '10 min antes'),
+                  _presetChip(30, '30 min antes'),
+                  _presetChip(60, '1 h antes'),
+                  _presetChip(1440, '1 día antes'),
+                ],
               ),
               const SizedBox(height: 12),
             ],
@@ -760,6 +753,19 @@ class _ReminderPickerDialogState extends State<_ReminderPickerDialog> {
           child: const Text('Agregar'),
         ),
       ],
+    );
+  }
+
+  Widget _presetChip(int offset, String label) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: !_custom && _offsetMinutes == offset,
+      onSelected: (_) {
+        setState(() {
+          _custom = false;
+          _offsetMinutes = offset;
+        });
+      },
     );
   }
 
@@ -830,26 +836,6 @@ class _ReminderPickerDialogState extends State<_ReminderPickerDialog> {
         offsetMinutes: _custom ? null : _offsetMinutes,
       ),
     );
-  }
-}
-
-class _ReminderPresetChoice extends StatefulWidget {
-  const _ReminderPresetChoice({
-    required this.offset,
-    required this.label,
-  });
-
-  final int offset;
-  final String label;
-
-  @override
-  State<_ReminderPresetChoice> createState() => _ReminderPresetChoiceState();
-}
-
-class _ReminderPresetChoiceState extends State<_ReminderPresetChoice> {
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
   }
 }
 
