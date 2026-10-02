@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/list_icons.dart';
+import '../../models/reminder.dart';
 import '../../models/subtask.dart';
 import '../../models/task.dart';
 import '../../models/task_list.dart';
@@ -13,6 +14,7 @@ class TaskFormResult {
     required this.dueDate,
     required this.listId,
     required this.subtasks,
+    required this.reminders,
   });
 
   final String title;
@@ -21,6 +23,7 @@ class TaskFormResult {
   final DateTime? dueDate;
   final String listId;
   final List<Subtask> subtasks;
+  final List<Reminder> reminders;
 }
 
 class TaskFormDialog extends StatefulWidget {
@@ -30,6 +33,7 @@ class TaskFormDialog extends StatefulWidget {
     required this.lists,
     this.task,
     this.subtasks = const [],
+    this.reminders = const [],
     this.initialListId,
   });
 
@@ -37,6 +41,7 @@ class TaskFormDialog extends StatefulWidget {
   final List<TaskList> lists;
   final Task? task;
   final List<Subtask> subtasks;
+  final List<Reminder> reminders;
   final String? initialListId;
 
   @override
@@ -51,6 +56,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   late String _listId;
   DateTime? _dueDate;
   final List<_SubtaskEditor> _subtaskEditors = [];
+  final List<_ReminderEditor> _reminderEditors = [];
 
   bool get _editing => widget.task != null;
 
@@ -79,6 +85,18 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
         ),
       );
     }
+
+    for (final reminder in widget.reminders) {
+      _reminderEditors.add(
+        _ReminderEditor(
+          id: reminder.id,
+          scheduledAt: reminder.scheduledAt,
+          offsetMinutes: reminder.offsetMinutes,
+          enabled: reminder.enabled,
+          createdAt: reminder.createdAt,
+        ),
+      );
+    }
   }
 
   @override
@@ -98,7 +116,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     return AlertDialog(
       title: Text(_editing ? 'Editar tarea' : 'Nueva tarea'),
       content: SizedBox(
-        width: 620,
+        width: 640,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -231,6 +249,8 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                   ),
                 ),
                 const SizedBox(height: 18),
+                _buildRemindersSection(theme),
+                const SizedBox(height: 18),
                 Row(
                   children: [
                     Expanded(
@@ -290,6 +310,89 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     );
   }
 
+  Widget _buildRemindersSection(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.notifications_active_outlined,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Recordatorios',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _addReminder,
+                icon: const Icon(Icons.add_alarm_rounded),
+                label: const Text('Agregar'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          if (_reminderEditors.isEmpty)
+            Text(
+              'Añade uno o varios avisos. Pueden ser antes de la fecha límite o en una fecha personalizada.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            )
+          else
+            ...List.generate(
+              _reminderEditors.length,
+              (index) => Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: _buildReminderRow(index),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReminderRow(int index) {
+    final editor = _reminderEditors[index];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.alarm_rounded, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(_reminderLabel(editor)),
+          ),
+          Switch(
+            value: editor.enabled,
+            onChanged: (value) => setState(() => editor.enabled = value),
+          ),
+          IconButton(
+            tooltip: 'Eliminar recordatorio',
+            onPressed: () => setState(() => _reminderEditors.removeAt(index)),
+            icon: const Icon(Icons.delete_outline_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSubtaskEditor(int index) {
     final editor = _subtaskEditors[index];
 
@@ -340,6 +443,37 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     final editor = _subtaskEditors.removeAt(index);
     editor.controller.dispose();
     setState(() {});
+  }
+
+  Future<void> _addReminder() async {
+    final draft = await showDialog<_ReminderDraft>(
+      context: context,
+      builder: (context) => _ReminderPickerDialog(dueDate: _dueDate),
+    );
+
+    if (draft == null || !mounted) return;
+
+    if (!draft.scheduledAt.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('El recordatorio debe estar en el futuro.'),
+        ),
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    setState(() {
+      _reminderEditors.add(
+        _ReminderEditor(
+          id: '${widget.taskId}-rem-${now.microsecondsSinceEpoch}',
+          scheduledAt: draft.scheduledAt,
+          offsetMinutes: draft.offsetMinutes,
+          enabled: true,
+          createdAt: now,
+        ),
+      );
+    });
   }
 
   Future<void> _pickDate() async {
@@ -402,8 +536,42 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
+  String _reminderLabel(_ReminderEditor reminder) {
+    final offset = reminder.offsetMinutes;
+    if (offset != null) {
+      return switch (offset) {
+        0 => 'A la hora de vencimiento',
+        10 => '10 minutos antes',
+        30 => '30 minutos antes',
+        60 => '1 hora antes',
+        1440 => '1 día antes',
+        _ => '$offset minutos antes',
+      };
+    }
+
+    final date = reminder.scheduledAt;
+    return 'Personalizado · '
+        '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/${date.year} · '
+        '${date.hour.toString().padLeft(2, '0')}:'
+        '${date.minute.toString().padLeft(2, '0')}';
+  }
+
   void _save() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final hasRelativeReminder =
+        _reminderEditors.any((reminder) => reminder.offsetMinutes != null);
+    if (hasRelativeReminder && _dueDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Los recordatorios relativos necesitan una fecha límite.',
+          ),
+        ),
+      );
+      return;
+    }
 
     final now = DateTime.now();
     final subtasks = <Subtask>[];
@@ -426,6 +594,37 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
       );
     }
 
+    final reminders = <Reminder>[];
+    for (final editor in _reminderEditors) {
+      final offset = editor.offsetMinutes;
+      final scheduledAt = offset == null
+          ? editor.scheduledAt
+          : _dueDate!.subtract(Duration(minutes: offset));
+
+      if (editor.enabled && !scheduledAt.isAfter(now)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'El recordatorio “${_reminderLabel(editor)}” ya pasó.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      reminders.add(
+        Reminder(
+          id: editor.id,
+          taskId: widget.taskId,
+          scheduledAt: scheduledAt,
+          offsetMinutes: offset,
+          enabled: editor.enabled,
+          createdAt: editor.createdAt,
+          updatedAt: now,
+        ),
+      );
+    }
+
     Navigator.of(context).pop(
       TaskFormResult(
         title: _titleController.text.trim(),
@@ -434,9 +633,250 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
         dueDate: _dueDate,
         listId: _listId,
         subtasks: subtasks,
+        reminders: reminders,
       ),
     );
   }
+}
+
+class _ReminderPickerDialog extends StatefulWidget {
+  const _ReminderPickerDialog({required this.dueDate});
+
+  final DateTime? dueDate;
+
+  @override
+  State<_ReminderPickerDialog> createState() => _ReminderPickerDialogState();
+}
+
+class _ReminderPickerDialogState extends State<_ReminderPickerDialog> {
+  int? _offsetMinutes;
+  late bool _custom;
+  late DateTime _customDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _custom = widget.dueDate == null;
+    _offsetMinutes = widget.dueDate == null ? null : 30;
+    _customDate = DateTime.now().add(const Duration(hours: 1));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AlertDialog(
+      title: const Text('Agregar recordatorio'),
+      content: SizedBox(
+        width: 470,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.dueDate != null) ...[
+              Text(
+                'Antes de la fecha límite',
+                style: theme.textTheme.labelLarge,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: const [
+                  (0, 'A la hora'),
+                  (10, '10 min antes'),
+                  (30, '30 min antes'),
+                  (60, '1 h antes'),
+                  (1440, '1 día antes'),
+                ].map((item) {
+                  final offset = item.$1;
+                  final label = item.$2;
+                  return _ReminderPresetChoice(
+                    offset: offset,
+                    label: label,
+                  );
+                }).toList(growable: false),
+              ),
+              const SizedBox(height: 12),
+            ],
+            ChoiceChip(
+              avatar: const Icon(Icons.edit_calendar_outlined, size: 18),
+              label: const Text('Fecha personalizada'),
+              selected: _custom,
+              onSelected: (_) {
+                setState(() {
+                  _custom = true;
+                  _offsetMinutes = null;
+                });
+              },
+            ),
+            if (!_custom && widget.dueDate != null) ...[
+              const SizedBox(height: 8),
+              DropdownButtonFormField<int>(
+                initialValue: _offsetMinutes,
+                decoration: const InputDecoration(
+                  labelText: 'Avisarme',
+                  prefixIcon: Icon(Icons.alarm_rounded),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('A la hora')),
+                  DropdownMenuItem(value: 10, child: Text('10 minutos antes')),
+                  DropdownMenuItem(value: 30, child: Text('30 minutos antes')),
+                  DropdownMenuItem(value: 60, child: Text('1 hora antes')),
+                  DropdownMenuItem(value: 1440, child: Text('1 día antes')),
+                ],
+                onChanged: (value) => setState(() => _offsetMinutes = value),
+              ),
+            ],
+            if (_custom) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _pickCustomDate,
+                    icon: const Icon(Icons.calendar_month_rounded),
+                    label: Text(_customDateLabel()),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _pickCustomTime,
+                    icon: const Icon(Icons.schedule_rounded),
+                    label: Text(_customTimeLabel()),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _save,
+          child: const Text('Agregar'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickCustomDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _customDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(DateTime.now().year + 10),
+    );
+    if (picked == null) return;
+
+    setState(() {
+      _customDate = DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
+        _customDate.hour,
+        _customDate.minute,
+      );
+    });
+  }
+
+  Future<void> _pickCustomTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_customDate),
+    );
+    if (picked == null) return;
+
+    setState(() {
+      _customDate = DateTime(
+        _customDate.year,
+        _customDate.month,
+        _customDate.day,
+        picked.hour,
+        picked.minute,
+      );
+    });
+  }
+
+  String _customDateLabel() =>
+      '${_customDate.day.toString().padLeft(2, '0')}/'
+      '${_customDate.month.toString().padLeft(2, '0')}/${_customDate.year}';
+
+  String _customTimeLabel() =>
+      '${_customDate.hour.toString().padLeft(2, '0')}:'
+      '${_customDate.minute.toString().padLeft(2, '0')}';
+
+  void _save() {
+    final dueDate = widget.dueDate;
+    final scheduledAt = _custom
+        ? _customDate
+        : dueDate!.subtract(Duration(minutes: _offsetMinutes ?? 30));
+
+    if (!scheduledAt.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ese recordatorio ya quedó en el pasado.'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).pop(
+      _ReminderDraft(
+        scheduledAt: scheduledAt,
+        offsetMinutes: _custom ? null : _offsetMinutes,
+      ),
+    );
+  }
+}
+
+class _ReminderPresetChoice extends StatefulWidget {
+  const _ReminderPresetChoice({
+    required this.offset,
+    required this.label,
+  });
+
+  final int offset;
+  final String label;
+
+  @override
+  State<_ReminderPresetChoice> createState() => _ReminderPresetChoiceState();
+}
+
+class _ReminderPresetChoiceState extends State<_ReminderPresetChoice> {
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
+  }
+}
+
+class _ReminderDraft {
+  const _ReminderDraft({
+    required this.scheduledAt,
+    required this.offsetMinutes,
+  });
+
+  final DateTime scheduledAt;
+  final int? offsetMinutes;
+}
+
+class _ReminderEditor {
+  _ReminderEditor({
+    required this.id,
+    required this.scheduledAt,
+    required this.offsetMinutes,
+    required this.enabled,
+    required this.createdAt,
+  });
+
+  final String id;
+  DateTime scheduledAt;
+  final int? offsetMinutes;
+  bool enabled;
+  final DateTime createdAt;
 }
 
 class _SubtaskEditor {
