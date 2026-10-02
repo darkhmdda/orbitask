@@ -447,7 +447,7 @@ class TodoRepository {
     return TaskList(
       id: row['id']! as String,
       name: row['name']! as String,
-      icon: (row['icon'] as String?) ?? '📋',
+      icon: (row['icon'] as String?) ?? 'list',
       isSystem: ((row['is_system'] as int?) ?? 0) == 1,
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         row['created_at']! as int,
