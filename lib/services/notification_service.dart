@@ -196,12 +196,12 @@ class NotificationService {
     return warning;
   }
 
-  Future<void> showNow({
+  Future<bool> showNow({
     required String title,
     required String body,
     String? payload,
   }) async {
-    if (!_initialized) return;
+    if (!_initialized) return false;
 
     final details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -217,13 +217,18 @@ class NotificationService {
       windows: WindowsNotificationDetails(),
     );
 
-    await _plugin.show(
-      id: DateTime.now().millisecondsSinceEpoch.remainder(2147483647),
-      title: title,
-      body: body,
-      notificationDetails: details,
-      payload: payload,
-    );
+    try {
+      await _plugin.show(
+        id: DateTime.now().millisecondsSinceEpoch.remainder(2147483647),
+        title: title,
+        body: body,
+        notificationDetails: details,
+        payload: payload,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   void dispose() {
