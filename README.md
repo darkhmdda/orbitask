@@ -19,7 +19,7 @@ Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para 
 - Migración segura de `todo_app.sqlite` a `orbitask.sqlite`.
 - Iconos Material para listas, sin depender de emojis del sistema.
 - Interfaz adaptable para escritorio y pantallas pequeñas.
-- Linux validado hasta v0.4-dev; v0.4.1-dev pendiente de validación local.
+- Linux v0.4.1-dev validado con análisis limpio y persistencia confirmada tras reinicio.
 
 ## Historial
 
