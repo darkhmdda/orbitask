@@ -978,12 +978,19 @@ class _HomeScreenState extends State<HomeScreen> {
           FilledButton.icon(
             onPressed: () async {
               await widget.notificationService.requestPermissions();
-              await widget.notificationService.showNow(
+              final shown = await widget.notificationService.showNow(
                 title: 'Orbitask',
                 body: 'Las notificaciones están funcionando.',
               );
               if (context.mounted) {
                 Navigator.of(context).pop();
+              }
+              if (mounted) {
+                _showMessage(
+                  shown
+                      ? 'Notificación de prueba enviada.'
+                      : 'El sistema de notificaciones de Linux no está disponible.',
+                );
               }
             },
             icon: const Icon(Icons.notifications_active_rounded),
