@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/list_icons.dart';
 import '../models/subtask.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
@@ -86,8 +87,8 @@ class TaskCard extends StatelessWidget {
                               _PriorityChip(priority: task.priority),
                               if (list != null)
                                 _MetaChip(
-                                  icon: Icons.folder_outlined,
-                                  label: '${list!.icon} ${list!.name}',
+                                  icon: listIconData(list!.icon),
+                                  label: list!.name,
                                 ),
                               if (dueLabel != null)
                                 _MetaChip(
