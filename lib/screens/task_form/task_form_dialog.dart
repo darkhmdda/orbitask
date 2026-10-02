@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/list_icons.dart';
 import '../../models/subtask.dart';
 import '../../models/task.dart';
 import '../../models/task_list.dart';
@@ -141,7 +142,14 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                       .map(
                         (list) => DropdownMenuItem(
                           value: list.id,
-                          child: Text('${list.icon}  ${list.name}'),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(listIconData(list.icon), size: 19),
+                              const SizedBox(width: 8),
+                              Text(list.name),
+                            ],
+                          ),
                         ),
                       )
                       .toList(growable: false),
