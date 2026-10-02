@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../core/list_icons.dart';
+import '../../models/reminder.dart';
 import '../../models/subtask.dart';
 import '../../models/task.dart';
 import '../../models/task_list.dart';
 import '../../repositories/todo_repository.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/task_card.dart';
 import '../list_manager/list_manager_dialog.dart';
 import '../task_form/task_form_dialog.dart';
@@ -13,9 +15,11 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     required this.repository,
+    required this.notificationService,
   });
 
   final TodoRepository repository;
+  final NotificationService notificationService;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -29,6 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Task> _tasks = const [];
   List<TaskList> _lists = const [];
   Map<String, List<Subtask>> _subtasksByTask = const {};
+  Map<String, List<Reminder>> _remindersByTask = const {};
+  bool _notificationsReconciled = false;
   bool _loading = true;
   String? _loadError;
 
@@ -49,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final lists = await widget.repository.getAllLists();
       final tasks = await widget.repository.getAllTasks();
       final subtasks = await widget.repository.getAllSubtasks();
+      final reminders = await widget.repository.getAllReminders();
 
       final grouped = <String, List<Subtask>>{};
       for (final subtask in subtasks) {
@@ -57,6 +64,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
       for (final entry in grouped.entries) {
         entry.value.sort((a, b) => a.position.compareTo(b.position));
+      }
+
+      final groupedReminders = <String, List<Reminder>>{};
+      for (final reminder in reminders) {
+        groupedReminders
+            .putIfAbsent(reminder.taskId, () => <Reminder>[])
+            .add(reminder);
+      }
+      for (final entry in groupedReminders.entries) {
+        entry.value.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
       }
 
       if (!mounted) return;
@@ -68,12 +85,18 @@ class _HomeScreenState extends State<HomeScreen> {
         _lists = lists;
         _tasks = tasks;
         _subtasksByTask = grouped;
+        _remindersByTask = groupedReminders;
         _loading = false;
         _loadError = null;
         if (!selectedStillExists) {
           _selectedListId = null;
         }
       });
+
+      if (!_notificationsReconciled) {
+        _notificationsReconciled = true;
+        await _reconcileNotifications(tasks, groupedReminders);
+      }
     } catch (error) {
       if (!mounted) return;
 
@@ -381,6 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         task: task,
                         list: _listForId(task.listId),
                         subtasks: _subtasksByTask[task.id] ?? const [],
+                        reminders: _remindersByTask[task.id] ?? const [],
                         onChanged: (value) =>
                             _toggleCompleted(task, value ?? false),
                         onEdit: () => _openTaskForm(task: task),
@@ -536,7 +560,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     try {
-      await widget.repository.createTask(task, const []);
+      await widget.repository.createTask(task, const [], const []);
       if (!mounted) return;
 
       setState(() {
@@ -559,6 +583,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final taskId = task?.id ?? now.microsecondsSinceEpoch.toString();
     final existingSubtasks =
         task == null ? const <Subtask>[] : (_subtasksByTask[task.id] ?? const []);
+    final existingReminders =
+        task == null ? const <Reminder>[] : (_remindersByTask[task.id] ?? const []);
 
     final result = await showDialog<TaskFormResult>(
       context: context,
@@ -567,6 +593,7 @@ class _HomeScreenState extends State<HomeScreen> {
         task: task,
         lists: _lists,
         subtasks: existingSubtasks,
+        reminders: existingReminders,
         initialListId: _selectedListId ?? 'inbox',
       ),
     );
@@ -586,7 +613,22 @@ class _HomeScreenState extends State<HomeScreen> {
           updatedAt: now,
         );
 
-        await widget.repository.createTask(newTask, result.subtasks);
+        await widget.repository.createTask(
+          newTask,
+          result.subtasks,
+          result.reminders,
+        );
+
+        String? reminderWarning;
+        if (result.reminders.any((item) => item.enabled)) {
+          await widget.notificationService.requestPermissions();
+          reminderWarning = await widget.notificationService
+              .scheduleTaskReminders(
+                task: newTask,
+                reminders: result.reminders,
+              );
+        }
+
         if (!mounted) return;
 
         setState(() {
@@ -595,12 +637,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ..._subtasksByTask,
             newTask.id: result.subtasks,
           };
+          _remindersByTask = {
+            ..._remindersByTask,
+            newTask.id: result.reminders,
+          };
           if (_selectedListId == null) {
             _filterIndex = 0;
           }
         });
 
-        _showMessage('Tarea creada y guardada.');
+        _showMessage(
+          reminderWarning ?? 'Tarea creada y guardada.',
+        );
       } else {
         final updatedTask = task.copyWith(
           title: result.title,
@@ -612,7 +660,24 @@ class _HomeScreenState extends State<HomeScreen> {
           updatedAt: DateTime.now(),
         );
 
-        await widget.repository.updateTask(updatedTask, result.subtasks);
+        await widget.repository.updateTask(
+          updatedTask,
+          result.subtasks,
+          result.reminders,
+        );
+
+        await widget.notificationService.cancelReminders(existingReminders);
+        String? reminderWarning;
+        if (!updatedTask.completed &&
+            result.reminders.any((item) => item.enabled)) {
+          await widget.notificationService.requestPermissions();
+          reminderWarning = await widget.notificationService
+              .scheduleTaskReminders(
+                task: updatedTask,
+                reminders: result.reminders,
+              );
+        }
+
         if (!mounted) return;
 
         setState(() {
@@ -623,9 +688,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ..._subtasksByTask,
             updatedTask.id: result.subtasks,
           };
+          _remindersByTask = {
+            ..._remindersByTask,
+            updatedTask.id: result.reminders,
+          };
         });
 
-        _showMessage('Tarea actualizada y guardada.');
+        _showMessage(
+          reminderWarning ?? 'Tarea actualizada y guardada.',
+        );
       }
     } catch (error) {
       if (!mounted) return;
