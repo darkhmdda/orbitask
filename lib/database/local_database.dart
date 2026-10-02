@@ -16,7 +16,10 @@ class LocalDatabase {
     await directory.create(recursive: true);
 
     final databasePath =
-        '${directory.path}${Platform.pathSeparator}todo_app.sqlite';
+        '${directory.path}${Platform.pathSeparator}orbitask.sqlite';
+
+    await _copyLegacyDatabaseIfNeeded(directory, databasePath);
+
     final database = sqlite3.open(databasePath);
 
     database.execute('PRAGMA foreign_keys = ON;');
@@ -25,6 +28,48 @@ class LocalDatabase {
     _createAndMigrate(database);
 
     return LocalDatabase._(database, databasePath);
+  }
+
+  static Future<void> _copyLegacyDatabaseIfNeeded(
+    Directory directory,
+    String databasePath,
+  ) async {
+    final destination = File(databasePath);
+    if (await destination.exists()) return;
+
+    final separator = Platform.pathSeparator;
+    final candidates = <String>{
+      '${directory.path}${separator}todo_app.sqlite',
+      '${directory.parent.path}${separator}todo_app${separator}todo_app.sqlite',
+      '${directory.parent.path}${separator}com.example.todo_app${separator}todo_app.sqlite',
+    };
+
+    if (Platform.isLinux) {
+      final home = Platform.environment['HOME'];
+      if (home != null && home.isNotEmpty) {
+        candidates.addAll([
+          '$home/.local/share/todo_app.sqlite',
+          '$home/.local/share/todo_app/todo_app.sqlite',
+          '$home/.local/share/com.example.todo_app/todo_app.sqlite',
+        ]);
+      }
+    }
+
+    for (final legacyPath in candidates) {
+      if (legacyPath == databasePath) continue;
+
+      final legacy = File(legacyPath);
+      if (!await legacy.exists()) continue;
+
+      await legacy.copy(databasePath);
+
+      final legacyWal = File('$legacyPath-wal');
+      if (await legacyWal.exists()) {
+        await legacyWal.copy('$databasePath-wal');
+      }
+
+      return;
+    }
   }
 
   static void _createAndMigrate(Database database) {
@@ -80,6 +125,23 @@ class LocalDatabase {
         );
       ''');
 
+      database.execute(r'''
+        UPDATE task_lists
+        SET icon = CASE icon
+          WHEN '📋' THEN 'list'
+          WHEN '📥' THEN 'inbox'
+          WHEN '📚' THEN 'school'
+          WHEN '🏠' THEN 'home'
+          WHEN '💻' THEN 'computer'
+          WHEN '🛒' THEN 'shopping'
+          WHEN '💡' THEN 'idea'
+          WHEN '🎯' THEN 'target'
+          WHEN '⭐' THEN 'star'
+          WHEN '🧰' THEN 'tools'
+          ELSE icon
+        END;
+      ''');
+
       final now = DateTime.now().millisecondsSinceEpoch;
       final listCountRow = database.select(
         'SELECT COUNT(*) AS total FROM task_lists;',
@@ -87,15 +149,15 @@ class LocalDatabase {
       final listCount = (listCountRow['total'] as int?) ?? 0;
 
       final seedLists = <List<Object?>>[
-        ['inbox', 'Bandeja de entrada', '📥', 1, now, now],
+        ['inbox', 'Bandeja de entrada', 'inbox', 1, now, now],
       ];
 
       if (listCount == 0) {
         seedLists.addAll([
-          ['university', 'Universidad', '📚', 0, now, now],
-          ['personal', 'Personal', '🏠', 0, now, now],
-          ['projects', 'Proyectos', '💻', 0, now, now],
-          ['shopping', 'Compras', '🛒', 0, now, now],
+          ['university', 'Universidad', 'school', 0, now, now],
+          ['personal', 'Personal', 'home', 0, now, now],
+          ['projects', 'Proyectos', 'computer', 0, now, now],
+          ['shopping', 'Compras', 'shopping', 0, now, now],
         ]);
       }
 
