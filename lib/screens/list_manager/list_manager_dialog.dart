@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/list_icons.dart';
 import '../../models/task_list.dart';
 import '../../repositories/todo_repository.dart';
 
@@ -206,7 +207,7 @@ class _ListRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(list.icon, style: const TextStyle(fontSize: 22)),
+          Icon(listIconData(list.icon), size: 22),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -248,13 +249,11 @@ class _ListEditorDialogState extends State<_ListEditorDialog> {
   late final TextEditingController _nameController;
   late String _icon;
 
-  static const _icons = ['📋', '📥', '📚', '🏠', '💻', '🛒', '💡', '🎯', '⭐', '🧰'];
-
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.list?.name ?? '');
-    _icon = widget.list?.icon ?? '📋';
+    _icon = normalizeListIconKey(widget.list?.icon ?? 'list');
   }
 
   @override
@@ -298,12 +297,16 @@ class _ListEditorDialogState extends State<_ListEditorDialog> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _icons
+                children: listIconOptions
                     .map(
-                      (icon) => ChoiceChip(
-                        label: Text(icon, style: const TextStyle(fontSize: 20)),
-                        selected: _icon == icon,
-                        onSelected: (_) => setState(() => _icon = icon),
+                      (option) => Tooltip(
+                        message: option.label,
+                        child: ChoiceChip(
+                          label: Icon(option.icon, size: 20),
+                          selected: _icon == option.key,
+                          onSelected: (_) =>
+                              setState(() => _icon = option.key),
+                        ),
                       ),
                     )
                     .toList(growable: false),

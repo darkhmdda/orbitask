@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/list_icons.dart';
 import '../../models/subtask.dart';
 import '../../models/task.dart';
 import '../../models/task_list.dart';
@@ -148,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = Theme.of(context);
 
     return SizedBox(
-      width: 250,
+      width: 280,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 18, 12, 18),
         child: Column(
@@ -398,9 +399,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildQuickAdd(BuildContext context) {
     final selectedList = _selectedList();
-    final suffix = selectedList == null
-        ? 'Bandeja de entrada'
-        : '${selectedList.icon} ${selectedList.name}';
+    final suffix =
+        selectedList == null ? 'Bandeja de entrada' : selectedList.name;
 
     return TextField(
       controller: _quickAddController,
@@ -479,7 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _sectionTitle() {
     final selectedList = _selectedList();
     if (selectedList != null) {
-      return '${selectedList.icon} ${selectedList.name}';
+      return selectedList.name;
     }
 
     return switch (_filterIndex) {
@@ -768,10 +768,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 ..._lists.map(
                   (list) => ListTile(
-                    leading: Text(
-                      list.icon,
-                      style: const TextStyle(fontSize: 22),
-                    ),
+                    leading: Icon(listIconData(list.icon)),
                     title: Text(list.name),
                     trailing: Text(
                       _tasks
@@ -894,7 +891,7 @@ class _SidebarListItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         selected: selected,
-        leading: Text(list.icon, style: const TextStyle(fontSize: 19)),
+        leading: Icon(listIconData(list.icon), size: 21),
         title: Text(
           list.name,
           maxLines: 1,
