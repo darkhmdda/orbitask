@@ -22,7 +22,7 @@ class ReminderScheduleResult {
 }
 
 class NotificationService {
-  NotificationService._();
+  NotificationService();
 
   static const _windowsGuid = '9A4B6A3E-487B-4F47-8E1A-472AF853621E';
   static const _windowsAppId = 'darkhmdda.Orbitask';
