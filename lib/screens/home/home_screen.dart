@@ -165,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    'Mi TO-DO',
+                    'Orbitask',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w900,
                     ),
@@ -483,11 +483,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return switch (_filterIndex) {
-      0 => 'Mi TO-DO',
+      0 => 'Orbitask',
       1 => 'Hoy',
       2 => 'Importantes',
       3 => 'Completadas',
-      _ => 'Mi TO-DO',
+      _ => 'Orbitask',
     };
   }
 

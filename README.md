@@ -1,17 +1,47 @@
-# todo_app
+# Orbitask
 
-A new Flutter project.
+**Tus tareas, siempre en órbita.**
 
-## Getting Started
+Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para organizar tareas, prioridades, fechas, listas y subtareas. El objetivo del proyecto es funcionar en Android, Windows y Linux y, en etapas posteriores, sincronizar tareas y recordatorios entre dispositivos.
 
-This project is a starting point for a Flutter application.
+## Estado actual — v0.4-dev
 
-A few resources to get you started if this is your first Flutter project:
+- CRUD de tareas.
+- Captura rápida.
+- Prioridades.
+- Fechas y horas límite.
+- Filtros de tareas.
+- Persistencia local con SQLite.
+- Listas personalizadas.
+- Subtareas y progreso.
+- Migración de datos de versiones anteriores.
+- Interfaz adaptable para escritorio y pantallas pequeñas.
+- Linux validado.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Historial
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- `v0.1-dev`: base visual, modelo Task y diseño responsive.
+- `v0.2-dev`: CRUD, prioridades, fechas y filtros.
+- `v0.3-dev`: SQLite y persistencia local.
+- `v0.4-dev`: listas, subtareas, progreso y migración SQLite.
+
+## Roadmap
+
+- `v0.5-dev`: recordatorios y notificaciones.
+- Cuenta de usuario y Supabase.
+- Sincronización entre dispositivos.
+- Android.
+- Windows.
+- Versión estable `v1.0`.
+
+## Tecnologías
+
+- Flutter / Dart
+- SQLite (`sqlite3`)
+- `path_provider`
+
+## Plataformas objetivo
+
+- Android
+- Windows
+- Linux

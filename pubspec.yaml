@@ -1,5 +1,5 @@
-name: todo_app
-description: "TO-DO multiplataforma - v0.4-dev"
+name: orbitask
+description: "Orbitask - gestor de tareas multiplataforma"
 publish_to: 'none'
 version: 0.4.0+4
 

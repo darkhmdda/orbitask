@@ -11,7 +11,7 @@ Future<void> main() async {
   final repository = TodoRepository(database);
 
   runApp(
-    TodoApp(
+    OrbitaskApp(
       database: database,
       repository: repository,
     ),

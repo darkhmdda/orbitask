@@ -5,8 +5,8 @@ import 'database/local_database.dart';
 import 'repositories/todo_repository.dart';
 import 'screens/home/home_screen.dart';
 
-class TodoApp extends StatefulWidget {
-  const TodoApp({
+class OrbitaskApp extends StatefulWidget {
+  const OrbitaskApp({
     super.key,
     required this.database,
     required this.repository,
@@ -16,10 +16,10 @@ class TodoApp extends StatefulWidget {
   final TodoRepository repository;
 
   @override
-  State<TodoApp> createState() => _TodoAppState();
+  State<OrbitaskApp> createState() => _OrbitaskAppState();
 }
 
-class _TodoAppState extends State<TodoApp> {
+class _OrbitaskAppState extends State<OrbitaskApp> {
   @override
   void dispose() {
     widget.database.close();
@@ -29,7 +29,7 @@ class _TodoAppState extends State<TodoApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Mi TO-DO',
+      title: 'Orbitask',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
