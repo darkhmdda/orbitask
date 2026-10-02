@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/list_icons.dart';
+import '../models/reminder.dart';
 import '../models/subtask.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
@@ -10,6 +11,7 @@ class TaskCard extends StatelessWidget {
     super.key,
     required this.task,
     required this.subtasks,
+    required this.reminders,
     required this.onChanged,
     required this.onEdit,
     required this.onDelete,
@@ -20,6 +22,7 @@ class TaskCard extends StatelessWidget {
   final Task task;
   final TaskList? list;
   final List<Subtask> subtasks;
+  final List<Reminder> reminders;
   final ValueChanged<bool?> onChanged;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -31,6 +34,13 @@ class TaskCard extends StatelessWidget {
     final dueLabel = _formatDueDate(task.dueDate);
     final completedSubtasks = subtasks.where((item) => item.completed).length;
     final progress = subtasks.isEmpty ? 0.0 : completedSubtasks / subtasks.length;
+    final activeReminders = reminders
+        .where(
+          (item) =>
+              item.enabled && item.scheduledAt.isAfter(DateTime.now()),
+        )
+        .toList()
+      ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
 
     return Card(
       color: theme.colorScheme.surface,
@@ -99,6 +109,11 @@ class TaskCard extends StatelessWidget {
                                 _MetaChip(
                                   icon: Icons.checklist_rounded,
                                   label: '$completedSubtasks/${subtasks.length}',
+                                ),
+                              if (activeReminders.isNotEmpty)
+                                _MetaChip(
+                                  icon: Icons.notifications_active_rounded,
+                                  label: _reminderSummary(activeReminders),
                                 ),
                               if (task.completed)
                                 const _MetaChip(
@@ -193,6 +208,32 @@ class TaskCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _reminderSummary(List<Reminder> activeReminders) {
+    if (activeReminders.length > 1) {
+      return '${activeReminders.length} recordatorios';
+    }
+
+    final reminder = activeReminders.first;
+    final offset = reminder.offsetMinutes;
+    if (offset != null) {
+      return switch (offset) {
+        0 => 'Aviso a la hora',
+        10 => 'Aviso 10 min antes',
+        30 => 'Aviso 30 min antes',
+        60 => 'Aviso 1 h antes',
+        1440 => 'Aviso 1 día antes',
+        _ => 'Aviso $offset min antes',
+      };
+    }
+
+    final date = reminder.scheduledAt;
+    return 'Aviso '
+        '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')} '
+        '${date.hour.toString().padLeft(2, '0')}:'
+        '${date.minute.toString().padLeft(2, '0')}';
   }
 
   String? _formatDueDate(DateTime? date) {
