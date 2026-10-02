@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
+import '../../models/subtask.dart';
 import '../../models/task.dart';
+import '../../models/task_list.dart';
 
 class TaskFormResult {
   const TaskFormResult({
@@ -7,21 +10,33 @@ class TaskFormResult {
     required this.description,
     required this.priority,
     required this.dueDate,
+    required this.listId,
+    required this.subtasks,
   });
 
   final String title;
   final String description;
   final TaskPriority priority;
   final DateTime? dueDate;
+  final String listId;
+  final List<Subtask> subtasks;
 }
 
 class TaskFormDialog extends StatefulWidget {
   const TaskFormDialog({
     super.key,
+    required this.taskId,
+    required this.lists,
     this.task,
+    this.subtasks = const [],
+    this.initialListId,
   });
 
+  final String taskId;
+  final List<TaskList> lists;
   final Task? task;
+  final List<Subtask> subtasks;
+  final String? initialListId;
 
   @override
   State<TaskFormDialog> createState() => _TaskFormDialogState();
@@ -32,7 +47,9 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   late TaskPriority _priority;
+  late String _listId;
   DateTime? _dueDate;
+  final List<_SubtaskEditor> _subtaskEditors = [];
 
   bool get _editing => widget.task != null;
 
@@ -44,12 +61,32 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     _descriptionController = TextEditingController(text: task?.description ?? '');
     _priority = task?.priority ?? TaskPriority.none;
     _dueDate = task?.dueDate;
+
+    final desiredListId = task?.listId ?? widget.initialListId ?? 'inbox';
+    final listExists = widget.lists.any((list) => list.id == desiredListId);
+    _listId = listExists
+        ? desiredListId
+        : (widget.lists.isNotEmpty ? widget.lists.first.id : 'inbox');
+
+    for (final subtask in widget.subtasks) {
+      _subtaskEditors.add(
+        _SubtaskEditor(
+          id: subtask.id,
+          controller: TextEditingController(text: subtask.title),
+          completed: subtask.completed,
+          createdAt: subtask.createdAt,
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    for (final editor in _subtaskEditors) {
+      editor.controller.dispose();
+    }
     super.dispose();
   }
 
@@ -60,7 +97,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     return AlertDialog(
       title: Text(_editing ? 'Editar tarea' : 'Nueva tarea'),
       content: SizedBox(
-        width: 520,
+        width: 620,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -92,6 +129,27 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                     labelText: 'Descripción',
                     prefixIcon: Icon(Icons.notes_rounded),
                   ),
+                ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  initialValue: _listId,
+                  decoration: const InputDecoration(
+                    labelText: 'Lista',
+                    prefixIcon: Icon(Icons.folder_outlined),
+                  ),
+                  items: widget.lists
+                      .map(
+                        (list) => DropdownMenuItem(
+                          value: list.id,
+                          child: Text('${list.icon}  ${list.name}'),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _listId = value);
+                    }
+                  },
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<TaskPriority>(
@@ -164,6 +222,47 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Subtareas',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _addSubtask,
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Agregar'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                if (_subtaskEditors.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      'Divide una tarea grande en pasos pequeños. Puedes agregar subtareas y marcarlas conforme avances.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                else
+                  ...List.generate(
+                    _subtaskEditors.length,
+                    (index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _buildSubtaskEditor(index),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -181,6 +280,58 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
         ),
       ],
     );
+  }
+
+  Widget _buildSubtaskEditor(int index) {
+    final editor = _subtaskEditors[index];
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Checkbox(
+          value: editor.completed,
+          onChanged: (value) {
+            setState(() => editor.completed = value ?? false);
+          },
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: TextFormField(
+            controller: editor.controller,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              hintText: 'Paso ${index + 1}',
+              isDense: true,
+            ),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Eliminar subtarea',
+          onPressed: () => _removeSubtask(index),
+          icon: const Icon(Icons.delete_outline_rounded),
+        ),
+      ],
+    );
+  }
+
+  void _addSubtask() {
+    final now = DateTime.now();
+    setState(() {
+      _subtaskEditors.add(
+        _SubtaskEditor(
+          id: '${widget.taskId}-sub-${now.microsecondsSinceEpoch}',
+          controller: TextEditingController(),
+          completed: false,
+          createdAt: now,
+        ),
+      );
+    });
+  }
+
+  void _removeSubtask(int index) {
+    final editor = _subtaskEditors.removeAt(index);
+    editor.controller.dispose();
+    setState(() {});
   }
 
   Future<void> _pickDate() async {
@@ -246,13 +397,50 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   void _save() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final now = DateTime.now();
+    final subtasks = <Subtask>[];
+
+    for (var index = 0; index < _subtaskEditors.length; index++) {
+      final editor = _subtaskEditors[index];
+      final title = editor.controller.text.trim();
+      if (title.isEmpty) continue;
+
+      subtasks.add(
+        Subtask(
+          id: editor.id,
+          taskId: widget.taskId,
+          title: title,
+          completed: editor.completed,
+          position: subtasks.length,
+          createdAt: editor.createdAt,
+          updatedAt: now,
+        ),
+      );
+    }
+
     Navigator.of(context).pop(
       TaskFormResult(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         priority: _priority,
         dueDate: _dueDate,
+        listId: _listId,
+        subtasks: subtasks,
       ),
     );
   }
+}
+
+class _SubtaskEditor {
+  _SubtaskEditor({
+    required this.id,
+    required this.controller,
+    required this.completed,
+    required this.createdAt,
+  });
+
+  final String id;
+  final TextEditingController controller;
+  bool completed;
+  final DateTime createdAt;
 }

@@ -13,6 +13,7 @@ class Task {
     this.priority = TaskPriority.none,
     this.dueDate,
     this.completed = false,
+    this.listId = 'inbox',
     required this.createdAt,
     required this.updatedAt,
   });
@@ -23,6 +24,7 @@ class Task {
   final TaskPriority priority;
   final DateTime? dueDate;
   final bool completed;
+  final String listId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -34,6 +36,7 @@ class Task {
     DateTime? dueDate,
     bool clearDueDate = false,
     bool? completed,
+    String? listId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -44,6 +47,7 @@ class Task {
       priority: priority ?? this.priority,
       dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
       completed: completed ?? this.completed,
+      listId: listId ?? this.listId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

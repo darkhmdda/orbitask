@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 
 import 'core/theme/app_theme.dart';
 import 'database/local_database.dart';
-import 'repositories/task_repository.dart';
+import 'repositories/todo_repository.dart';
 import 'screens/home/home_screen.dart';
 
 class TodoApp extends StatefulWidget {
   const TodoApp({
     super.key,
     required this.database,
-    required this.taskRepository,
+    required this.repository,
   });
 
   final LocalDatabase database;
-  final TaskRepository taskRepository;
+  final TodoRepository repository;
 
   @override
   State<TodoApp> createState() => _TodoAppState();
@@ -34,7 +34,7 @@ class _TodoAppState extends State<TodoApp> {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
-      home: HomeScreen(taskRepository: widget.taskRepository),
+      home: HomeScreen(repository: widget.repository),
     );
   }
 }

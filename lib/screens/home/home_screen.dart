@@ -1,34 +1,40 @@
 import 'package:flutter/material.dart';
 
+import '../../models/subtask.dart';
 import '../../models/task.dart';
-import '../../repositories/task_repository.dart';
+import '../../models/task_list.dart';
+import '../../repositories/todo_repository.dart';
 import '../../widgets/task_card.dart';
+import '../list_manager/list_manager_dialog.dart';
 import '../task_form/task_form_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
-    required this.taskRepository,
+    required this.repository,
   });
 
-  final TaskRepository taskRepository;
+  final TodoRepository repository;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
+  int _filterIndex = 0;
+  String? _selectedListId;
   final TextEditingController _quickAddController = TextEditingController();
 
   List<Task> _tasks = const [];
+  List<TaskList> _lists = const [];
+  Map<String, List<Subtask>> _subtasksByTask = const {};
   bool _loading = true;
   String? _loadError;
 
   @override
   void initState() {
     super.initState();
-    _loadTasks();
+    _loadData();
   }
 
   @override
@@ -37,15 +43,35 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _loadTasks() async {
+  Future<void> _loadData() async {
     try {
-      final tasks = await widget.taskRepository.getAll();
+      final lists = await widget.repository.getAllLists();
+      final tasks = await widget.repository.getAllTasks();
+      final subtasks = await widget.repository.getAllSubtasks();
+
+      final grouped = <String, List<Subtask>>{};
+      for (final subtask in subtasks) {
+        grouped.putIfAbsent(subtask.taskId, () => []).add(subtask);
+      }
+
+      for (final entry in grouped.entries) {
+        entry.value.sort((a, b) => a.position.compareTo(b.position));
+      }
+
       if (!mounted) return;
 
+      final selectedStillExists = _selectedListId == null ||
+          lists.any((list) => list.id == _selectedListId);
+
       setState(() {
+        _lists = lists;
         _tasks = tasks;
+        _subtasksByTask = grouped;
         _loading = false;
         _loadError = null;
+        if (!selectedStillExists) {
+          _selectedListId = null;
+        }
       });
     } catch (error) {
       if (!mounted) return;
@@ -61,54 +87,28 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final useRail = constraints.maxWidth >= 820;
+        final useSidebar = constraints.maxWidth >= 920;
 
         return Scaffold(
           body: SafeArea(
             child: Row(
               children: [
-                if (useRail)
-                  NavigationRail(
-                    selectedIndex: _selectedIndex,
-                    onDestinationSelected: (index) {
-                      setState(() => _selectedIndex = index);
-                    },
-                    labelType: NavigationRailLabelType.all,
-                    destinations: const [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.home_outlined),
-                        selectedIcon: Icon(Icons.home_rounded),
-                        label: Text('Inicio'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.today_outlined),
-                        selectedIcon: Icon(Icons.today_rounded),
-                        label: Text('Hoy'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.star_border_rounded),
-                        selectedIcon: Icon(Icons.star_rounded),
-                        label: Text('Importantes'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.check_circle_outline_rounded),
-                        selectedIcon: Icon(Icons.check_circle_rounded),
-                        label: Text('Completadas'),
-                      ),
-                    ],
+                if (useSidebar) _buildSidebar(context),
+                if (useSidebar) const VerticalDivider(width: 1),
+                Expanded(
+                  child: _buildMainContent(
+                    context,
+                    showMobileListButton: !useSidebar,
                   ),
-                if (useRail) const VerticalDivider(width: 1),
-                Expanded(child: _buildMainContent(context)),
+                ),
               ],
             ),
           ),
-          bottomNavigationBar: useRail
+          bottomNavigationBar: useSidebar
               ? null
               : NavigationBar(
-                  selectedIndex: _selectedIndex,
-                  onDestinationSelected: (index) {
-                    setState(() => _selectedIndex = index);
-                  },
+                  selectedIndex: _selectedListId == null ? _filterIndex : 0,
+                  onDestinationSelected: _selectFilter,
                   destinations: const [
                     NavigationDestination(
                       icon: Icon(Icons.home_outlined),
@@ -144,7 +144,127 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMainContent(BuildContext context) {
+  Widget _buildSidebar(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SizedBox(
+      width: 250,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 18, 12, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.checklist_rounded,
+                    color: theme.colorScheme.primary,
+                    size: 30,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Mi TO-DO',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            _SidebarItem(
+              icon: Icons.home_outlined,
+              selectedIcon: Icons.home_rounded,
+              label: 'Inicio',
+              selected: _selectedListId == null && _filterIndex == 0,
+              onTap: () => _selectFilter(0),
+            ),
+            _SidebarItem(
+              icon: Icons.today_outlined,
+              selectedIcon: Icons.today_rounded,
+              label: 'Hoy',
+              selected: _selectedListId == null && _filterIndex == 1,
+              onTap: () => _selectFilter(1),
+            ),
+            _SidebarItem(
+              icon: Icons.star_border_rounded,
+              selectedIcon: Icons.star_rounded,
+              label: 'Importantes',
+              selected: _selectedListId == null && _filterIndex == 2,
+              onTap: () => _selectFilter(2),
+            ),
+            _SidebarItem(
+              icon: Icons.check_circle_outline_rounded,
+              selectedIcon: Icons.check_circle_rounded,
+              label: 'Completadas',
+              selected: _selectedListId == null && _filterIndex == 3,
+              onTap: () => _selectFilter(3),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Divider(height: 1),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'LISTAS',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.1,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Administrar listas',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _openListManager,
+                    icon: const Icon(Icons.settings_outlined, size: 19),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: _lists
+                    .map(
+                      (list) => _SidebarListItem(
+                        list: list,
+                        count: _tasks
+                            .where(
+                              (task) =>
+                                  task.listId == list.id && !task.completed,
+                            )
+                            .length,
+                        selected: _selectedListId == list.id,
+                        onTap: () => _selectList(list.id),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: _openListManager,
+              icon: const Icon(Icons.create_new_folder_outlined),
+              label: const Text('Administrar listas'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainContent(
+    BuildContext context, {
+    required bool showMobileListButton,
+  }) {
     final theme = Theme.of(context);
     final now = DateTime.now();
     final visibleTasks = _visibleTasks();
@@ -194,7 +314,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   _LocalStatusChip(loading: _loading),
-                  const SizedBox(width: 4),
+                  if (showMobileListButton) ...[
+                    const SizedBox(width: 4),
+                    IconButton(
+                      tooltip: 'Listas',
+                      onPressed: _showListsPicker,
+                      icon: const Icon(Icons.folder_outlined),
+                    ),
+                  ],
                   IconButton(
                     tooltip: 'Buscar',
                     onPressed: _showSearchInfo,
@@ -217,11 +344,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       _loading = true;
                       _loadError = null;
                     });
-                    _loadTasks();
+                    _loadData();
                   },
                 )
               else ...[
-                if (_selectedIndex != 3) ...[
+                if (_filterIndex != 3 || _selectedListId != null) ...[
                   _buildQuickAdd(context),
                   const SizedBox(height: 30),
                 ],
@@ -251,10 +378,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.only(bottom: 10),
                       child: TaskCard(
                         task: task,
+                        list: _listForId(task.listId),
+                        subtasks: _subtasksByTask[task.id] ?? const [],
                         onChanged: (value) =>
                             _toggleCompleted(task, value ?? false),
                         onEdit: () => _openTaskForm(task: task),
                         onDelete: () => _deleteTask(task),
+                        onSubtaskChanged: _toggleSubtask,
                       ),
                     ),
                   ),
@@ -267,13 +397,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildQuickAdd(BuildContext context) {
+    final selectedList = _selectedList();
+    final suffix = selectedList == null
+        ? 'Bandeja de entrada'
+        : '${selectedList.icon} ${selectedList.name}';
+
     return TextField(
       controller: _quickAddController,
       textInputAction: TextInputAction.done,
       onSubmitted: (_) => _quickAdd(),
       decoration: InputDecoration(
         prefixIcon: const Icon(Icons.add_task_rounded),
-        hintText: 'Anota una tarea rápidamente…',
+        hintText: 'Anota una tarea rápidamente…  ·  $suffix',
         suffixIcon: IconButton(
           tooltip: 'Agregar tarea',
           onPressed: _quickAdd,
@@ -283,16 +418,41 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _selectFilter(int index) {
+    setState(() {
+      _filterIndex = index;
+      _selectedListId = null;
+    });
+  }
+
+  void _selectList(String id) {
+    setState(() {
+      _selectedListId = id;
+      _filterIndex = 0;
+    });
+  }
+
   List<Task> _visibleTasks() {
-    final tasks = switch (_selectedIndex) {
-      0 => _tasks.where((task) => !task.completed),
-      1 => _tasks.where((task) => !task.completed && _isToday(task.dueDate)),
-      2 => _tasks.where(
-          (task) => !task.completed && task.priority == TaskPriority.high,
-        ),
-      3 => _tasks.where((task) => task.completed),
-      _ => _tasks.where((task) => !task.completed),
-    };
+    Iterable<Task> tasks;
+
+    if (_selectedListId != null) {
+      tasks = _tasks.where(
+        (task) => !task.completed && task.listId == _selectedListId,
+      );
+    } else {
+      tasks = switch (_filterIndex) {
+        0 => _tasks.where((task) => !task.completed),
+        1 => _tasks.where(
+            (task) => !task.completed && _isToday(task.dueDate),
+          ),
+        2 => _tasks.where(
+            (task) =>
+                !task.completed && task.priority == TaskPriority.high,
+          ),
+        3 => _tasks.where((task) => task.completed),
+        _ => _tasks.where((task) => !task.completed),
+      };
+    }
 
     final result = tasks.toList();
     result.sort((a, b) {
@@ -316,25 +476,51 @@ class _HomeScreenState extends State<HomeScreen> {
         date.day == now.day;
   }
 
-  String _sectionTitle() => switch (_selectedIndex) {
-        0 => 'Mi TO-DO',
-        1 => 'Hoy',
-        2 => 'Importantes',
-        3 => 'Completadas',
-        _ => 'Mi TO-DO',
-      };
+  String _sectionTitle() {
+    final selectedList = _selectedList();
+    if (selectedList != null) {
+      return '${selectedList.icon} ${selectedList.name}';
+    }
 
-  String _listLabel() => switch (_selectedIndex) {
-        3 => 'Tareas completadas',
-        _ => 'Pendientes',
-      };
+    return switch (_filterIndex) {
+      0 => 'Mi TO-DO',
+      1 => 'Hoy',
+      2 => 'Importantes',
+      3 => 'Completadas',
+      _ => 'Mi TO-DO',
+    };
+  }
 
-  String _emptyMessage() => switch (_selectedIndex) {
-        1 => 'No tienes tareas pendientes para hoy.',
-        2 => 'No tienes tareas importantes pendientes.',
-        3 => 'Todavía no has completado tareas.',
-        _ => 'No tienes tareas pendientes.',
-      };
+  String _listLabel() {
+    if (_selectedListId != null) return 'Pendientes de la lista';
+    return _filterIndex == 3 ? 'Tareas completadas' : 'Pendientes';
+  }
+
+  String _emptyMessage() {
+    if (_selectedListId != null) {
+      return 'Esta lista no tiene tareas pendientes.';
+    }
+
+    return switch (_filterIndex) {
+      1 => 'No tienes tareas pendientes para hoy.',
+      2 => 'No tienes tareas importantes pendientes.',
+      3 => 'Todavía no has completado tareas.',
+      _ => 'No tienes tareas pendientes.',
+    };
+  }
+
+  TaskList? _selectedList() {
+    final id = _selectedListId;
+    if (id == null) return null;
+    return _listForId(id);
+  }
+
+  TaskList? _listForId(String id) {
+    for (final list in _lists) {
+      if (list.id == id) return list;
+    }
+    return null;
+  }
 
   Future<void> _quickAdd() async {
     final title = _quickAddController.text.trim();
@@ -344,18 +530,21 @@ class _HomeScreenState extends State<HomeScreen> {
     final task = Task(
       id: now.microsecondsSinceEpoch.toString(),
       title: title,
+      listId: _selectedListId ?? 'inbox',
       createdAt: now,
       updatedAt: now,
     );
 
     try {
-      await widget.taskRepository.create(task);
+      await widget.repository.createTask(task, const []);
       if (!mounted) return;
 
       setState(() {
         _tasks = [..._tasks, task];
-        _selectedIndex = 0;
         _quickAddController.clear();
+        if (_selectedListId == null) {
+          _filterIndex = 0;
+        }
       });
 
       _showMessage('Tarea guardada localmente.');
@@ -366,33 +555,49 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openTaskForm({Task? task}) async {
+    final now = DateTime.now();
+    final taskId = task?.id ?? now.microsecondsSinceEpoch.toString();
+    final existingSubtasks =
+        task == null ? const <Subtask>[] : (_subtasksByTask[task.id] ?? const []);
+
     final result = await showDialog<TaskFormResult>(
       context: context,
-      builder: (context) => TaskFormDialog(task: task),
+      builder: (context) => TaskFormDialog(
+        taskId: taskId,
+        task: task,
+        lists: _lists,
+        subtasks: existingSubtasks,
+        initialListId: _selectedListId ?? 'inbox',
+      ),
     );
 
     if (result == null || !mounted) return;
 
-    final now = DateTime.now();
-
     try {
       if (task == null) {
         final newTask = Task(
-          id: now.microsecondsSinceEpoch.toString(),
+          id: taskId,
           title: result.title,
           description: result.description,
           priority: result.priority,
           dueDate: result.dueDate,
+          listId: result.listId,
           createdAt: now,
           updatedAt: now,
         );
 
-        await widget.taskRepository.create(newTask);
+        await widget.repository.createTask(newTask, result.subtasks);
         if (!mounted) return;
 
         setState(() {
           _tasks = [..._tasks, newTask];
-          _selectedIndex = 0;
+          _subtasksByTask = {
+            ..._subtasksByTask,
+            newTask.id: result.subtasks,
+          };
+          if (_selectedListId == null) {
+            _filterIndex = 0;
+          }
         });
 
         _showMessage('Tarea creada y guardada.');
@@ -403,13 +608,23 @@ class _HomeScreenState extends State<HomeScreen> {
           priority: result.priority,
           dueDate: result.dueDate,
           clearDueDate: result.dueDate == null,
-          updatedAt: now,
+          listId: result.listId,
+          updatedAt: DateTime.now(),
         );
 
-        await widget.taskRepository.update(updatedTask);
+        await widget.repository.updateTask(updatedTask, result.subtasks);
         if (!mounted) return;
 
-        _replaceTask(updatedTask);
+        setState(() {
+          _tasks = _tasks
+              .map((item) => item.id == updatedTask.id ? updatedTask : item)
+              .toList(growable: false);
+          _subtasksByTask = {
+            ..._subtasksByTask,
+            updatedTask.id: result.subtasks,
+          };
+        });
+
         _showMessage('Tarea actualizada y guardada.');
       }
     } catch (error) {
@@ -425,9 +640,41 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     try {
-      await widget.taskRepository.update(updatedTask);
+      await widget.repository.updateTaskOnly(updatedTask);
       if (!mounted) return;
-      _replaceTask(updatedTask);
+
+      setState(() {
+        _tasks = _tasks
+            .map((item) => item.id == updatedTask.id ? updatedTask : item)
+            .toList(growable: false);
+      });
+    } catch (error) {
+      if (!mounted) return;
+      _showDatabaseError(error);
+    }
+  }
+
+  Future<void> _toggleSubtask(Subtask subtask, bool completed) async {
+    final updated = subtask.copyWith(
+      completed: completed,
+      updatedAt: DateTime.now(),
+    );
+
+    try {
+      await widget.repository.updateSubtaskCompleted(updated);
+      if (!mounted) return;
+
+      final current = _subtasksByTask[subtask.taskId] ?? const <Subtask>[];
+      final updatedList = current
+          .map((item) => item.id == updated.id ? updated : item)
+          .toList(growable: false);
+
+      setState(() {
+        _subtasksByTask = {
+          ..._subtasksByTask,
+          subtask.taskId: updatedList,
+        };
+      });
     } catch (error) {
       if (!mounted) return;
       _showDatabaseError(error);
@@ -438,12 +685,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final index = _tasks.indexWhere((item) => item.id == task.id);
     if (index == -1) return;
 
+    final deletedSubtasks = _subtasksByTask[task.id] ?? const <Subtask>[];
+
     try {
-      await widget.taskRepository.delete(task.id);
+      await widget.repository.deleteTask(task.id);
       if (!mounted) return;
+
+      final newSubtaskMap = Map<String, List<Subtask>>.from(_subtasksByTask)
+        ..remove(task.id);
 
       setState(() {
         _tasks = _tasks.where((item) => item.id != task.id).toList();
+        _subtasksByTask = newSubtaskMap;
       });
 
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -452,7 +705,8 @@ class _HomeScreenState extends State<HomeScreen> {
           content: Text('Se eliminó “${task.title}”.'),
           action: SnackBarAction(
             label: 'Deshacer',
-            onPressed: () => _restoreDeletedTask(task, index),
+            onPressed: () =>
+                _restoreDeletedTask(task, deletedSubtasks, index),
           ),
         ),
       );
@@ -462,9 +716,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _restoreDeletedTask(Task task, int index) async {
+  Future<void> _restoreDeletedTask(
+    Task task,
+    List<Subtask> subtasks,
+    int index,
+  ) async {
     try {
-      await widget.taskRepository.create(task);
+      await widget.repository.createTask(task, subtasks);
       if (!mounted) return;
 
       setState(() {
@@ -472,6 +730,10 @@ class _HomeScreenState extends State<HomeScreen> {
         final safeIndex = index > restored.length ? restored.length : index;
         restored.insert(safeIndex, task);
         _tasks = restored;
+        _subtasksByTask = {
+          ..._subtasksByTask,
+          task.id: subtasks,
+        };
       });
     } catch (error) {
       if (!mounted) return;
@@ -479,12 +741,78 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _replaceTask(Task updatedTask) {
-    setState(() {
-      _tasks = _tasks
-          .map((task) => task.id == updatedTask.id ? updatedTask : task)
-          .toList(growable: false);
-    });
+  Future<void> _openListManager() async {
+    await showDialog<bool>(
+      context: context,
+      builder: (context) => ListManagerDialog(
+        repository: widget.repository,
+        lists: _lists,
+      ),
+    );
+
+    if (!mounted) return;
+    setState(() => _loading = true);
+    await _loadData();
+  }
+
+  Future<void> _showListsPicker() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Listas'),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ..._lists.map(
+                  (list) => ListTile(
+                    leading: Text(
+                      list.icon,
+                      style: const TextStyle(fontSize: 22),
+                    ),
+                    title: Text(list.name),
+                    trailing: Text(
+                      _tasks
+                          .where(
+                            (task) =>
+                                task.listId == list.id && !task.completed,
+                          )
+                          .length
+                          .toString(),
+                    ),
+                    selected: _selectedListId == list.id,
+                    onTap: () => Navigator.of(context).pop(list.id),
+                  ),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.settings_outlined),
+                  title: const Text('Administrar listas'),
+                  onTap: () => Navigator.of(context).pop('__manage__'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || result == null) return;
+
+    if (result == '__manage__') {
+      await _openListManager();
+      return;
+    }
+
+    _selectList(result);
   }
 
   void _showMessage(String message) {
@@ -507,6 +835,75 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showSettingsInfo() {
     _showMessage('Los ajustes se añadirán en una versión posterior.');
+  }
+}
+
+class _SidebarItem extends StatelessWidget {
+  const _SidebarItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: ListTile(
+        dense: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        selected: selected,
+        leading: Icon(selected ? selectedIcon : icon),
+        title: Text(label),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _SidebarListItem extends StatelessWidget {
+  const _SidebarListItem({
+    required this.list,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final TaskList list;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: ListTile(
+        dense: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        selected: selected,
+        leading: Text(list.icon, style: const TextStyle(fontSize: 19)),
+        title: Text(
+          list.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: count == 0 ? null : Text(count.toString()),
+        onTap: onTap,
+      ),
+    );
   }
 }
 
