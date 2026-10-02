@@ -1,4 +1,5 @@
 import '../database/local_database.dart';
+import '../models/reminder.dart';
 import '../models/subtask.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
@@ -65,12 +66,34 @@ class TodoRepository {
     return rows.map(_subtaskFromRow).toList(growable: false);
   }
 
-  Future<void> createTask(Task task, List<Subtask> subtasks) async {
+  Future<List<Reminder>> getAllReminders() async {
+    final rows = _database.raw.select('''
+      SELECT
+        id,
+        task_id,
+        scheduled_at,
+        offset_minutes,
+        enabled,
+        created_at,
+        updated_at
+      FROM reminders
+      ORDER BY scheduled_at ASC, created_at ASC;
+    ''');
+
+    return rows.map(_reminderFromRow).toList(growable: false);
+  }
+
+  Future<void> createTask(
+    Task task,
+    List<Subtask> subtasks,
+    List<Reminder> reminders,
+  ) async {
     _database.raw.execute('BEGIN IMMEDIATE;');
 
     try {
       _insertTask(task);
       _replaceSubtasks(task.id, subtasks);
+      _replaceReminders(task.id, reminders);
       _database.raw.execute('COMMIT;');
     } catch (_) {
       _database.raw.execute('ROLLBACK;');
@@ -78,7 +101,11 @@ class TodoRepository {
     }
   }
 
-  Future<void> updateTask(Task task, List<Subtask> subtasks) async {
+  Future<void> updateTask(
+    Task task,
+    List<Subtask> subtasks,
+    List<Reminder> reminders,
+  ) async {
     _database.raw.execute('BEGIN IMMEDIATE;');
 
     try {
@@ -111,6 +138,7 @@ class TodoRepository {
       }
 
       _replaceSubtasks(task.id, subtasks);
+      _replaceReminders(task.id, reminders);
       _database.raw.execute('COMMIT;');
     } catch (_) {
       _database.raw.execute('ROLLBACK;');
@@ -347,6 +375,46 @@ class TodoRepository {
     }
   }
 
+  void _replaceReminders(String taskId, List<Reminder> reminders) {
+    final deleteStatement =
+        _database.raw.prepare('DELETE FROM reminders WHERE task_id = ?;');
+    try {
+      deleteStatement.execute([taskId]);
+    } finally {
+      deleteStatement.close();
+    }
+
+    if (reminders.isEmpty) return;
+
+    final insertStatement = _database.raw.prepare('''
+      INSERT INTO reminders (
+        id,
+        task_id,
+        scheduled_at,
+        offset_minutes,
+        enabled,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?);
+    ''');
+
+    try {
+      for (final reminder in reminders) {
+        insertStatement.execute([
+          reminder.id,
+          taskId,
+          reminder.scheduledAt.millisecondsSinceEpoch,
+          reminder.offsetMinutes,
+          reminder.enabled ? 1 : 0,
+          reminder.createdAt.millisecondsSinceEpoch,
+          reminder.updatedAt.millisecondsSinceEpoch,
+        ]);
+      }
+    } finally {
+      insertStatement.close();
+    }
+  }
+
   Task _taskFromRow(Map<String, Object?> row) {
     final priorityIndex = (row['priority'] as int?) ?? 0;
     final safePriority =
@@ -397,6 +465,24 @@ class TodoRepository {
       title: row['title']! as String,
       completed: ((row['completed'] as int?) ?? 0) == 1,
       position: (row['position'] as int?) ?? 0,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        row['created_at']! as int,
+      ),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(
+        row['updated_at']! as int,
+      ),
+    );
+  }
+
+  Reminder _reminderFromRow(Map<String, Object?> row) {
+    return Reminder(
+      id: row['id']! as String,
+      taskId: row['task_id']! as String,
+      scheduledAt: DateTime.fromMillisecondsSinceEpoch(
+        row['scheduled_at']! as int,
+      ),
+      offsetMinutes: row['offset_minutes'] as int?,
+      enabled: ((row['enabled'] as int?) ?? 1) == 1,
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         row['created_at']! as int,
       ),
