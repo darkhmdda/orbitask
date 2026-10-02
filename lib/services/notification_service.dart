@@ -47,7 +47,7 @@ class NotificationService {
       // Linux background scheduling uses the OS local clock directly.
     }
 
-    const settings = InitializationSettings(
+    final settings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       linux: LinuxInitializationSettings(
         defaultActionName: 'Abrir Orbitask',
@@ -132,7 +132,7 @@ class NotificationService {
       );
     }
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: AndroidNotificationDetails(
         _androidChannelId,
         'Recordatorios de Orbitask',
@@ -203,7 +203,7 @@ class NotificationService {
   }) async {
     if (!_initialized) return;
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: AndroidNotificationDetails(
         _androidChannelId,
         'Recordatorios de Orbitask',
