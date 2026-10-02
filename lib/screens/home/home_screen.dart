@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+
 import '../../models/task.dart';
+import '../../repositories/task_repository.dart';
 import '../../widgets/task_card.dart';
 import '../task_form/task_form_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({
+    super.key,
+    required this.taskRepository,
+  });
+
+  final TaskRepository taskRepository;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -14,49 +21,40 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final TextEditingController _quickAddController = TextEditingController();
 
-  late final List<Task> _tasks = [
-    Task(
-      id: '1',
-      title: 'Terminar práctica de Base de Datos',
-      description: 'Revisar procedimientos, funciones y triggers.',
-      priority: TaskPriority.high,
-      dueDate: _todayAt(18, 0),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    ),
-    Task(
-      id: '2',
-      title: 'Estudiar para la clase',
-      description: 'Repasar los apuntes principales.',
-      priority: TaskPriority.medium,
-      dueDate: _tomorrowAt(19, 0),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    ),
-    Task(
-      id: '3',
-      title: 'Comprar memoria USB',
-      priority: TaskPriority.low,
-      dueDate: _tomorrowAt(20, 0),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    ),
-  ];
+  List<Task> _tasks = const [];
+  bool _loading = true;
+  String? _loadError;
 
-  static DateTime _todayAt(int hour, int minute) {
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day, hour, minute);
-  }
-
-  static DateTime _tomorrowAt(int hour, int minute) {
-    final now = DateTime.now().add(const Duration(days: 1));
-    return DateTime(now.year, now.month, now.day, hour, minute);
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
   }
 
   @override
   void dispose() {
     _quickAddController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadTasks() async {
+    try {
+      final tasks = await widget.taskRepository.getAll();
+      if (!mounted) return;
+
+      setState(() {
+        _tasks = tasks;
+        _loading = false;
+        _loadError = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+        _loadError = error.toString();
+      });
+    }
   }
 
   @override
@@ -134,11 +132,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _openTaskForm(),
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Nueva tarea'),
-          ),
+          floatingActionButton: _loading || _loadError != null
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: () => _openTaskForm(),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Nueva tarea'),
+                ),
         );
       },
     );
@@ -193,6 +193,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
+                  _LocalStatusChip(loading: _loading),
+                  const SizedBox(width: 4),
                   IconButton(
                     tooltip: 'Buscar',
                     onPressed: _showSearchInfo,
@@ -206,47 +208,57 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 28),
-              if (_selectedIndex != 3) ...[
-                _buildQuickAdd(context),
-                const SizedBox(height: 30),
-              ],
-              Row(
-                children: [
-                  Text(
-                    _listLabel(),
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${visibleTasks.length} ${visibleTasks.length == 1 ? 'tarea' : 'tareas'}',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+              if (_loading)
+                const _LoadingState()
+              else if (_loadError != null)
+                _DatabaseErrorState(
+                  onRetry: () {
+                    setState(() {
+                      _loading = true;
+                      _loadError = null;
+                    });
+                    _loadTasks();
+                  },
+                )
+              else ...[
+                if (_selectedIndex != 3) ...[
+                  _buildQuickAdd(context),
+                  const SizedBox(height: 30),
                 ],
-              ),
-              const SizedBox(height: 12),
-              if (visibleTasks.isEmpty)
-                _EmptyState(message: _emptyMessage())
-              else
-                ...visibleTasks.map(
-                  (task) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: TaskCard(
-                      task: task,
-                      onChanged: (value) {
-                        setState(() {
-                          task.completed = value ?? false;
-                          task.updatedAt = DateTime.now();
-                        });
-                      },
-                      onEdit: () => _openTaskForm(task: task),
-                      onDelete: () => _deleteTask(task),
+                Row(
+                  children: [
+                    Text(
+                      _listLabel(),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${visibleTasks.length} ${visibleTasks.length == 1 ? 'tarea' : 'tareas'}',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (visibleTasks.isEmpty)
+                  _EmptyState(message: _emptyMessage())
+                else
+                  ...visibleTasks.map(
+                    (task) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: TaskCard(
+                        task: task,
+                        onChanged: (value) =>
+                            _toggleCompleted(task, value ?? false),
+                        onEdit: () => _openTaskForm(task: task),
+                        onDelete: () => _deleteTask(task),
+                      ),
                     ),
                   ),
-                ),
+              ],
             ],
           ),
         ),
@@ -324,27 +336,33 @@ class _HomeScreenState extends State<HomeScreen> {
         _ => 'No tienes tareas pendientes.',
       };
 
-  void _quickAdd() {
+  Future<void> _quickAdd() async {
     final title = _quickAddController.text.trim();
     if (title.isEmpty) return;
 
     final now = DateTime.now();
-    setState(() {
-      _tasks.add(
-        Task(
-          id: now.microsecondsSinceEpoch.toString(),
-          title: title,
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-      _selectedIndex = 0;
-      _quickAddController.clear();
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Tarea agregada.')),
+    final task = Task(
+      id: now.microsecondsSinceEpoch.toString(),
+      title: title,
+      createdAt: now,
+      updatedAt: now,
     );
+
+    try {
+      await widget.taskRepository.create(task);
+      if (!mounted) return;
+
+      setState(() {
+        _tasks = [..._tasks, task];
+        _selectedIndex = 0;
+        _quickAddController.clear();
+      });
+
+      _showMessage('Tarea guardada localmente.');
+    } catch (error) {
+      if (!mounted) return;
+      _showDatabaseError(error);
+    }
   }
 
   Future<void> _openTaskForm({Task? task}) async {
@@ -356,69 +374,235 @@ class _HomeScreenState extends State<HomeScreen> {
     if (result == null || !mounted) return;
 
     final now = DateTime.now();
-    setState(() {
-      if (task == null) {
-        _tasks.add(
-          Task(
-            id: now.microsecondsSinceEpoch.toString(),
-            title: result.title,
-            description: result.description,
-            priority: result.priority,
-            dueDate: result.dueDate,
-            createdAt: now,
-            updatedAt: now,
-          ),
-        );
-        _selectedIndex = 0;
-      } else {
-        task.title = result.title;
-        task.description = result.description;
-        task.priority = result.priority;
-        task.dueDate = result.dueDate;
-        task.updatedAt = now;
-      }
-    });
 
+    try {
+      if (task == null) {
+        final newTask = Task(
+          id: now.microsecondsSinceEpoch.toString(),
+          title: result.title,
+          description: result.description,
+          priority: result.priority,
+          dueDate: result.dueDate,
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        await widget.taskRepository.create(newTask);
+        if (!mounted) return;
+
+        setState(() {
+          _tasks = [..._tasks, newTask];
+          _selectedIndex = 0;
+        });
+
+        _showMessage('Tarea creada y guardada.');
+      } else {
+        final updatedTask = task.copyWith(
+          title: result.title,
+          description: result.description,
+          priority: result.priority,
+          dueDate: result.dueDate,
+          clearDueDate: result.dueDate == null,
+          updatedAt: now,
+        );
+
+        await widget.taskRepository.update(updatedTask);
+        if (!mounted) return;
+
+        _replaceTask(updatedTask);
+        _showMessage('Tarea actualizada y guardada.');
+      }
+    } catch (error) {
+      if (!mounted) return;
+      _showDatabaseError(error);
+    }
+  }
+
+  Future<void> _toggleCompleted(Task task, bool completed) async {
+    final updatedTask = task.copyWith(
+      completed: completed,
+      updatedAt: DateTime.now(),
+    );
+
+    try {
+      await widget.taskRepository.update(updatedTask);
+      if (!mounted) return;
+      _replaceTask(updatedTask);
+    } catch (error) {
+      if (!mounted) return;
+      _showDatabaseError(error);
+    }
+  }
+
+  Future<void> _deleteTask(Task task) async {
+    final index = _tasks.indexWhere((item) => item.id == task.id);
+    if (index == -1) return;
+
+    try {
+      await widget.taskRepository.delete(task.id);
+      if (!mounted) return;
+
+      setState(() {
+        _tasks = _tasks.where((item) => item.id != task.id).toList();
+      });
+
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Se eliminó “${task.title}”.'),
+          action: SnackBarAction(
+            label: 'Deshacer',
+            onPressed: () => _restoreDeletedTask(task, index),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      _showDatabaseError(error);
+    }
+  }
+
+  Future<void> _restoreDeletedTask(Task task, int index) async {
+    try {
+      await widget.taskRepository.create(task);
+      if (!mounted) return;
+
+      setState(() {
+        final restored = [..._tasks];
+        final safeIndex = index > restored.length ? restored.length : index;
+        restored.insert(safeIndex, task);
+        _tasks = restored;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      _showDatabaseError(error);
+    }
+  }
+
+  void _replaceTask(Task updatedTask) {
+    setState(() {
+      _tasks = _tasks
+          .map((task) => task.id == updatedTask.id ? updatedTask : task)
+          .toList(growable: false);
+    });
+  }
+
+  void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(task == null ? 'Tarea creada.' : 'Tarea actualizada.'),
-      ),
+      SnackBar(content: Text(message)),
     );
   }
 
-  void _deleteTask(Task task) {
-    final index = _tasks.indexOf(task);
-    if (index == -1) return;
-
-    setState(() => _tasks.removeAt(index));
-
-    ScaffoldMessenger.of(context).clearSnackBars();
+  void _showDatabaseError(Object error) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Se eliminó “${task.title}”.'),
-        action: SnackBarAction(
-          label: 'Deshacer',
-          onPressed: () {
-            if (!mounted) return;
-            setState(() {
-              final safeIndex = index > _tasks.length ? _tasks.length : index;
-              _tasks.insert(safeIndex, task);
-            });
-          },
-        ),
+        content: Text('No se pudo guardar el cambio: $error'),
       ),
     );
   }
 
   void _showSearchInfo() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('La búsqueda se añadirá en una versión posterior.')),
-    );
+    _showMessage('La búsqueda se añadirá en una versión posterior.');
   }
 
   void _showSettingsInfo() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Los ajustes se añadirán en una versión posterior.')),
+    _showMessage('Los ajustes se añadirán en una versión posterior.');
+  }
+}
+
+class _LocalStatusChip extends StatelessWidget {
+  const _LocalStatusChip({required this.loading});
+
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            loading ? Icons.sync_rounded : Icons.storage_rounded,
+            size: 16,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            loading ? 'Cargando…' : 'Guardado local',
+            style: theme.textTheme.labelMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 70),
+        child: Column(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Abriendo base de datos local…'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DatabaseErrorState extends StatelessWidget {
+  const _DatabaseErrorState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.storage_rounded,
+            size: 46,
+            color: theme.colorScheme.onErrorContainer,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'No se pudo abrir la base de datos local.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.onErrorContainer,
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Reintentar'),
+          ),
+        ],
+      ),
     );
   }
 }
