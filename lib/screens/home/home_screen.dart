@@ -712,6 +712,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       await widget.repository.updateTaskOnly(updatedTask);
+
+      final reminders = _remindersByTask[task.id] ?? const <Reminder>[];
+      String? reminderWarning;
+      if (completed) {
+        await widget.notificationService.cancelReminders(reminders);
+      } else {
+        reminderWarning = await widget.notificationService
+            .scheduleTaskReminders(
+              task: updatedTask,
+              reminders: reminders,
+            );
+      }
+
       if (!mounted) return;
 
       setState(() {
@@ -719,6 +732,10 @@ class _HomeScreenState extends State<HomeScreen> {
             .map((item) => item.id == updatedTask.id ? updatedTask : item)
             .toList(growable: false);
       });
+
+      if (reminderWarning != null) {
+        _showMessage(reminderWarning);
+      }
     } catch (error) {
       if (!mounted) return;
       _showDatabaseError(error);
@@ -757,17 +774,22 @@ class _HomeScreenState extends State<HomeScreen> {
     if (index == -1) return;
 
     final deletedSubtasks = _subtasksByTask[task.id] ?? const <Subtask>[];
+    final deletedReminders = _remindersByTask[task.id] ?? const <Reminder>[];
 
     try {
       await widget.repository.deleteTask(task.id);
+      await widget.notificationService.cancelReminders(deletedReminders);
       if (!mounted) return;
 
       final newSubtaskMap = Map<String, List<Subtask>>.from(_subtasksByTask)
+        ..remove(task.id);
+      final newReminderMap = Map<String, List<Reminder>>.from(_remindersByTask)
         ..remove(task.id);
 
       setState(() {
         _tasks = _tasks.where((item) => item.id != task.id).toList();
         _subtasksByTask = newSubtaskMap;
+        _remindersByTask = newReminderMap;
       });
 
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -776,8 +798,12 @@ class _HomeScreenState extends State<HomeScreen> {
           content: Text('Se eliminó “${task.title}”.'),
           action: SnackBarAction(
             label: 'Deshacer',
-            onPressed: () =>
-                _restoreDeletedTask(task, deletedSubtasks, index),
+            onPressed: () => _restoreDeletedTask(
+              task,
+              deletedSubtasks,
+              deletedReminders,
+              index,
+            ),
           ),
         ),
       );
@@ -790,10 +816,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _restoreDeletedTask(
     Task task,
     List<Subtask> subtasks,
+    List<Reminder> reminders,
     int index,
   ) async {
     try {
-      await widget.repository.createTask(task, subtasks);
+      await widget.repository.createTask(task, subtasks, reminders);
+
+      String? reminderWarning;
+      if (!task.completed) {
+        reminderWarning = await widget.notificationService
+            .scheduleTaskReminders(task: task, reminders: reminders);
+      }
+
       if (!mounted) return;
 
       setState(() {
@@ -805,10 +839,36 @@ class _HomeScreenState extends State<HomeScreen> {
           ..._subtasksByTask,
           task.id: subtasks,
         };
+        _remindersByTask = {
+          ..._remindersByTask,
+          task.id: reminders,
+        };
       });
+
+      if (reminderWarning != null) {
+        _showMessage(reminderWarning);
+      }
     } catch (error) {
       if (!mounted) return;
       _showDatabaseError(error);
+    }
+  }
+
+  Future<void> _reconcileNotifications(
+    List<Task> tasks,
+    Map<String, List<Reminder>> remindersByTask,
+  ) async {
+    for (final task in tasks) {
+      final reminders = remindersByTask[task.id] ?? const <Reminder>[];
+      if (task.completed) {
+        await widget.notificationService.cancelReminders(reminders);
+        continue;
+      }
+
+      await widget.notificationService.scheduleTaskReminders(
+        task: task,
+        reminders: reminders,
+      );
     }
   }
 
@@ -901,8 +961,37 @@ class _HomeScreenState extends State<HomeScreen> {
     _showMessage('La búsqueda se añadirá en una versión posterior.');
   }
 
-  void _showSettingsInfo() {
-    _showMessage('Los ajustes se añadirán en una versión posterior.');
+  Future<void> _showSettingsInfo() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Notificaciones'),
+        content: const Text(
+          'Puedes enviar una notificación de prueba para comprobar que '
+          'Orbitask tiene acceso al sistema de avisos.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+          FilledButton.icon(
+            onPressed: () async {
+              await widget.notificationService.requestPermissions();
+              await widget.notificationService.showNow(
+                title: 'Orbitask',
+                body: 'Las notificaciones están funcionando.',
+              );
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            icon: const Icon(Icons.notifications_active_rounded),
+            label: const Text('Probar notificación'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
