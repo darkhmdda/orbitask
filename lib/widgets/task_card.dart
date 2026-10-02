@@ -6,10 +6,14 @@ class TaskCard extends StatelessWidget {
     super.key,
     required this.task,
     required this.onChanged,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   final Task task;
   final ValueChanged<bool?> onChanged;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +24,7 @@ class TaskCard extends StatelessWidget {
       color: theme.colorScheme.surface,
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () {},
+        onTap: onEdit,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
@@ -51,6 +55,8 @@ class TaskCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
+                          decoration:
+                              task.completed ? TextDecoration.lineThrough : null,
                         ),
                       ),
                     ],
@@ -65,14 +71,40 @@ class TaskCard extends StatelessWidget {
                             icon: Icons.schedule_rounded,
                             label: dueLabel,
                           ),
+                        if (task.completed)
+                          const _MetaChip(
+                            icon: Icons.check_circle_rounded,
+                            label: 'Completada',
+                          ),
                       ],
                     ),
                   ],
                 ),
               ),
-              IconButton(
+              PopupMenuButton<String>(
                 tooltip: 'Más opciones',
-                onPressed: () {},
+                onSelected: (value) {
+                  if (value == 'edit') onEdit();
+                  if (value == 'delete') onDelete();
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Editar'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      leading: Icon(Icons.delete_outline_rounded),
+                      title: Text('Eliminar'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
                 icon: const Icon(Icons.more_horiz_rounded),
               ),
             ],
@@ -95,6 +127,8 @@ class TaskCard extends StatelessWidget {
 
     if (difference == 0) return 'Hoy · $time';
     if (difference == 1) return 'Mañana · $time';
+    if (difference == -1) return 'Ayer · $time';
+    if (difference < -1) return 'Vencida · ${date.day}/${date.month} · $time';
 
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} · $time';
   }
