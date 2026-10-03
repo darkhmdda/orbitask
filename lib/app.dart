@@ -6,6 +6,7 @@ import 'repositories/todo_repository.dart';
 import 'screens/auth/auth_gate.dart';
 import 'screens/home/home_screen.dart';
 import 'services/auth_service.dart';
+import 'services/cloud_sync_service.dart';
 import 'services/notification_service.dart';
 
 class OrbitaskApp extends StatefulWidget {
@@ -15,12 +16,14 @@ class OrbitaskApp extends StatefulWidget {
     required this.repository,
     required this.notificationService,
     required this.authService,
+    required this.cloudSyncService,
   });
 
   final LocalDatabase database;
   final TodoRepository repository;
   final NotificationService notificationService;
   final AuthService authService;
+  final CloudSyncService cloudSyncService;
 
   @override
   State<OrbitaskApp> createState() => _OrbitaskAppState();
@@ -58,6 +61,7 @@ class _OrbitaskAppState extends State<OrbitaskApp> {
       repository: widget.repository,
       notificationService: widget.notificationService,
       authService: widget.authService,
+      cloudSyncService: widget.cloudSyncService,
       themeId: _themeId,
       onThemeChanged: _changeTheme,
     );
