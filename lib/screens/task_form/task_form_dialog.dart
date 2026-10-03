@@ -901,7 +901,7 @@ class _ReminderDraft {
   });
 
   final DateTime scheduledAt;
-  int? offsetMinutes;
+  final int? offsetMinutes;
 }
 
 class _ReminderEditor {
@@ -915,7 +915,7 @@ class _ReminderEditor {
 
   final String id;
   DateTime scheduledAt;
-  final int? offsetMinutes;
+  int? offsetMinutes;
   bool enabled;
   final DateTime createdAt;
 }
