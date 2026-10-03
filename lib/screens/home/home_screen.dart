@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/list_icons.dart';
@@ -48,18 +50,74 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, List<Reminder>> _remindersByTask = const {};
   bool _notificationsReconciled = false;
   bool _loading = true;
+  bool _cloudSyncing = false;
   String? _loadError;
+  Timer? _cloudSyncDebounce;
+  Timer? _cloudSyncTimer;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    unawaited(_initializeHome());
+  }
+
+  Future<void> _initializeHome() async {
+    await _loadData();
+    if (!mounted) return;
+
+    _scheduleCloudSync(immediate: true);
+    _cloudSyncTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _scheduleCloudSync(immediate: true),
+    );
   }
 
   @override
   void dispose() {
+    _cloudSyncDebounce?.cancel();
+    _cloudSyncTimer?.cancel();
     _quickAddController.dispose();
     super.dispose();
+  }
+
+  void _scheduleCloudSync({bool immediate = false}) {
+    if (!widget.cloudSyncService.isConfigured ||
+        widget.authService.currentUser == null) {
+      return;
+    }
+
+    _cloudSyncDebounce?.cancel();
+    _cloudSyncDebounce = Timer(
+      immediate ? Duration.zero : const Duration(milliseconds: 1500),
+      () => unawaited(_runAutomaticCloudSync()),
+    );
+  }
+
+  Future<void> _runAutomaticCloudSync() async {
+    if (_cloudSyncing ||
+        !widget.cloudSyncService.isConfigured ||
+        widget.authService.currentUser == null) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() => _cloudSyncing = true);
+    }
+
+    try {
+      await widget.cloudSyncService.syncNow();
+      if (!mounted) return;
+
+      _notificationsReconciled = false;
+      await _loadData();
+    } catch (_) {
+      // La sincronización automática es silenciosa: SQLite sigue siendo usable
+      // y el siguiente cambio o ciclo periódico vuelve a intentarlo.
+    } finally {
+      if (mounted) {
+        setState(() => _cloudSyncing = false);
+      }
+    }
   }
 
   Future<void> _loadData() async {
@@ -338,6 +396,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     loading: _loading,
                     cloudConnected:
                         widget.authService.currentUser != null,
+                    cloudSyncing: _cloudSyncing,
                   ),
                   if (showMobileListButton) ...[
                     const SizedBox(width: 4),
@@ -573,6 +632,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       _showMessage('Tarea guardada localmente.');
+      _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
       _showDatabaseError(error);
@@ -650,6 +710,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _showMessage(
           reminderWarning ?? 'Tarea creada y guardada.',
         );
+        _scheduleCloudSync();
       } else {
         final updatedTask = task.copyWith(
           title: result.title,
@@ -698,6 +759,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _showMessage(
           reminderWarning ?? 'Tarea actualizada y guardada.',
         );
+        _scheduleCloudSync();
       }
     } catch (error) {
       if (!mounted) return;
@@ -737,6 +799,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (reminderWarning != null) {
         _showMessage(reminderWarning);
       }
+      _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
       _showDatabaseError(error);
@@ -764,6 +827,7 @@ class _HomeScreenState extends State<HomeScreen> {
           subtask.taskId: updatedList,
         };
       });
+      _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
       _showDatabaseError(error);
@@ -794,6 +858,8 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       ScaffoldMessenger.of(context).clearSnackBars();
+      _scheduleCloudSync();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Se eliminó “${task.title}”.'),
@@ -821,12 +887,22 @@ class _HomeScreenState extends State<HomeScreen> {
     int index,
   ) async {
     try {
-      await widget.repository.createTask(task, subtasks, reminders);
+      final restoredAt = DateTime.now();
+      final restoredTask = task.copyWith(updatedAt: restoredAt);
+
+      await widget.repository.createTask(
+        restoredTask,
+        subtasks,
+        reminders,
+      );
 
       String? reminderWarning;
-      if (!task.completed) {
+      if (!restoredTask.completed) {
         reminderWarning = await widget.notificationService
-            .scheduleTaskReminders(task: task, reminders: reminders);
+            .scheduleTaskReminders(
+              task: restoredTask,
+              reminders: reminders,
+            );
       }
 
       if (!mounted) return;
@@ -834,7 +910,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         final restored = [..._tasks];
         final safeIndex = index > restored.length ? restored.length : index;
-        restored.insert(safeIndex, task);
+        restored.insert(safeIndex, restoredTask);
         _tasks = restored;
         _subtasksByTask = {
           ..._subtasksByTask,
@@ -849,6 +925,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (reminderWarning != null) {
         _showMessage(reminderWarning);
       }
+      _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
       _showDatabaseError(error);
@@ -885,6 +962,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     setState(() => _loading = true);
     await _loadData();
+    _scheduleCloudSync();
   }
 
   Future<void> _showListsPicker() async {
@@ -1000,6 +1078,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onSelected: (themeId) {
                         setDialogState(() => selectedThemeId = themeId);
                         widget.onThemeChanged(themeId);
+                        _scheduleCloudSync();
                       },
                     ),
                     if (widget.authService.isConfigured) ...[
@@ -1033,12 +1112,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         runSpacing: 10,
                         children: [
                           FilledButton.icon(
-                            onPressed: uploadingCloud
+                            onPressed: uploadingCloud || _cloudSyncing
                                 ? null
                                 : () async {
                                     setDialogState(
                                       () => uploadingCloud = true,
                                     );
+                                    setState(() => _cloudSyncing = true);
                                     try {
                                       final result = await widget
                                           .cloudSyncService
@@ -1069,6 +1149,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         setDialogState(
                                           () => uploadingCloud = false,
                                         );
+                                      }
+                                      if (mounted) {
+                                        setState(() => _cloudSyncing = false);
                                       }
                                     }
                                   },
@@ -1242,10 +1325,12 @@ class _LocalStatusChip extends StatelessWidget {
   const _LocalStatusChip({
     required this.loading,
     required this.cloudConnected,
+    required this.cloudSyncing,
   });
 
   final bool loading;
   final bool cloudConnected;
+  final bool cloudSyncing;
 
   @override
   Widget build(BuildContext context) {
@@ -1261,7 +1346,7 @@ class _LocalStatusChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            loading
+            loading || cloudSyncing
                 ? Icons.sync_rounded
                 : (cloudConnected
                     ? Icons.cloud_done_outlined
@@ -1272,7 +1357,11 @@ class _LocalStatusChip extends StatelessWidget {
           Text(
             loading
                 ? 'Cargando…'
-                : (cloudConnected ? 'Nube conectada' : 'Guardado local'),
+                : (cloudSyncing
+                    ? 'Sincronizando…'
+                    : (cloudConnected
+                        ? 'Nube conectada'
+                        : 'Guardado local')),
             style: theme.textTheme.labelMedium,
           ),
         ],
