@@ -4,7 +4,7 @@
 
 Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para organizar tareas, prioridades, fechas, listas y subtareas. El objetivo es funcionar en Android, Windows y Linux y, en etapas posteriores, sincronizar tareas y recordatorios entre dispositivos.
 
-## Estado actual — v0.7-dev
+## Estado actual — v0.8-dev (multiplataforma en desarrollo)
 
 - CRUD de tareas.
 - Captura rápida.
@@ -51,6 +51,10 @@ Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para 
 - Al volver a Orbitask desde segundo plano, se fuerza un nuevo intento de sincronización.
 - El indicador superior distingue entre `Sincronizando…`, `Nube conectada` y `Sin conexión`.
 - El botón manual `Sincronizar ahora` se conserva para forzar una sincronización inmediata.
+- Inicio de la adaptación Android de v0.8-dev.
+- El manifiesto Android de producción incluye acceso a Internet para Supabase y permiso de notificaciones.
+- Android registra el callback nativo `com.darkhmdda.orbitask://login-callback` para confirmaciones de Auth.
+- Orbitask solicita el permiso de notificaciones antes de restaurar los recordatorios en Android.
 
 ## Historial
 
@@ -77,10 +81,10 @@ Sin estas variables Orbitask continúa funcionando en modo local, igual que en v
 
 ## Roadmap
 
-- Validar el flujo de confirmación de correo con una cuenta nueva usando el redirect configurado.
-- Android.
-- Windows.
-- Preparar `v0.8-dev`.
+- Validar Android: build, SQLite, Auth, deep link, Supabase, Realtime y recordatorios.
+- Ajustar la interfaz para pantallas móviles según lo que revele la prueba Android.
+- Validar Windows: build, SQLite, Auth, Supabase, Realtime y notificaciones.
+- Completar v0.8-dev como primera base multiplataforma real.
 - Versión estable `v1.0`.
 
 ## Tecnologías
@@ -105,3 +109,23 @@ Orbitask admite un redirect de autenticación opcional mediante:
 ```
 
 La URL debe existir también en **Authentication → URL Configuration → Redirect URLs** del proyecto Supabase. Si no se define, Supabase usa el **Site URL** configurado en el proyecto.
+
+
+### Android — callback nativo
+
+Para Android, Orbitask registra este deep link:
+
+```text
+com.darkhmdda.orbitask://login-callback
+```
+
+Debe agregarse también en **Authentication → URL Configuration → Redirect URLs** de Supabase.
+
+Ejemplo de ejecución Android con Auth nativo:
+
+```bash
+flutter run -d <ANDROID_DEVICE> \
+  --dart-define=SUPABASE_URL=https://TU-PROYECTO.supabase.co \
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE \
+  --dart-define=SUPABASE_AUTH_REDIRECT_URL=com.darkhmdda.orbitask://login-callback
+```
