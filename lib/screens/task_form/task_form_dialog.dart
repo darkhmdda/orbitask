@@ -387,28 +387,70 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
         border: Border.all(color: Theme.of(context).dividerColor),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.alarm_rounded, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(_reminderLabel(editor)),
-          ),
-          Switch(
-            value: editor.enabled,
-            onChanged: (value) => setState(() => editor.enabled = value),
-          ),
-          IconButton(
-            tooltip: 'Editar recordatorio',
-            onPressed: () => _editReminder(index),
-            icon: const Icon(Icons.edit_outlined),
-          ),
-          IconButton(
-            tooltip: 'Eliminar recordatorio',
-            onPressed: () => setState(() => _reminderEditors.removeAt(index)),
-            icon: const Icon(Icons.delete_outline_rounded),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 420;
+
+          final label = Row(
+            children: [
+              const Icon(Icons.alarm_rounded, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _reminderLabel(editor),
+                  maxLines: compact ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          );
+
+          final actions = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Switch(
+                value: editor.enabled,
+                onChanged: (value) =>
+                    setState(() => editor.enabled = value),
+              ),
+              IconButton(
+                tooltip: 'Editar recordatorio',
+                visualDensity: VisualDensity.compact,
+                onPressed: () => _editReminder(index),
+                icon: const Icon(Icons.edit_outlined),
+              ),
+              IconButton(
+                tooltip: 'Eliminar recordatorio',
+                visualDensity: VisualDensity.compact,
+                onPressed: () =>
+                    setState(() => _reminderEditors.removeAt(index)),
+                icon: const Icon(Icons.delete_outline_rounded),
+              ),
+            ],
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                label,
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: actions,
+                ),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: label),
+              const SizedBox(width: 8),
+              actions,
+            ],
+          );
+        },
       ),
     );
   }
