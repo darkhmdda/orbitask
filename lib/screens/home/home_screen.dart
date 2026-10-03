@@ -7,6 +7,7 @@ import '../../models/task.dart';
 import '../../models/task_list.dart';
 import '../../repositories/todo_repository.dart';
 import '../../services/auth_service.dart';
+import '../../services/cloud_sync_service.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/orbitask_brand.dart';
 import '../../widgets/task_card.dart';
@@ -20,6 +21,7 @@ class HomeScreen extends StatefulWidget {
     required this.repository,
     required this.notificationService,
     required this.authService,
+    required this.cloudSyncService,
     required this.themeId,
     required this.onThemeChanged,
   });
@@ -27,6 +29,7 @@ class HomeScreen extends StatefulWidget {
   final TodoRepository repository;
   final NotificationService notificationService;
   final AuthService authService;
+  final CloudSyncService cloudSyncService;
   final String themeId;
   final ValueChanged<String> onThemeChanged;
 
@@ -957,6 +960,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _showSettingsInfo() async {
     var selectedThemeId = widget.themeId;
+    var uploadingCloud = false;
 
     await showDialog<void>(
       context: context,
@@ -1014,16 +1018,65 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'La cuenta ya está conectada. La sincronización de tareas se añadirá en la siguiente etapa.',
+                        'La cuenta ya está conectada. Puedes hacer la primera copia de tus datos locales en Supabase.',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 10),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          FilledButton.icon(
+                            onPressed: uploadingCloud
+                                ? null
+                                : () async {
+                                    setDialogState(
+                                      () => uploadingCloud = true,
+                                    );
+                                    try {
+                                      final result = await widget
+                                          .cloudSyncService
+                                          .uploadLocalSnapshot();
+                                      if (!mounted) return;
+                                      _showMessage(
+                                        'Copia en la nube completada: '
+                                        '${result.lists} listas, '
+                                        '${result.tasks} tareas, '
+                                        '${result.subtasks} subtareas y '
+                                        '${result.reminders} recordatorios.',
+                                      );
+                                    } catch (error) {
+                                      if (mounted) {
+                                        _showMessage(
+                                          'No se pudo subir a Supabase: $error',
+                                        );
+                                      }
+                                    } finally {
+                                      if (context.mounted) {
+                                        setDialogState(
+                                          () => uploadingCloud = false,
+                                        );
+                                      }
+                                    }
+                                  },
+                            icon: uploadingCloud
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.cloud_upload_outlined),
+                            label: Text(
+                              uploadingCloud
+                                  ? 'Subiendo…'
+                                  : 'Subir datos locales',
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () async {
                             try {
                               await widget.authService.signOut();
                               if (context.mounted) {
@@ -1037,9 +1090,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               }
                             }
                           },
-                          icon: const Icon(Icons.logout_rounded),
-                          label: const Text('Cerrar sesión'),
-                        ),
+                            icon: const Icon(Icons.logout_rounded),
+                            label: const Text('Cerrar sesión'),
+                          ),
+                        ],
                       ),
                     ],
                     const SizedBox(height: 22),
