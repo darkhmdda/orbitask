@@ -85,6 +85,7 @@ class _OrbitaskAppState extends State<OrbitaskApp> {
       home: widget.authService.isConfigured
           ? AuthGate(
               authService: widget.authService,
+              database: widget.database,
               signedInChild: home,
             )
           : home,
