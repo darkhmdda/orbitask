@@ -151,6 +151,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: _listId,
                   decoration: const InputDecoration(
                     labelText: 'Lista',
@@ -165,7 +166,13 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                             children: [
                               Icon(listIconData(list.icon), size: 19),
                               const SizedBox(width: 8),
-                              Text(list.name),
+                              Expanded(
+                                child: Text(
+                                  list.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -179,6 +186,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<TaskPriority>(
+                  isExpanded: true,
                   initialValue: _priority,
                   decoration: const InputDecoration(
                     labelText: 'Prioridad',
@@ -320,20 +328,27 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 4,
             children: [
-              Icon(
-                Icons.notifications_active_outlined,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Recordatorios',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.notifications_active_outlined,
+                    color: theme.colorScheme.primary,
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Recordatorios',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
               TextButton.icon(
                 onPressed: _addReminder,
