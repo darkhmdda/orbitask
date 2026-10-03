@@ -4,7 +4,7 @@
 
 Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para organizar tareas, prioridades, fechas, listas y subtareas. El objetivo es funcionar en Android, Windows y Linux y, en etapas posteriores, sincronizar tareas y recordatorios entre dispositivos.
 
-## Estado actual — v0.5-dev (en validación)
+## Estado actual — v0.5-dev
 
 - CRUD de tareas.
 - Captura rápida.
@@ -24,7 +24,11 @@ Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para 
 - Múltiples recordatorios relativos o personalizados.
 - Programación/cancelación automática de notificaciones.
 - Prueba manual de notificación desde Ajustes.
-- En Linux, Orbitask intenta programar el aviso mediante un temporizador de usuario del sistema para que sobreviva al cierre de la app.
+- En Linux/Crostini, los recordatorios usan temporizadores de usuario del sistema y sobreviven al cierre de Orbitask.
+- Edición directa de recordatorios conservando su identificador y reprogramando el mismo timer.
+- Cancelación automática del timer al completar o eliminar una tarea.
+- Persistencia de recordatorios confirmada tras cerrar y volver a abrir Orbitask.
+- v0.5-dev validado en Linux/Crostini con notificaciones reales entregadas con Orbitask cerrada.
 
 ## Historial
 
@@ -33,11 +37,10 @@ Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para 
 - `v0.3-dev`: SQLite y persistencia local.
 - `v0.4-dev`: listas, subtareas, progreso y migración SQLite.
 - `v0.4.1-dev`: limpieza de identidad Orbitask, migración de nombre de base de datos e iconos Material.
-- `v0.5-dev`: recordatorios persistentes y notificaciones locales (en validación).
+- `v0.5-dev`: recordatorios persistentes, edición y cancelación de avisos, y notificaciones locales validadas en Linux/Crostini.
 
 ## Roadmap
 
-- Validar `v0.5-dev` en Linux.
 - Cuenta de usuario y Supabase.
 - Sincronización entre dispositivos.
 - Android.
