@@ -125,6 +125,19 @@ class LocalDatabase {
         );
       ''');
 
+      database.execute('''
+        CREATE TABLE IF NOT EXISTS reminders (
+          id TEXT PRIMARY KEY NOT NULL,
+          task_id TEXT NOT NULL,
+          scheduled_at INTEGER NOT NULL,
+          offset_minutes INTEGER,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+        );
+      ''');
+
       database.execute(r'''
         UPDATE task_lists
         SET icon = CASE icon
@@ -209,6 +222,16 @@ class LocalDatabase {
       database.execute('''
         CREATE INDEX IF NOT EXISTS idx_subtasks_position
         ON subtasks(task_id, position);
+      ''');
+
+      database.execute('''
+        CREATE INDEX IF NOT EXISTS idx_reminders_task_id
+        ON reminders(task_id);
+      ''');
+
+      database.execute('''
+        CREATE INDEX IF NOT EXISTS idx_reminders_scheduled_at
+        ON reminders(scheduled_at);
       ''');
 
       database.execute('COMMIT;');
