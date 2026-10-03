@@ -6,6 +6,7 @@ import '../../models/subtask.dart';
 import '../../models/task.dart';
 import '../../models/task_list.dart';
 import '../../repositories/todo_repository.dart';
+import '../../services/auth_service.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/orbitask_brand.dart';
 import '../../widgets/task_card.dart';
@@ -18,12 +19,14 @@ class HomeScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.notificationService,
+    required this.authService,
     required this.themeId,
     required this.onThemeChanged,
   });
 
   final TodoRepository repository;
   final NotificationService notificationService;
+  final AuthService authService;
   final String themeId;
   final ValueChanged<String> onThemeChanged;
 
@@ -991,6 +994,54 @@ class _HomeScreenState extends State<HomeScreen> {
                         widget.onThemeChanged(themeId);
                       },
                     ),
+                    if (widget.authService.isConfigured) ...[
+                      const SizedBox(height: 22),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Cuenta',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.authService.currentUser?.email ??
+                            'Sesión de Supabase activa.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'La cuenta ya está conectada. La sincronización de tareas se añadirá en la siguiente etapa.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            try {
+                              await widget.authService.signOut();
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            } catch (error) {
+                              if (mounted) {
+                                _showMessage(
+                                  'No se pudo cerrar la sesión: $error',
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.logout_rounded),
+                          label: const Text('Cerrar sesión'),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 22),
                     const Divider(),
                     const SizedBox(height: 16),
