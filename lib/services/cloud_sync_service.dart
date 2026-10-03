@@ -59,6 +59,23 @@ class CloudSyncService {
 
   bool get isConfigured => _client != null;
 
+  RealtimeChannel? subscribeToRemoteChanges(void Function() onChange) {
+    final client = _client;
+    final user = client?.auth.currentUser;
+    if (client == null || user == null) return null;
+
+    final channel = client
+        .channel('orbitask:${user.id}:changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          callback: (_) => onChange(),
+        );
+
+    channel.subscribe();
+    return channel;
+  }
+
   Future<CloudSyncResult> syncNow() async {
     final client = _requireClient();
     final user = _requireUser(client);
