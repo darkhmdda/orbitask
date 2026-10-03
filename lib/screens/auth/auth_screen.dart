@@ -250,7 +250,7 @@ class _AuthScreenState extends State<AuthScreen> {
         if (response.session == null) {
           setState(() {
             _message =
-                'Cuenta creada. Revisa tu correo para confirmar el acceso.';
+                'Cuenta creada. Revisa tu correo, confirma el acceso y luego vuelve a Orbitask para iniciar sesión.';
           });
         }
       } else {
