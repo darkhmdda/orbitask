@@ -26,6 +26,7 @@ class HomeScreen extends StatefulWidget {
     required this.cloudSyncService,
     required this.themeId,
     required this.onThemeChanged,
+    required this.onCloudThemeChanged,
   });
 
   final TodoRepository repository;
@@ -34,6 +35,7 @@ class HomeScreen extends StatefulWidget {
   final CloudSyncService cloudSyncService;
   final String themeId;
   final ValueChanged<String> onThemeChanged;
+  final ValueChanged<String> onCloudThemeChanged;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -116,8 +118,10 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     try {
-      await widget.cloudSyncService.syncNow();
+      final result = await widget.cloudSyncService.syncNow();
       if (!mounted) return;
+
+      widget.onCloudThemeChanged(result.themeId);
 
       if (_cloudSyncFailed) {
         setState(() => _cloudSyncFailed = false);
@@ -1086,7 +1090,9 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Elige la apariencia que prefieras. La selección se guarda localmente.',
+                      widget.authService.currentUser == null
+                          ? 'Elige la apariencia que prefieras. La selección se guarda localmente.'
+                          : 'Elige la apariencia que prefieras. La selección se sincroniza con tu cuenta.',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -1143,6 +1149,13 @@ class _HomeScreenState extends State<HomeScreen>
                                           .cloudSyncService
                                           .syncNow();
                                       if (!mounted) return;
+
+                                      widget.onCloudThemeChanged(
+                                        result.themeId,
+                                      );
+                                      setDialogState(
+                                        () => selectedThemeId = result.themeId,
+                                      );
 
                                       if (_cloudSyncFailed) {
                                         setState(
