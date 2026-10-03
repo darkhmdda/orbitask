@@ -424,55 +424,105 @@ class _HomeScreenState extends State<HomeScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _sectionTitle(),
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+              if (MediaQuery.sizeOf(context).width < 600) ...[
+                Text(
+                  _sectionTitle(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${now.day} de ${months[now.month - 1]} de ${now.year}',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _LocalStatusChip(
+                          loading: _loading,
+                          cloudConnected:
+                              widget.authService.currentUser != null,
+                          cloudSyncing: _cloudSyncing,
+                          cloudSyncFailed: _cloudSyncFailed,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${now.day} de ${months[now.month - 1]} de ${now.year}',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                  _LocalStatusChip(
-                    loading: _loading,
-                    cloudConnected:
-                        widget.authService.currentUser != null,
-                    cloudSyncing: _cloudSyncing,
-                    cloudSyncFailed: _cloudSyncFailed,
-                  ),
-                  if (showMobileListButton) ...[
-                    const SizedBox(width: 4),
+                    if (showMobileListButton)
+                      IconButton(
+                        tooltip: 'Listas',
+                        onPressed: _showListsPicker,
+                        icon: const Icon(Icons.folder_outlined),
+                      ),
                     IconButton(
-                      tooltip: 'Listas',
-                      onPressed: _showListsPicker,
-                      icon: const Icon(Icons.folder_outlined),
+                      tooltip: 'Buscar',
+                      onPressed: _showSearchInfo,
+                      icon: const Icon(Icons.search_rounded),
+                    ),
+                    IconButton(
+                      tooltip: 'Ajustes',
+                      onPressed: _showSettingsInfo,
+                      icon: const Icon(Icons.settings_outlined),
                     ),
                   ],
-                  IconButton(
-                    tooltip: 'Buscar',
-                    onPressed: _showSearchInfo,
-                    icon: const Icon(Icons.search_rounded),
-                  ),
-                  IconButton(
-                    tooltip: 'Ajustes',
-                    onPressed: _showSettingsInfo,
-                    icon: const Icon(Icons.settings_outlined),
-                  ),
-                ],
-              ),
+                ),
+              ] else
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _sectionTitle(),
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${now.day} de ${months[now.month - 1]} de ${now.year}',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _LocalStatusChip(
+                      loading: _loading,
+                      cloudConnected:
+                          widget.authService.currentUser != null,
+                      cloudSyncing: _cloudSyncing,
+                      cloudSyncFailed: _cloudSyncFailed,
+                    ),
+                    if (showMobileListButton) ...[
+                      const SizedBox(width: 4),
+                      IconButton(
+                        tooltip: 'Listas',
+                        onPressed: _showListsPicker,
+                        icon: const Icon(Icons.folder_outlined),
+                      ),
+                    ],
+                    IconButton(
+                      tooltip: 'Buscar',
+                      onPressed: _showSearchInfo,
+                      icon: const Icon(Icons.search_rounded),
+                    ),
+                    IconButton(
+                      tooltip: 'Ajustes',
+                      onPressed: _showSettingsInfo,
+                      icon: const Icon(Icons.settings_outlined),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 28),
               if (_loading)
                 const _LoadingState()
