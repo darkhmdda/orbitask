@@ -77,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _initializeHome() async {
+    await widget.notificationService.requestPermissions();
     await _loadData();
     if (!mounted) return;
 
