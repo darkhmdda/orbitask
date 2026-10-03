@@ -25,6 +25,7 @@ class CloudSyncResult {
     required this.remoteTasks,
     required this.remoteSubtasks,
     required this.remoteReminders,
+    required this.remoteDeletions,
     required this.uploaded,
   });
 
@@ -32,10 +33,15 @@ class CloudSyncResult {
   final int remoteTasks;
   final int remoteSubtasks;
   final int remoteReminders;
+  final int remoteDeletions;
   final CloudUploadResult uploaded;
 
   int get remoteTotal =>
-      remoteLists + remoteTasks + remoteSubtasks + remoteReminders;
+      remoteLists +
+      remoteTasks +
+      remoteSubtasks +
+      remoteReminders +
+      remoteDeletions;
 }
 
 class CloudSyncService {
@@ -55,22 +61,23 @@ class CloudSyncService {
     final client = _requireClient();
     final user = _requireUser(client);
 
+    final remoteDeletions = await client
+        .from('sync_deletions')
+        .select()
+        .eq('user_id', user.id);
+
+    _mergeRemoteDeletions(remoteDeletions);
+
     final remoteLists = await client
         .from('task_lists')
         .select()
         .eq('user_id', user.id);
-    final remoteTasks = await client
-        .from('tasks')
-        .select()
-        .eq('user_id', user.id);
-    final remoteSubtasks = await client
-        .from('subtasks')
-        .select()
-        .eq('user_id', user.id);
-    final remoteReminders = await client
-        .from('reminders')
-        .select()
-        .eq('user_id', user.id);
+    final remoteTasks =
+        await client.from('tasks').select().eq('user_id', user.id);
+    final remoteSubtasks =
+        await client.from('subtasks').select().eq('user_id', user.id);
+    final remoteReminders =
+        await client.from('reminders').select().eq('user_id', user.id);
 
     _mergeRemoteSnapshot(
       lists: remoteLists,
@@ -79,7 +86,11 @@ class CloudSyncService {
       reminders: remoteReminders,
     );
 
+    _applyLocalDeletionJournal();
+
     final uploaded = await uploadLocalSnapshot();
+    await _uploadDeletionJournal(client, user.id);
+    await _applyDeletionJournalToCloud(client, user.id);
 
     _database.setSetting(
       'last_cloud_sync_at',
@@ -91,6 +102,7 @@ class CloudSyncService {
       remoteTasks: remoteTasks.length,
       remoteSubtasks: remoteSubtasks.length,
       remoteReminders: remoteReminders.length,
+      remoteDeletions: remoteDeletions.length,
       uploaded: uploaded,
     );
   }
@@ -134,7 +146,8 @@ class CloudSyncService {
                 'title': task.title,
                 'description': task.description,
                 'priority': task.priority.index,
-                'due_date': task.dueDate == null ? null : _iso(task.dueDate!),
+                'due_date':
+                    task.dueDate == null ? null : _iso(task.dueDate!),
                 'completed': task.completed,
                 'list_id': task.listId,
                 'created_at': _iso(task.createdAt),
@@ -335,6 +348,213 @@ class CloudSyncService {
       database.execute('ROLLBACK;');
       rethrow;
     }
+  }
+
+  void _mergeRemoteDeletions(List<Map<String, dynamic>> remote) {
+    if (remote.isEmpty) return;
+
+    final statement = _database.raw.prepare('''
+      INSERT INTO sync_deletions (
+        entity_type,
+        entity_id,
+        deleted_at
+      ) VALUES (?, ?, ?)
+      ON CONFLICT(entity_type, entity_id) DO UPDATE SET
+        deleted_at = excluded.deleted_at
+      WHERE excluded.deleted_at > sync_deletions.deleted_at;
+    ''');
+
+    try {
+      for (final row in remote) {
+        statement.execute([
+          row['entity_type']! as String,
+          row['entity_id']! as String,
+          _millis(row['deleted_at']),
+        ]);
+      }
+    } finally {
+      statement.close();
+    }
+  }
+
+  void _applyLocalDeletionJournal() {
+    final database = _database.raw;
+    final rows = database.select('''
+      SELECT entity_type, entity_id, deleted_at
+      FROM sync_deletions
+      ORDER BY deleted_at ASC;
+    ''');
+
+    database.execute('BEGIN IMMEDIATE;');
+
+    try {
+      for (final row in rows) {
+        final type = row['entity_type']! as String;
+        final id = row['entity_id']! as String;
+        final deletedAt = row['deleted_at']! as int;
+
+        switch (type) {
+          case 'task':
+            _deleteLocalIfNotNewer('tasks', id, deletedAt);
+            break;
+          case 'subtask':
+            _deleteLocalIfNotNewer('subtasks', id, deletedAt);
+            break;
+          case 'reminder':
+            _deleteLocalIfNotNewer('reminders', id, deletedAt);
+            break;
+          case 'task_list':
+            if (id != 'inbox') {
+              final listRows = database.select(
+                'SELECT updated_at FROM task_lists WHERE id = ? LIMIT 1;',
+                [id],
+              );
+              final canDelete = listRows.isEmpty ||
+                  (listRows.first['updated_at']! as int) <= deletedAt;
+
+              if (canDelete) {
+                final moveStatement = database.prepare('''
+                  UPDATE tasks
+                  SET list_id = 'inbox', updated_at = ?
+                  WHERE list_id = ?;
+                ''');
+                try {
+                  moveStatement.execute([deletedAt, id]);
+                } finally {
+                  moveStatement.close();
+                }
+                _deleteLocalIfNotNewer('task_lists', id, deletedAt);
+              }
+            }
+            break;
+        }
+      }
+
+      database.execute('COMMIT;');
+    } catch (_) {
+      database.execute('ROLLBACK;');
+      rethrow;
+    }
+  }
+
+  void _deleteLocalIfNotNewer(
+    String table,
+    String id,
+    int deletedAt,
+  ) {
+    final statement = _database.raw.prepare(
+      'DELETE FROM $table WHERE id = ? AND updated_at <= ?;',
+    );
+    try {
+      statement.execute([id, deletedAt]);
+    } finally {
+      statement.close();
+    }
+  }
+
+  Future<void> _uploadDeletionJournal(
+    SupabaseClient client,
+    String userId,
+  ) async {
+    final rows = _database.raw.select('''
+      SELECT entity_type, entity_id, deleted_at
+      FROM sync_deletions;
+    ''');
+
+    if (rows.isEmpty) return;
+
+    await client.from('sync_deletions').upsert(
+      rows
+          .map(
+            (row) => <String, dynamic>{
+              'user_id': userId,
+              'entity_type': row['entity_type']! as String,
+              'entity_id': row['entity_id']! as String,
+              'deleted_at': DateTime.fromMillisecondsSinceEpoch(
+                row['deleted_at']! as int,
+                isUtc: true,
+              ).toIso8601String(),
+            },
+          )
+          .toList(growable: false),
+      onConflict: 'user_id,entity_type,entity_id',
+    );
+  }
+
+  Future<void> _applyDeletionJournalToCloud(
+    SupabaseClient client,
+    String userId,
+  ) async {
+    final rows = _database.raw.select('''
+      SELECT entity_type, entity_id, deleted_at
+      FROM sync_deletions
+      ORDER BY deleted_at ASC;
+    ''');
+
+    for (final row in rows) {
+      final type = row['entity_type']! as String;
+      final id = row['entity_id']! as String;
+      final deletedAt = DateTime.fromMillisecondsSinceEpoch(
+        row['deleted_at']! as int,
+        isUtc: true,
+      ).toIso8601String();
+
+      switch (type) {
+        case 'reminder':
+          await _deleteCloudIfNotNewer(
+            client,
+            'reminders',
+            userId,
+            id,
+            deletedAt,
+          );
+          break;
+        case 'subtask':
+          await _deleteCloudIfNotNewer(
+            client,
+            'subtasks',
+            userId,
+            id,
+            deletedAt,
+          );
+          break;
+        case 'task':
+          await _deleteCloudIfNotNewer(
+            client,
+            'tasks',
+            userId,
+            id,
+            deletedAt,
+          );
+          break;
+        case 'task_list':
+          if (id != 'inbox') {
+            await _deleteCloudIfNotNewer(
+              client,
+              'task_lists',
+              userId,
+              id,
+              deletedAt,
+            );
+          }
+          break;
+      }
+    }
+  }
+
+  Future<void> _deleteCloudIfNotNewer(
+    SupabaseClient client,
+    String table,
+    String userId,
+    String id,
+    String deletedAt,
+  ) async {
+    await client
+        .from(table)
+        .delete()
+        .eq('user_id', userId)
+        .eq('id', id)
+        .lte('updated_at', deletedAt);
   }
 
   SupabaseClient _requireClient() {
