@@ -94,3 +94,14 @@ Sin estas variables Orbitask continúa funcionando en modo local, igual que en v
 - Android
 - Windows
 - Linux
+
+
+### Redirect de confirmación de correo
+
+Orbitask admite un redirect de autenticación opcional mediante:
+
+```bash
+--dart-define=SUPABASE_AUTH_REDIRECT_URL=<url-permitida-en-supabase>
+```
+
+La URL debe existir también en **Authentication → URL Configuration → Redirect URLs** del proyecto Supabase. Si no se define, Supabase usa el **Site URL** configurado en el proyecto.
