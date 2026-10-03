@@ -334,7 +334,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                  _LocalStatusChip(loading: _loading),
+                  _LocalStatusChip(
+                    loading: _loading,
+                    cloudConnected:
+                        widget.authService.currentUser != null,
+                  ),
                   if (showMobileListButton) ...[
                     const SizedBox(width: 4),
                     IconButton(
@@ -1018,7 +1022,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'La cuenta ya está conectada. Puedes hacer la primera copia de tus datos locales en Supabase.',
+                        'La cuenta está conectada. Orbitask combina la nube con SQLite usando la versión más reciente de cada elemento.',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -1038,14 +1042,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                     try {
                                       final result = await widget
                                           .cloudSyncService
-                                          .uploadLocalSnapshot();
+                                          .syncNow();
+                                      if (!mounted) return;
+
+                                      _notificationsReconciled = false;
+                                      await _loadData();
+
                                       if (!mounted) return;
                                       _showMessage(
-                                        'Copia en la nube completada: '
-                                        '${result.lists} listas, '
-                                        '${result.tasks} tareas, '
-                                        '${result.subtasks} subtareas y '
-                                        '${result.reminders} recordatorios.',
+                                        'Sincronización completada. '
+                                        'Nube revisada: '
+                                        '${result.remoteLists} listas, '
+                                        '${result.remoteTasks} tareas, '
+                                        '${result.remoteSubtasks} subtareas y '
+                                        '${result.remoteReminders} recordatorios.',
                                       );
                                     } catch (error) {
                                       if (mounted) {
@@ -1071,8 +1081,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 : const Icon(Icons.cloud_upload_outlined),
                             label: Text(
                               uploadingCloud
-                                  ? 'Subiendo…'
-                                  : 'Subir datos locales',
+                                  ? 'Sincronizando…'
+                                  : 'Sincronizar ahora',
                             ),
                           ),
                           OutlinedButton.icon(
@@ -1228,9 +1238,13 @@ class _SidebarListItem extends StatelessWidget {
 }
 
 class _LocalStatusChip extends StatelessWidget {
-  const _LocalStatusChip({required this.loading});
+  const _LocalStatusChip({
+    required this.loading,
+    required this.cloudConnected,
+  });
 
   final bool loading;
+  final bool cloudConnected;
 
   @override
   Widget build(BuildContext context) {
@@ -1246,12 +1260,18 @@ class _LocalStatusChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            loading ? Icons.sync_rounded : Icons.storage_rounded,
+            loading
+                ? Icons.sync_rounded
+                : (cloudConnected
+                    ? Icons.cloud_done_outlined
+                    : Icons.storage_rounded),
             size: 16,
           ),
           const SizedBox(width: 6),
           Text(
-            loading ? 'Cargando…' : 'Guardado local',
+            loading
+                ? 'Cargando…'
+                : (cloudConnected ? 'Nube conectada' : 'Guardado local'),
             style: theme.textTheme.labelMedium,
           ),
         ],
