@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/list_icons.dart';
 import '../../models/reminder.dart';
@@ -6,6 +9,8 @@ import '../../models/subtask.dart';
 import '../../models/task.dart';
 import '../../models/task_list.dart';
 import '../../repositories/todo_repository.dart';
+import '../../services/auth_service.dart';
+import '../../services/cloud_sync_service.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/orbitask_brand.dart';
 import '../../widgets/task_card.dart';
@@ -18,20 +23,27 @@ class HomeScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.notificationService,
+    required this.authService,
+    required this.cloudSyncService,
     required this.themeId,
     required this.onThemeChanged,
+    required this.onCloudThemeChanged,
   });
 
   final TodoRepository repository;
   final NotificationService notificationService;
+  final AuthService authService;
+  final CloudSyncService cloudSyncService;
   final String themeId;
   final ValueChanged<String> onThemeChanged;
+  final ValueChanged<String> onCloudThemeChanged;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with WidgetsBindingObserver {
   int _filterIndex = 0;
   String? _selectedListId;
   final TextEditingController _quickAddController = TextEditingController();
@@ -42,18 +54,123 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, List<Reminder>> _remindersByTask = const {};
   bool _notificationsReconciled = false;
   bool _loading = true;
+  bool _cloudSyncing = false;
+  bool _cloudSyncFailed = false;
   String? _loadError;
+  Timer? _cloudSyncDebounce;
+  Timer? _cloudSyncTimer;
+  RealtimeChannel? _cloudRealtimeChannel;
+  DateTime? _ignoreRealtimeUntil;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_initializeHome());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _scheduleCloudSync(immediate: true);
+    }
+  }
+
+  Future<void> _initializeHome() async {
+    await _loadData();
+    if (!mounted) return;
+
+    _startRealtimeSubscription();
+    _scheduleCloudSync(immediate: true);
+    _cloudSyncTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _scheduleCloudSync(immediate: true),
+    );
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _cloudSyncDebounce?.cancel();
+    _cloudSyncTimer?.cancel();
+
+    final realtimeChannel = _cloudRealtimeChannel;
+    if (realtimeChannel != null) {
+      unawaited(realtimeChannel.unsubscribe().then((_) {}));
+    }
+
     _quickAddController.dispose();
     super.dispose();
+  }
+
+  void _startRealtimeSubscription() {
+    if (!widget.cloudSyncService.isConfigured ||
+        widget.authService.currentUser == null) {
+      return;
+    }
+
+    _cloudRealtimeChannel = widget.cloudSyncService.subscribeToRemoteChanges(
+      () {
+        final ignoreUntil = _ignoreRealtimeUntil;
+        if (ignoreUntil != null && DateTime.now().isBefore(ignoreUntil)) {
+          return;
+        }
+        _scheduleCloudSync(immediate: true);
+      },
+    );
+  }
+
+  void _scheduleCloudSync({bool immediate = false}) {
+    if (!widget.cloudSyncService.isConfigured ||
+        widget.authService.currentUser == null) {
+      return;
+    }
+
+    _cloudSyncDebounce?.cancel();
+    _cloudSyncDebounce = Timer(
+      immediate ? Duration.zero : const Duration(milliseconds: 1500),
+      () => unawaited(_runAutomaticCloudSync()),
+    );
+  }
+
+  Future<void> _runAutomaticCloudSync() async {
+    if (_cloudSyncing ||
+        !widget.cloudSyncService.isConfigured ||
+        widget.authService.currentUser == null) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() => _cloudSyncing = true);
+    }
+
+    _ignoreRealtimeUntil = DateTime.now().add(
+      const Duration(seconds: 5),
+    );
+
+    try {
+      final result = await widget.cloudSyncService.syncNow();
+      if (!mounted) return;
+
+      widget.onCloudThemeChanged(result.themeId);
+
+      if (_cloudSyncFailed) {
+        setState(() => _cloudSyncFailed = false);
+      }
+
+      _notificationsReconciled = false;
+      await _loadData();
+    } catch (_) {
+      if (mounted && !_cloudSyncFailed) {
+        setState(() => _cloudSyncFailed = true);
+      }
+      // SQLite sigue siendo usable y el siguiente cambio, reanudación
+      // o ciclo periódico vuelve a intentar la sincronización.
+    } finally {
+      if (mounted) {
+        setState(() => _cloudSyncing = false);
+      }
+    }
   }
 
   Future<void> _loadData() async {
@@ -328,7 +445,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                  _LocalStatusChip(loading: _loading),
+                  _LocalStatusChip(
+                    loading: _loading,
+                    cloudConnected:
+                        widget.authService.currentUser != null,
+                    cloudSyncing: _cloudSyncing,
+                    cloudSyncFailed: _cloudSyncFailed,
+                  ),
                   if (showMobileListButton) ...[
                     const SizedBox(width: 4),
                     IconButton(
@@ -563,6 +686,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       _showMessage('Tarea guardada localmente.');
+      _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
       _showDatabaseError(error);
@@ -640,6 +764,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _showMessage(
           reminderWarning ?? 'Tarea creada y guardada.',
         );
+        _scheduleCloudSync();
       } else {
         final updatedTask = task.copyWith(
           title: result.title,
@@ -688,6 +813,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _showMessage(
           reminderWarning ?? 'Tarea actualizada y guardada.',
         );
+        _scheduleCloudSync();
       }
     } catch (error) {
       if (!mounted) return;
@@ -727,6 +853,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (reminderWarning != null) {
         _showMessage(reminderWarning);
       }
+      _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
       _showDatabaseError(error);
@@ -754,6 +881,7 @@ class _HomeScreenState extends State<HomeScreen> {
           subtask.taskId: updatedList,
         };
       });
+      _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
       _showDatabaseError(error);
@@ -784,6 +912,8 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       ScaffoldMessenger.of(context).clearSnackBars();
+      _scheduleCloudSync();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Se eliminó “${task.title}”.'),
@@ -811,12 +941,22 @@ class _HomeScreenState extends State<HomeScreen> {
     int index,
   ) async {
     try {
-      await widget.repository.createTask(task, subtasks, reminders);
+      final restoredAt = DateTime.now();
+      final restoredTask = task.copyWith(updatedAt: restoredAt);
+
+      await widget.repository.createTask(
+        restoredTask,
+        subtasks,
+        reminders,
+      );
 
       String? reminderWarning;
-      if (!task.completed) {
+      if (!restoredTask.completed) {
         reminderWarning = await widget.notificationService
-            .scheduleTaskReminders(task: task, reminders: reminders);
+            .scheduleTaskReminders(
+              task: restoredTask,
+              reminders: reminders,
+            );
       }
 
       if (!mounted) return;
@@ -824,7 +964,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         final restored = [..._tasks];
         final safeIndex = index > restored.length ? restored.length : index;
-        restored.insert(safeIndex, task);
+        restored.insert(safeIndex, restoredTask);
         _tasks = restored;
         _subtasksByTask = {
           ..._subtasksByTask,
@@ -839,6 +979,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (reminderWarning != null) {
         _showMessage(reminderWarning);
       }
+      _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
       _showDatabaseError(error);
@@ -875,6 +1016,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     setState(() => _loading = true);
     await _loadData();
+    _scheduleCloudSync();
   }
 
   Future<void> _showListsPicker() async {
@@ -954,6 +1096,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _showSettingsInfo() async {
     var selectedThemeId = widget.themeId;
+    var uploadingCloud = false;
 
     await showDialog<void>(
       context: context,
@@ -978,7 +1121,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Elige la apariencia que prefieras. La selección se guarda localmente.',
+                      widget.authService.currentUser == null
+                          ? 'Elige la apariencia que prefieras. La selección se guarda localmente.'
+                          : 'Elige la apariencia que prefieras. La selección se sincroniza con tu cuenta.',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -989,8 +1134,134 @@ class _HomeScreenState extends State<HomeScreen> {
                       onSelected: (themeId) {
                         setDialogState(() => selectedThemeId = themeId);
                         widget.onThemeChanged(themeId);
+                        _scheduleCloudSync();
                       },
                     ),
+                    if (widget.authService.isConfigured) ...[
+                      const SizedBox(height: 22),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Cuenta',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.authService.currentUser?.email ??
+                            'Sesión de Supabase activa.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'La cuenta está conectada. Orbitask combina la nube con SQLite usando la versión más reciente de cada elemento.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          FilledButton.icon(
+                            onPressed: uploadingCloud || _cloudSyncing
+                                ? null
+                                : () async {
+                                    setDialogState(
+                                      () => uploadingCloud = true,
+                                    );
+                                    setState(() => _cloudSyncing = true);
+                                    try {
+                                      final result = await widget
+                                          .cloudSyncService
+                                          .syncNow();
+                                      if (!mounted) return;
+
+                                      widget.onCloudThemeChanged(
+                                        result.themeId,
+                                      );
+                                      setDialogState(
+                                        () => selectedThemeId = result.themeId,
+                                      );
+
+                                      if (_cloudSyncFailed) {
+                                        setState(
+                                          () => _cloudSyncFailed = false,
+                                        );
+                                      }
+
+                                      _notificationsReconciled = false;
+                                      await _loadData();
+
+                                      if (!mounted) return;
+                                      _showMessage(
+                                        'Sincronización completada. '
+                                        'Nube revisada: '
+                                        '${result.remoteLists} listas, '
+                                        '${result.remoteTasks} tareas, '
+                                        '${result.remoteSubtasks} subtareas, '
+                                        '${result.remoteReminders} recordatorios y '
+                                        '${result.remoteDeletions} eliminaciones.',
+                                      );
+                                    } catch (error) {
+                                      if (mounted) {
+                                        setState(
+                                          () => _cloudSyncFailed = true,
+                                        );
+                                        _showMessage(
+                                          'No se pudo sincronizar con Supabase: $error',
+                                        );
+                                      }
+                                    } finally {
+                                      if (context.mounted) {
+                                        setDialogState(
+                                          () => uploadingCloud = false,
+                                        );
+                                      }
+                                      if (mounted) {
+                                        setState(() => _cloudSyncing = false);
+                                      }
+                                    }
+                                  },
+                            icon: uploadingCloud
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.cloud_upload_outlined),
+                            label: Text(
+                              uploadingCloud
+                                  ? 'Sincronizando…'
+                                  : 'Sincronizar ahora',
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                            try {
+                              await widget.authService.signOut();
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            } catch (error) {
+                              if (mounted) {
+                                _showMessage(
+                                  'No se pudo cerrar la sesión: $error',
+                                );
+                              }
+                            }
+                          },
+                            icon: const Icon(Icons.logout_rounded),
+                            label: const Text('Cerrar sesión'),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 22),
                     const Divider(),
                     const SizedBox(height: 16),
@@ -1123,9 +1394,17 @@ class _SidebarListItem extends StatelessWidget {
 }
 
 class _LocalStatusChip extends StatelessWidget {
-  const _LocalStatusChip({required this.loading});
+  const _LocalStatusChip({
+    required this.loading,
+    required this.cloudConnected,
+    required this.cloudSyncing,
+    required this.cloudSyncFailed,
+  });
 
   final bool loading;
+  final bool cloudConnected;
+  final bool cloudSyncing;
+  final bool cloudSyncFailed;
 
   @override
   Widget build(BuildContext context) {
@@ -1141,12 +1420,26 @@ class _LocalStatusChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            loading ? Icons.sync_rounded : Icons.storage_rounded,
+            loading || cloudSyncing
+                ? Icons.sync_rounded
+                : (cloudSyncFailed
+                    ? Icons.cloud_off_outlined
+                    : (cloudConnected
+                        ? Icons.cloud_done_outlined
+                        : Icons.storage_rounded)),
             size: 16,
           ),
           const SizedBox(width: 6),
           Text(
-            loading ? 'Cargando…' : 'Guardado local',
+            loading
+                ? 'Cargando…'
+                : (cloudSyncing
+                    ? 'Sincronizando…'
+                    : (cloudSyncFailed
+                        ? 'Sin conexión'
+                        : (cloudConnected
+                            ? 'Nube conectada'
+                            : 'Guardado local'))),
             style: theme.textTheme.labelMedium,
           ),
         ],

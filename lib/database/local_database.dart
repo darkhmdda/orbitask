@@ -145,6 +145,15 @@ class LocalDatabase {
         );
       ''');
 
+      database.execute('''
+        CREATE TABLE IF NOT EXISTS sync_deletions (
+          entity_type TEXT NOT NULL,
+          entity_id TEXT NOT NULL,
+          deleted_at INTEGER NOT NULL,
+          PRIMARY KEY (entity_type, entity_id)
+        );
+      ''');
+
       database.execute(r'''
         UPDATE task_lists
         SET icon = CASE icon
@@ -239,6 +248,11 @@ class LocalDatabase {
       database.execute('''
         CREATE INDEX IF NOT EXISTS idx_reminders_scheduled_at
         ON reminders(scheduled_at);
+      ''');
+
+      database.execute('''
+        CREATE INDEX IF NOT EXISTS idx_sync_deletions_deleted_at
+        ON sync_deletions(deleted_at);
       ''');
 
       database.execute('COMMIT;');
