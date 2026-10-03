@@ -39,7 +39,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with WidgetsBindingObserver {
   int _filterIndex = 0;
   String? _selectedListId;
   final TextEditingController _quickAddController = TextEditingController();
@@ -51,6 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _notificationsReconciled = false;
   bool _loading = true;
   bool _cloudSyncing = false;
+  bool _cloudSyncFailed = false;
   String? _loadError;
   Timer? _cloudSyncDebounce;
   Timer? _cloudSyncTimer;
@@ -58,7 +60,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_initializeHome());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _scheduleCloudSync(immediate: true);
+    }
   }
 
   Future<void> _initializeHome() async {
@@ -74,6 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cloudSyncDebounce?.cancel();
     _cloudSyncTimer?.cancel();
     _quickAddController.dispose();
@@ -108,11 +119,18 @@ class _HomeScreenState extends State<HomeScreen> {
       await widget.cloudSyncService.syncNow();
       if (!mounted) return;
 
+      if (_cloudSyncFailed) {
+        setState(() => _cloudSyncFailed = false);
+      }
+
       _notificationsReconciled = false;
       await _loadData();
     } catch (_) {
-      // La sincronización automática es silenciosa: SQLite sigue siendo usable
-      // y el siguiente cambio o ciclo periódico vuelve a intentarlo.
+      if (mounted && !_cloudSyncFailed) {
+        setState(() => _cloudSyncFailed = true);
+      }
+      // SQLite sigue siendo usable y el siguiente cambio, reanudación
+      // o ciclo periódico vuelve a intentar la sincronización.
     } finally {
       if (mounted) {
         setState(() => _cloudSyncing = false);
@@ -397,6 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     cloudConnected:
                         widget.authService.currentUser != null,
                     cloudSyncing: _cloudSyncing,
+                    cloudSyncFailed: _cloudSyncFailed,
                   ),
                   if (showMobileListButton) ...[
                     const SizedBox(width: 4),
@@ -1125,6 +1144,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                           .syncNow();
                                       if (!mounted) return;
 
+                                      if (_cloudSyncFailed) {
+                                        setState(
+                                          () => _cloudSyncFailed = false,
+                                        );
+                                      }
+
                                       _notificationsReconciled = false;
                                       await _loadData();
 
@@ -1140,6 +1165,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       );
                                     } catch (error) {
                                       if (mounted) {
+                                        setState(
+                                          () => _cloudSyncFailed = true,
+                                        );
                                         _showMessage(
                                           'No se pudo sincronizar con Supabase: $error',
                                         );
@@ -1326,11 +1354,13 @@ class _LocalStatusChip extends StatelessWidget {
     required this.loading,
     required this.cloudConnected,
     required this.cloudSyncing,
+    required this.cloudSyncFailed,
   });
 
   final bool loading;
   final bool cloudConnected;
   final bool cloudSyncing;
+  final bool cloudSyncFailed;
 
   @override
   Widget build(BuildContext context) {
@@ -1348,9 +1378,11 @@ class _LocalStatusChip extends StatelessWidget {
           Icon(
             loading || cloudSyncing
                 ? Icons.sync_rounded
-                : (cloudConnected
-                    ? Icons.cloud_done_outlined
-                    : Icons.storage_rounded),
+                : (cloudSyncFailed
+                    ? Icons.cloud_off_outlined
+                    : (cloudConnected
+                        ? Icons.cloud_done_outlined
+                        : Icons.storage_rounded)),
             size: 16,
           ),
           const SizedBox(width: 6),
@@ -1359,9 +1391,11 @@ class _LocalStatusChip extends StatelessWidget {
                 ? 'Cargando…'
                 : (cloudSyncing
                     ? 'Sincronizando…'
-                    : (cloudConnected
-                        ? 'Nube conectada'
-                        : 'Guardado local')),
+                    : (cloudSyncFailed
+                        ? 'Sin conexión'
+                        : (cloudConnected
+                            ? 'Nube conectada'
+                            : 'Guardado local'))),
             style: theme.textTheme.labelMedium,
           ),
         ],
