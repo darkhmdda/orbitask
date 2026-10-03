@@ -22,11 +22,9 @@ class CloudUploadResult {
 class CloudSyncService {
   CloudSyncService({
     required SupabaseClient? client,
-    required TodoRepository repository,
-    required LocalDatabase database,
-  })  : _client = client,
-        _repository = repository,
-        _database = database;
+    required this._repository,
+    required this._database,
+  }) : _client = client;
 
   final SupabaseClient? _client;
   final TodoRepository _repository;
