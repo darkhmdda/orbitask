@@ -70,14 +70,21 @@ class NotificationService {
     }
   }
 
-  Future<void> requestPermissions() async {
+  Future<void> requestPermissions({bool exactAlarms = false}) async {
     if (!_initialized) return;
 
     if (Platform.isAndroid) {
-      await _plugin
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.requestNotificationsPermission();
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      await android?.requestNotificationsPermission();
+
+      if (exactAlarms) {
+        final canScheduleExact =
+            await android?.canScheduleExactNotifications() ?? false;
+        if (!canScheduleExact) {
+          await android?.requestExactAlarmsPermission();
+        }
+      }
     }
   }
 
@@ -144,19 +151,35 @@ class NotificationService {
       windows: WindowsNotificationDetails(),
     );
 
+    var androidScheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
+    var exactAlarmGranted = false;
+
+    if (Platform.isAndroid) {
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      exactAlarmGranted =
+          await android?.canScheduleExactNotifications() ?? false;
+      if (exactAlarmGranted) {
+        androidScheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
+      }
+    }
+
     await _plugin.zonedSchedule(
       id: notificationId(reminder.id),
       title: 'Orbitask',
       body: 'Recordatorio: ${task.title}',
       scheduledDate: tz.TZDateTime.from(reminder.scheduledAt, tz.local),
       notificationDetails: details,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: androidScheduleMode,
       payload: 'task:${task.id}',
     );
 
-    return const ReminderScheduleResult(
+    return ReminderScheduleResult(
       scheduled: true,
       survivesAppExit: true,
+      warning: Platform.isAndroid && !exactAlarmGranted
+          ? 'El recordatorio quedó programado, pero Android puede retrasarlo porque el acceso a Alarmas y recordatorios no está activado.'
+          : null,
     );
   }
 
