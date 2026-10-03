@@ -24,7 +24,10 @@ Future<void> main() async {
   final database = await LocalDatabase.open();
   final repository = TodoRepository(database);
   final notificationService = NotificationService();
-  final authService = AuthService(supabaseClient);
+  final authService = AuthService(
+    supabaseClient,
+    emailRedirectTo: CloudConfig.authRedirectUrl,
+  );
   final cloudSyncService = CloudSyncService(
     client: supabaseClient,
     repository: repository,
