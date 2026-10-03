@@ -787,7 +787,9 @@ class _HomeScreenState extends State<HomeScreen>
 
         String? reminderWarning;
         if (result.reminders.any((item) => item.enabled)) {
-          await widget.notificationService.requestPermissions();
+          await widget.notificationService.requestPermissions(
+            exactAlarms: true,
+          );
           reminderWarning = await widget.notificationService
               .scheduleTaskReminders(
                 task: newTask,
@@ -837,7 +839,9 @@ class _HomeScreenState extends State<HomeScreen>
         String? reminderWarning;
         if (!updatedTask.completed &&
             result.reminders.any((item) => item.enabled)) {
-          await widget.notificationService.requestPermissions();
+          await widget.notificationService.requestPermissions(
+            exactAlarms: true,
+          );
           reminderWarning = await widget.notificationService
               .scheduleTaskReminders(
                 task: updatedTask,
