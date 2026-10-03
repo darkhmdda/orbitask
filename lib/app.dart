@@ -45,6 +45,17 @@ class _OrbitaskAppState extends State<OrbitaskApp> {
     if (normalized == _themeId) return;
 
     widget.database.setSetting('theme_id', normalized);
+    widget.database.setSetting(
+      'theme_updated_at',
+      DateTime.now().millisecondsSinceEpoch.toString(),
+    );
+    setState(() => _themeId = normalized);
+  }
+
+  void _applyCloudTheme(String themeId) {
+    final normalized = AppTheme.normalizeThemeId(themeId);
+    if (normalized == _themeId) return;
+
     setState(() => _themeId = normalized);
   }
 
@@ -64,6 +75,7 @@ class _OrbitaskAppState extends State<OrbitaskApp> {
       cloudSyncService: widget.cloudSyncService,
       themeId: _themeId,
       onThemeChanged: _changeTheme,
+      onCloudThemeChanged: _applyCloudTheme,
     );
 
     return MaterialApp(
