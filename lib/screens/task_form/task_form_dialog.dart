@@ -384,6 +384,11 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
             onChanged: (value) => setState(() => editor.enabled = value),
           ),
           IconButton(
+            tooltip: 'Editar recordatorio',
+            onPressed: () => _editReminder(index),
+            icon: const Icon(Icons.edit_outlined),
+          ),
+          IconButton(
             tooltip: 'Eliminar recordatorio',
             onPressed: () => setState(() => _reminderEditors.removeAt(index)),
             icon: const Icon(Icons.delete_outline_rounded),
@@ -473,6 +478,36 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
           createdAt: now,
         ),
       );
+    });
+  }
+
+  Future<void> _editReminder(int index) async {
+    final editor = _reminderEditors[index];
+
+    final draft = await showDialog<_ReminderDraft>(
+      context: context,
+      builder: (context) => _ReminderPickerDialog(
+        dueDate: _dueDate,
+        initialScheduledAt: editor.scheduledAt,
+        initialOffsetMinutes: editor.offsetMinutes,
+        editing: true,
+      ),
+    );
+
+    if (draft == null || !mounted) return;
+
+    if (!draft.scheduledAt.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('El recordatorio debe estar en el futuro.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      editor.scheduledAt = draft.scheduledAt;
+      editor.offsetMinutes = draft.offsetMinutes;
     });
   }
 
@@ -640,9 +675,17 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
 }
 
 class _ReminderPickerDialog extends StatefulWidget {
-  const _ReminderPickerDialog({required this.dueDate});
+  const _ReminderPickerDialog({
+    required this.dueDate,
+    this.initialScheduledAt,
+    this.initialOffsetMinutes,
+    this.editing = false,
+  });
 
   final DateTime? dueDate;
+  final DateTime? initialScheduledAt;
+  final int? initialOffsetMinutes;
+  final bool editing;
 
   @override
   State<_ReminderPickerDialog> createState() => _ReminderPickerDialogState();
@@ -656,9 +699,19 @@ class _ReminderPickerDialogState extends State<_ReminderPickerDialog> {
   @override
   void initState() {
     super.initState();
-    _custom = widget.dueDate == null;
-    _offsetMinutes = widget.dueDate == null ? null : 30;
-    _customDate = DateTime.now().add(const Duration(hours: 1));
+
+    final existingOffset = widget.initialOffsetMinutes;
+    final existingDate = widget.initialScheduledAt;
+
+    if (existingDate != null) {
+      _custom = existingOffset == null;
+      _offsetMinutes = existingOffset;
+      _customDate = existingDate;
+    } else {
+      _custom = widget.dueDate == null;
+      _offsetMinutes = widget.dueDate == null ? null : 30;
+      _customDate = DateTime.now().add(const Duration(hours: 1));
+    }
   }
 
   @override
@@ -666,7 +719,9 @@ class _ReminderPickerDialogState extends State<_ReminderPickerDialog> {
     final theme = Theme.of(context);
 
     return AlertDialog(
-      title: const Text('Agregar recordatorio'),
+      title: Text(
+        widget.editing ? 'Editar recordatorio' : 'Agregar recordatorio',
+      ),
       content: SizedBox(
         width: 470,
         child: Column(
@@ -750,7 +805,7 @@ class _ReminderPickerDialogState extends State<_ReminderPickerDialog> {
         ),
         FilledButton(
           onPressed: _save,
-          child: const Text('Agregar'),
+          child: Text(widget.editing ? 'Guardar' : 'Agregar'),
         ),
       ],
     );
@@ -846,7 +901,7 @@ class _ReminderDraft {
   });
 
   final DateTime scheduledAt;
-  final int? offsetMinutes;
+  int? offsetMinutes;
 }
 
 class _ReminderEditor {
