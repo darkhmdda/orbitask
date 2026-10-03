@@ -7,7 +7,9 @@ import '../../models/task.dart';
 import '../../models/task_list.dart';
 import '../../repositories/todo_repository.dart';
 import '../../services/notification_service.dart';
+import '../../widgets/orbitask_brand.dart';
 import '../../widgets/task_card.dart';
+import '../../widgets/theme_picker.dart';
 import '../list_manager/list_manager_dialog.dart';
 import '../task_form/task_form_dialog.dart';
 
@@ -16,10 +18,14 @@ class HomeScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.notificationService,
+    required this.themeId,
+    required this.onThemeChanged,
   });
 
   final TodoRepository repository;
   final NotificationService notificationService;
+  final String themeId;
+  final ValueChanged<String> onThemeChanged;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -178,24 +184,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.checklist_rounded,
-                    color: theme.colorScheme.primary,
-                    size: 30,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Orbitask',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: OrbitaskBrand(),
             ),
             const SizedBox(height: 20),
             _SidebarItem(
@@ -962,41 +953,90 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _showSettingsInfo() async {
+    var selectedThemeId = widget.themeId;
+
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Notificaciones'),
-        content: const Text(
-          'Puedes enviar una notificación de prueba para comprobar que '
-          'Orbitask tiene acceso al sistema de avisos.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cerrar'),
-          ),
-          FilledButton.icon(
-            onPressed: () async {
-              await widget.notificationService.requestPermissions();
-              final shown = await widget.notificationService.showNow(
-                title: 'Orbitask',
-                body: 'Las notificaciones están funcionando.',
-              );
-              if (context.mounted) {
-                Navigator.of(context).pop();
-              }
-              if (mounted) {
-                _showMessage(
-                  shown
-                      ? 'Notificación de prueba enviada.'
-                      : 'El sistema de notificaciones de Linux no está disponible.',
-                );
-              }
-            },
-            icon: const Icon(Icons.notifications_active_rounded),
-            label: const Text('Probar notificación'),
-          ),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final theme = Theme.of(context);
+
+          return AlertDialog(
+            title: const Text('Ajustes'),
+            content: SizedBox(
+              width: 590,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Tema de Orbitask',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Elige la apariencia que prefieras. La selección se guarda localmente.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    ThemePicker(
+                      currentThemeId: selectedThemeId,
+                      onSelected: (themeId) {
+                        setDialogState(() => selectedThemeId = themeId);
+                        widget.onThemeChanged(themeId);
+                      },
+                    ),
+                    const SizedBox(height: 22),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Notificaciones',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Envía un aviso de prueba para comprobar el acceso al sistema de notificaciones.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cerrar'),
+              ),
+              FilledButton.icon(
+                onPressed: () async {
+                  await widget.notificationService.requestPermissions();
+                  final shown = await widget.notificationService.showNow(
+                    title: 'Orbitask',
+                    body: 'Las notificaciones están funcionando.',
+                  );
+                  if (mounted) {
+                    _showMessage(
+                      shown
+                          ? 'Notificación de prueba enviada.'
+                          : 'El sistema de notificaciones de Linux no está disponible.',
+                    );
+                  }
+                },
+                icon: const Icon(Icons.notifications_active_rounded),
+                label: const Text('Probar notificación'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1027,7 +1067,12 @@ class _SidebarItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         selected: selected,
-        leading: Icon(selected ? selectedIcon : icon),
+        leading: Icon(
+          selected ? selectedIcon : icon,
+          color: selected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         title: Text(label),
         onTap: onTap,
       ),
@@ -1058,7 +1103,13 @@ class _SidebarListItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         selected: selected,
-        leading: Icon(listIconData(list.icon), size: 21),
+        leading: Icon(
+          listIconData(list.icon),
+          size: 21,
+          color: selected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         title: Text(
           list.name,
           maxLines: 1,

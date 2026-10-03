@@ -23,6 +23,24 @@ class OrbitaskApp extends StatefulWidget {
 }
 
 class _OrbitaskAppState extends State<OrbitaskApp> {
+  late String _themeId;
+
+  @override
+  void initState() {
+    super.initState();
+    _themeId = AppTheme.normalizeThemeId(
+      widget.database.getSetting('theme_id'),
+    );
+  }
+
+  void _changeTheme(String themeId) {
+    final normalized = AppTheme.normalizeThemeId(themeId);
+    if (normalized == _themeId) return;
+
+    widget.database.setSetting('theme_id', normalized);
+    setState(() => _themeId = normalized);
+  }
+
   @override
   void dispose() {
     widget.notificationService.dispose();
@@ -35,12 +53,12 @@ class _OrbitaskAppState extends State<OrbitaskApp> {
     return MaterialApp(
       title: 'Orbitask',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      theme: AppTheme.forPreset(_themeId),
       home: HomeScreen(
         repository: widget.repository,
         notificationService: widget.notificationService,
+        themeId: _themeId,
+        onThemeChanged: _changeTheme,
       ),
     );
   }
