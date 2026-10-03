@@ -26,6 +26,7 @@ class CloudSyncResult {
     required this.remoteSubtasks,
     required this.remoteReminders,
     required this.remoteDeletions,
+    required this.themeId,
     required this.uploaded,
   });
 
@@ -34,6 +35,7 @@ class CloudSyncResult {
   final int remoteSubtasks;
   final int remoteReminders;
   final int remoteDeletions;
+  final String themeId;
   final CloudUploadResult uploaded;
 
   int get remoteTotal =>
@@ -60,6 +62,8 @@ class CloudSyncService {
   Future<CloudSyncResult> syncNow() async {
     final client = _requireClient();
     final user = _requireUser(client);
+
+    final themeId = await _syncThemePreference(client, user.id);
 
     final remoteDeletions = await client
         .from('sync_deletions')
@@ -103,6 +107,7 @@ class CloudSyncService {
       remoteSubtasks: remoteSubtasks.length,
       remoteReminders: remoteReminders.length,
       remoteDeletions: remoteDeletions.length,
+      themeId: themeId,
       uploaded: uploaded,
     );
   }
@@ -199,16 +204,6 @@ class CloudSyncService {
       );
     }
 
-    final themeId = _database.getSetting('theme_id') ?? 'emilia';
-    await client.from('user_preferences').upsert(
-      <String, dynamic>{
-        'user_id': userId,
-        'theme_id': themeId,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      },
-      onConflict: 'user_id',
-    );
-
     _database.setSetting(
       'last_cloud_upload_at',
       DateTime.now().toUtc().toIso8601String(),
@@ -220,6 +215,66 @@ class CloudSyncService {
       subtasks: subtasks.length,
       reminders: reminders.length,
     );
+  }
+
+  Future<String> _syncThemePreference(
+    SupabaseClient client,
+    String userId,
+  ) async {
+    final remotePreferences = await client
+        .from('user_preferences')
+        .select('theme_id, updated_at')
+        .eq('user_id', userId)
+        .limit(1);
+
+    final remote =
+        remotePreferences.isEmpty ? null : remotePreferences.first;
+
+    var localThemeId = _database.getSetting('theme_id') ?? 'emilia';
+    var localUpdatedAt = int.tryParse(
+          _database.getSetting('theme_updated_at') ?? '',
+        ) ??
+        0;
+
+    var remoteUpdatedAt = 0;
+    if (remote != null) {
+      remoteUpdatedAt = _millis(remote['updated_at']);
+      final remoteThemeId = (remote['theme_id'] as String?) ?? 'emilia';
+
+      if (remoteUpdatedAt > localUpdatedAt) {
+        localThemeId = remoteThemeId;
+        localUpdatedAt = remoteUpdatedAt;
+        _database.setSetting('theme_id', localThemeId);
+        _database.setSetting(
+          'theme_updated_at',
+          localUpdatedAt.toString(),
+        );
+      }
+    }
+
+    if (localUpdatedAt == 0) {
+      localUpdatedAt = DateTime.now().millisecondsSinceEpoch;
+      _database.setSetting(
+        'theme_updated_at',
+        localUpdatedAt.toString(),
+      );
+    }
+
+    if (remote == null || localUpdatedAt > remoteUpdatedAt) {
+      await client.from('user_preferences').upsert(
+        <String, dynamic>{
+          'user_id': userId,
+          'theme_id': localThemeId,
+          'updated_at': DateTime.fromMillisecondsSinceEpoch(
+            localUpdatedAt,
+            isUtc: true,
+          ).toIso8601String(),
+        },
+        onConflict: 'user_id',
+      );
+    }
+
+    return localThemeId;
   }
 
   void _mergeRemoteSnapshot({
