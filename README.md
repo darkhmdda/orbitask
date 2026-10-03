@@ -4,7 +4,7 @@
 
 Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para organizar tareas, prioridades, fechas, listas y subtareas. El objetivo es funcionar en Android, Windows y Linux y, en etapas posteriores, sincronizar tareas y recordatorios entre dispositivos.
 
-## Estado actual — v0.6-dev
+## Estado actual — v0.7-dev (autenticación en desarrollo)
 
 - CRUD de tareas.
 - Captura rápida.
@@ -35,6 +35,11 @@ Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para 
 - Logo orbital de Orbitask adaptable al color principal de cada tema.
 - Persistencia del tema validada tras cerrar y volver a abrir Orbitask en Linux/Crostini.
 - v0.6-dev validado visualmente con los seis temas en Linux/Crostini.
+- Base de autenticación con Supabase.
+- Inicio de sesión y creación de cuenta mediante correo y contraseña.
+- Sesión persistente administrada por Supabase.
+- Orbitask sigue funcionando en modo local si no se proporcionan credenciales de Supabase.
+- Estado de cuenta y cierre de sesión desde Ajustes.
 
 ## Historial
 
@@ -45,10 +50,23 @@ Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para 
 - `v0.4.1-dev`: limpieza de identidad Orbitask, migración de nombre de base de datos e iconos Material.
 - `v0.5-dev`: recordatorios persistentes, edición y cancelación de avisos, y notificaciones locales validadas en Linux/Crostini.
 - `v0.6-dev`: sistema de seis temas persistentes, paletas completas e identidad visual adaptable.
+- `v0.7-dev`: autenticación con Supabase y base para sincronización entre dispositivos (en desarrollo).
+
+## Configuración de Supabase
+
+Orbitask no guarda claves privadas en el repositorio. Para habilitar cuentas, ejecuta la app con la URL del proyecto y la clave publicable de Supabase:
+
+```bash
+flutter run -d linux \\
+  --dart-define=SUPABASE_URL=https://TU-PROYECTO.supabase.co \\
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE
+```
+
+Sin estas variables Orbitask continúa funcionando en modo local, igual que en v0.6-dev. Nunca debe usarse una clave `service_role` dentro de la aplicación cliente.
 
 ## Roadmap
 
-- Cuenta de usuario y Supabase.
+- Completar y validar cuentas de usuario con Supabase.
 - Sincronización entre dispositivos.
 - Android.
 - Windows.
