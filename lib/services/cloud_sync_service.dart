@@ -79,6 +79,7 @@ class CloudSyncService {
   Future<CloudSyncResult> syncNow() async {
     final client = _requireClient();
     final user = _requireUser(client);
+    _requireWorkspaceOwner(user.id);
 
     final themeId = await _syncThemePreference(client, user.id);
 
@@ -132,6 +133,7 @@ class CloudSyncService {
   Future<CloudUploadResult> uploadLocalSnapshot() async {
     final client = _requireClient();
     final user = _requireUser(client);
+    _requireWorkspaceOwner(user.id);
     final userId = user.id;
 
     final lists = await _repository.getAllLists();
@@ -627,6 +629,22 @@ class CloudSyncService {
         .eq('user_id', userId)
         .eq('id', id)
         .lte('updated_at', deletedAt);
+  }
+
+  void _requireWorkspaceOwner(String userId) {
+    final ownerId = _database.getSetting('cloud_account_id');
+
+    if (ownerId == null || ownerId.isEmpty) {
+      _database.setSetting('cloud_account_id', userId);
+      return;
+    }
+
+    if (ownerId != userId) {
+      throw StateError(
+        'Este espacio local está vinculado a otra cuenta. '
+        'Orbitask bloqueó la sincronización para evitar mezclar datos.',
+      );
+    }
   }
 
   SupabaseClient _requireClient() {
