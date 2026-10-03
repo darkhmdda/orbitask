@@ -3,11 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AuthService {
   AuthService(
     this._client, {
-    String? emailRedirectTo,
-  }) : _emailRedirectTo = emailRedirectTo;
+    this.emailRedirectTo,
+  });
 
   final SupabaseClient? _client;
-  final String? _emailRedirectTo;
+  final String? emailRedirectTo;
 
   bool get isConfigured => _client != null;
 
@@ -37,7 +37,7 @@ class AuthService {
     return client.auth.signUp(
       email: email.trim(),
       password: password,
-      emailRedirectTo: _emailRedirectTo,
+      emailRedirectTo: emailRedirectTo,
       data: name == null || name.isEmpty
           ? null
           : <String, dynamic>{'display_name': name},
