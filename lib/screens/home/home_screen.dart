@@ -1054,13 +1054,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                         'Nube revisada: '
                                         '${result.remoteLists} listas, '
                                         '${result.remoteTasks} tareas, '
-                                        '${result.remoteSubtasks} subtareas y '
-                                        '${result.remoteReminders} recordatorios.',
+                                        '${result.remoteSubtasks} subtareas, '
+                                        '${result.remoteReminders} recordatorios y '
+                                        '${result.remoteDeletions} eliminaciones.',
                                       );
                                     } catch (error) {
                                       if (mounted) {
                                         _showMessage(
-                                          'No se pudo subir a Supabase: $error',
+                                          'No se pudo sincronizar con Supabase: $error',
                                         );
                                       }
                                     } finally {
