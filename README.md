@@ -44,6 +44,8 @@ Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para 
 - Sincronización manual nube ↔ dispositivo en desarrollo: primero combina los datos remotos con SQLite por `updated_at` y después vuelve a subir el estado resultante.
 - Registro de eliminaciones local y remoto mediante tombstones para evitar que tareas, listas, subtareas o recordatorios borrados reaparezcan.
 - Las eliminaciones se aplican solo cuando el tombstone no es más antiguo que el elemento existente.
+- Sincronización automática mientras Orbitask está abierto: al iniciar, después de cambios locales y mediante un ciclo periódico cada minuto.
+- El botón manual `Sincronizar ahora` se conserva para forzar una sincronización inmediata.
 
 ## Historial
 
@@ -71,8 +73,8 @@ Sin estas variables Orbitask continúa funcionando en modo local, igual que en v
 ## Roadmap
 
 - Validar la sincronización manual nube ↔ dispositivo.
-- Validar sincronización segura de eliminaciones entre SQLite y Supabase.
-- Sincronización automática entre dispositivos.
+- Validar sincronización automática en Linux/Crostini.
+- Mejorar reanudación de sincronización y posteriormente evaluar Supabase Realtime.
 - Android.
 - Windows.
 - Versión estable `v1.0`.
