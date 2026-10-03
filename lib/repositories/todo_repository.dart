@@ -180,6 +180,8 @@ class TodoRepository {
     _database.raw.execute('BEGIN IMMEDIATE;');
 
     try {
+      _recordDeletion('task', id);
+
       final subtaskStatement =
           _database.raw.prepare('DELETE FROM subtasks WHERE task_id = ?;');
       try {
@@ -288,6 +290,8 @@ class TodoRepository {
         moveStatement.close();
       }
 
+      _recordDeletion('task_list', id);
+
       final deleteStatement =
           _database.raw.prepare('DELETE FROM task_lists WHERE id = ?;');
       try {
@@ -336,6 +340,13 @@ class TodoRepository {
   }
 
   void _replaceSubtasks(String taskId, List<Subtask> subtasks) {
+    _recordMissingChildren(
+      table: 'subtasks',
+      entityType: 'subtask',
+      taskId: taskId,
+      keepIds: subtasks.map((item) => item.id).toSet(),
+    );
+
     final deleteStatement =
         _database.raw.prepare('DELETE FROM subtasks WHERE task_id = ?;');
     try {
@@ -376,6 +387,13 @@ class TodoRepository {
   }
 
   void _replaceReminders(String taskId, List<Reminder> reminders) {
+    _recordMissingChildren(
+      table: 'reminders',
+      entityType: 'reminder',
+      taskId: taskId,
+      keepIds: reminders.map((item) => item.id).toSet(),
+    );
+
     final deleteStatement =
         _database.raw.prepare('DELETE FROM reminders WHERE task_id = ?;');
     try {
@@ -412,6 +430,57 @@ class TodoRepository {
       }
     } finally {
       insertStatement.close();
+    }
+  }
+
+  void _recordMissingChildren({
+    required String table,
+    required String entityType,
+    required String taskId,
+    required Set<String> keepIds,
+  }) {
+    final rows = _database.raw.select(
+      'SELECT id FROM $table WHERE task_id = ?;',
+      [taskId],
+    );
+
+    final deletedAt = DateTime.now().millisecondsSinceEpoch;
+    for (final row in rows) {
+      final id = row['id']! as String;
+      if (!keepIds.contains(id)) {
+        _recordDeletion(
+          entityType,
+          id,
+          deletedAt: deletedAt,
+        );
+      }
+    }
+  }
+
+  void _recordDeletion(
+    String entityType,
+    String entityId, {
+    int? deletedAt,
+  }) {
+    final statement = _database.raw.prepare('''
+      INSERT INTO sync_deletions (
+        entity_type,
+        entity_id,
+        deleted_at
+      ) VALUES (?, ?, ?)
+      ON CONFLICT(entity_type, entity_id) DO UPDATE SET
+        deleted_at = excluded.deleted_at
+      WHERE excluded.deleted_at > sync_deletions.deleted_at;
+    ''');
+
+    try {
+      statement.execute([
+        entityType,
+        entityId,
+        deletedAt ?? DateTime.now().millisecondsSinceEpoch,
+      ]);
+    } finally {
+      statement.close();
     }
   }
 
