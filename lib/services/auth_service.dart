@@ -1,0 +1,56 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class AuthService {
+  AuthService(this._client);
+
+  final SupabaseClient? _client;
+
+  bool get isConfigured => _client != null;
+
+  User? get currentUser => _client?.auth.currentUser;
+
+  Stream<AuthState>? get authStateChanges => _client?.auth.onAuthStateChange;
+
+  Future<AuthResponse> signIn({
+    required String email,
+    required String password,
+  }) async {
+    final client = _requireClient();
+    return client.auth.signInWithPassword(
+      email: email.trim(),
+      password: password,
+    );
+  }
+
+  Future<AuthResponse> signUp({
+    required String email,
+    required String password,
+    String? displayName,
+  }) async {
+    final client = _requireClient();
+    final name = displayName?.trim();
+
+    return client.auth.signUp(
+      email: email.trim(),
+      password: password,
+      data: name == null || name.isEmpty
+          ? null
+          : <String, dynamic>{'display_name': name},
+    );
+  }
+
+  Future<void> signOut() async {
+    final client = _requireClient();
+    await client.auth.signOut();
+  }
+
+  SupabaseClient _requireClient() {
+    final client = _client;
+    if (client == null) {
+      throw StateError(
+        'Supabase no está configurado para esta ejecución de Orbitask.',
+      );
+    }
+    return client;
+  }
+}
