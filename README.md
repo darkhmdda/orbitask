@@ -32,7 +32,7 @@ Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para 
 - Selector de temas visuales: Rimuru, Emilia, Itsuki, Rem, Veldora y Zoro.
 - Tema elegido persistente en SQLite.
 - Paleta completa aplicada a fondo, superficies, botones, chips, selección e iconos.
-- Nueva identidad visual adaptable de Orbitask con marca tipo órbita + check.
+- Logo orbital de Orbitask adaptable al color principal de cada tema.
 - Persistencia del tema validada tras cerrar y volver a abrir Orbitask en Linux/Crostini.
 - v0.6-dev validado visualmente con los seis temas en Linux/Crostini.
 
