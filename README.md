@@ -40,6 +40,9 @@ Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para 
 - Sesión persistente administrada por Supabase.
 - Orbitask sigue funcionando en modo local si no se proporcionan credenciales de Supabase.
 - Estado de cuenta y cierre de sesión desde Ajustes.
+- Copia inicial SQLite → Supabase validada con datos reales.
+- Sincronización manual nube ↔ dispositivo en desarrollo: primero combina los datos remotos con SQLite por `updated_at` y después vuelve a subir el estado resultante.
+- La sincronización de eliminaciones todavía no está implementada, por lo que v0.7-dev aún no se considera sincronización completa entre dispositivos.
 
 ## Historial
 
@@ -66,8 +69,9 @@ Sin estas variables Orbitask continúa funcionando en modo local, igual que en v
 
 ## Roadmap
 
-- Completar y validar cuentas de usuario con Supabase.
-- Sincronización entre dispositivos.
+- Validar la sincronización manual nube ↔ dispositivo.
+- Añadir sincronización segura de eliminaciones.
+- Sincronización automática entre dispositivos.
 - Android.
 - Windows.
 - Versión estable `v1.0`.
