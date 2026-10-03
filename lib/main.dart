@@ -6,6 +6,7 @@ import 'core/config/cloud_config.dart';
 import 'database/local_database.dart';
 import 'repositories/todo_repository.dart';
 import 'services/auth_service.dart';
+import 'services/cloud_sync_service.dart';
 import 'services/notification_service.dart';
 
 Future<void> main() async {
@@ -24,6 +25,11 @@ Future<void> main() async {
   final repository = TodoRepository(database);
   final notificationService = NotificationService();
   final authService = AuthService(supabaseClient);
+  final cloudSyncService = CloudSyncService(
+    client: supabaseClient,
+    repository: repository,
+    database: database,
+  );
 
   await notificationService.initialize();
 
@@ -33,6 +39,7 @@ Future<void> main() async {
       repository: repository,
       notificationService: notificationService,
       authService: authService,
+      cloudSyncService: cloudSyncService,
     ),
   );
 }
