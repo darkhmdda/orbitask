@@ -47,6 +47,7 @@ Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para 
 - Sincronización automática mientras Orbitask está abierto: al iniciar, después de cambios locales y mediante un ciclo periódico cada minuto.
 - El tema seleccionado también se sincroniza por cuenta y resuelve conflictos usando `updated_at`, sin sobrescribir una preferencia más reciente con una más antigua.
 - Supabase Realtime está habilitado para preferencias, listas, tareas, subtareas, recordatorios y tombstones. Los cambios remotos disparan una sincronización inmediata, manteniendo el ciclo periódico de un minuto como respaldo.
+- Por seguridad, cada espacio SQLite local queda vinculado a una sola cuenta Supabase; una cuenta distinta se bloquea para evitar mezclar o subir datos de otro usuario.
 - Al volver a Orbitask desde segundo plano, se fuerza un nuevo intento de sincronización.
 - El indicador superior distingue entre `Sincronizando…`, `Nube conectada` y `Sin conexión`.
 - El botón manual `Sincronizar ahora` se conserva para forzar una sincronización inmediata.
