@@ -138,6 +138,13 @@ class LocalDatabase {
         );
       ''');
 
+      database.execute('''
+        CREATE TABLE IF NOT EXISTS app_settings (
+          key TEXT PRIMARY KEY NOT NULL,
+          value TEXT NOT NULL
+        );
+      ''');
+
       database.execute(r'''
         UPDATE task_lists
         SET icon = CASE icon
@@ -238,6 +245,29 @@ class LocalDatabase {
     } catch (_) {
       database.execute('ROLLBACK;');
       rethrow;
+    }
+  }
+
+  String? getSetting(String key) {
+    final rows = _database.select(
+      'SELECT value FROM app_settings WHERE key = ? LIMIT 1;',
+      [key],
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['value'] as String?;
+  }
+
+  void setSetting(String key, String value) {
+    final statement = _database.prepare('''
+      INSERT INTO app_settings (key, value)
+      VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+    ''');
+
+    try {
+      statement.execute([key, value]);
+    } finally {
+      statement.close();
     }
   }
 
