@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/list_icons.dart';
 import '../../models/reminder.dart';
@@ -58,6 +59,8 @@ class _HomeScreenState extends State<HomeScreen>
   String? _loadError;
   Timer? _cloudSyncDebounce;
   Timer? _cloudSyncTimer;
+  RealtimeChannel? _cloudRealtimeChannel;
+  DateTime? _ignoreRealtimeUntil;
 
   @override
   void initState() {
@@ -77,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen>
     await _loadData();
     if (!mounted) return;
 
+    _startRealtimeSubscription();
     _scheduleCloudSync(immediate: true);
     _cloudSyncTimer = Timer.periodic(
       const Duration(minutes: 1),
@@ -89,8 +93,31 @@ class _HomeScreenState extends State<HomeScreen>
     WidgetsBinding.instance.removeObserver(this);
     _cloudSyncDebounce?.cancel();
     _cloudSyncTimer?.cancel();
+
+    final realtimeChannel = _cloudRealtimeChannel;
+    if (realtimeChannel != null) {
+      unawaited(realtimeChannel.unsubscribe().then((_) {}));
+    }
+
     _quickAddController.dispose();
     super.dispose();
+  }
+
+  void _startRealtimeSubscription() {
+    if (!widget.cloudSyncService.isConfigured ||
+        widget.authService.currentUser == null) {
+      return;
+    }
+
+    _cloudRealtimeChannel = widget.cloudSyncService.subscribeToRemoteChanges(
+      () {
+        final ignoreUntil = _ignoreRealtimeUntil;
+        if (ignoreUntil != null && DateTime.now().isBefore(ignoreUntil)) {
+          return;
+        }
+        _scheduleCloudSync(immediate: true);
+      },
+    );
   }
 
   void _scheduleCloudSync({bool immediate = false}) {
@@ -116,6 +143,10 @@ class _HomeScreenState extends State<HomeScreen>
     if (mounted) {
       setState(() => _cloudSyncing = true);
     }
+
+    _ignoreRealtimeUntil = DateTime.now().add(
+      const Duration(seconds: 5),
+    );
 
     try {
       final result = await widget.cloudSyncService.syncNow();
