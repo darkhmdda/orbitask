@@ -1874,6 +1874,8 @@ class _HomeScreenState extends State<HomeScreen>
       }
     }
 
+    if (!mounted) return;
+
     final usernameController = TextEditingController(
       text: profile?.username ?? '',
     );
