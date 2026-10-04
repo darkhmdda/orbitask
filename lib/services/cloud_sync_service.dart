@@ -26,6 +26,7 @@ class CloudSyncResult {
     required this.remoteSubtasks,
     required this.remoteReminders,
     required this.remoteDeletions,
+    required this.cleanedDeletions,
     required this.themeId,
     required this.uploaded,
   });
@@ -35,6 +36,7 @@ class CloudSyncResult {
   final int remoteSubtasks;
   final int remoteReminders;
   final int remoteDeletions;
+  final int cleanedDeletions;
   final String themeId;
   final CloudUploadResult uploaded;
 
@@ -47,6 +49,8 @@ class CloudSyncResult {
 }
 
 class CloudSyncService {
+  static const Duration deletionRetention = Duration(days: 180);
+
   CloudSyncService({
     required this._client,
     required this._repository,
@@ -126,6 +130,11 @@ class CloudSyncService {
     await _uploadDeletionJournal(client, user.id);
     await _applyDeletionJournalToCloud(client, user.id);
 
+    final cleanedDeletions = await _cleanupOldDeletionJournal(
+      client,
+      user.id,
+    );
+
     _database.setSetting(
       'last_cloud_sync_at',
       DateTime.now().toUtc().toIso8601String(),
@@ -137,6 +146,7 @@ class CloudSyncService {
       remoteSubtasks: remoteSubtasks.length,
       remoteReminders: remoteReminders.length,
       remoteDeletions: remoteDeletions.length,
+      cleanedDeletions: cleanedDeletions,
       themeId: themeId,
       uploaded: uploaded,
     );
@@ -626,6 +636,50 @@ class CloudSyncService {
           break;
       }
     }
+  }
+
+  Future<int> _cleanupOldDeletionJournal(
+    SupabaseClient client,
+    String userId,
+  ) async {
+    final cutoff = DateTime.now().toUtc().subtract(deletionRetention);
+    final cutoffMillis = cutoff.millisecondsSinceEpoch;
+    final cutoffIso = cutoff.toIso8601String();
+
+    final localCountRows = _database.raw.select(
+      '''
+      SELECT COUNT(*) AS total
+      FROM sync_deletions
+      WHERE deleted_at < ?;
+      ''',
+      [cutoffMillis],
+    );
+    final localCount =
+        (localCountRows.first['total'] as int?) ?? 0;
+
+    // La limpieza solo ocurre al final de una sincronización exitosa,
+    // después de aplicar los tombstones tanto localmente como en la nube.
+    await client
+        .from('sync_deletions')
+        .delete()
+        .eq('user_id', userId)
+        .lt('deleted_at', cutoffIso);
+
+    final statement = _database.raw.prepare(
+      'DELETE FROM sync_deletions WHERE deleted_at < ?;',
+    );
+    try {
+      statement.execute([cutoffMillis]);
+    } finally {
+      statement.close();
+    }
+
+    _database.setSetting(
+      'last_tombstone_cleanup_at',
+      DateTime.now().toUtc().toIso8601String(),
+    );
+
+    return localCount;
   }
 
   Future<void> _deleteCloudIfNotNewer(
