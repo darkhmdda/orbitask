@@ -8,6 +8,7 @@ import 'screens/home/home_screen.dart';
 import 'services/auth_service.dart';
 import 'services/cloud_sync_service.dart';
 import 'services/notification_service.dart';
+import 'services/profile_service.dart';
 
 class OrbitaskApp extends StatefulWidget {
   const OrbitaskApp({
@@ -17,6 +18,7 @@ class OrbitaskApp extends StatefulWidget {
     required this.notificationService,
     required this.authService,
     required this.cloudSyncService,
+    required this.profileService,
   });
 
   final LocalDatabase database;
@@ -24,6 +26,7 @@ class OrbitaskApp extends StatefulWidget {
   final NotificationService notificationService;
   final AuthService authService;
   final CloudSyncService cloudSyncService;
+  final ProfileService profileService;
 
   @override
   State<OrbitaskApp> createState() => _OrbitaskAppState();
@@ -73,6 +76,7 @@ class _OrbitaskAppState extends State<OrbitaskApp> {
       notificationService: widget.notificationService,
       authService: widget.authService,
       cloudSyncService: widget.cloudSyncService,
+      profileService: widget.profileService,
       themeId: _themeId,
       onThemeChanged: _changeTheme,
       onCloudThemeChanged: _applyCloudTheme,
