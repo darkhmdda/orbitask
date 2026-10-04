@@ -8,6 +8,7 @@ import 'repositories/todo_repository.dart';
 import 'services/auth_service.dart';
 import 'services/cloud_sync_service.dart';
 import 'services/notification_service.dart';
+import 'services/profile_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,7 @@ Future<void> main() async {
     repository: repository,
     database: database,
   );
+  final profileService = ProfileService(supabaseClient);
 
   await notificationService.initialize();
 
@@ -43,6 +45,7 @@ Future<void> main() async {
       notificationService: notificationService,
       authService: authService,
       cloudSyncService: cloudSyncService,
+      profileService: profileService,
     ),
   );
 }
