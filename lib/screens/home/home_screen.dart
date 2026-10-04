@@ -1889,10 +1889,26 @@ class _HomeScreenState extends State<HomeScreen>
             builder: (dialogContext, setDialogState) {
               final theme = Theme.of(dialogContext);
               final email = widget.authService.currentUser?.email;
+              final dialogSize = MediaQuery.sizeOf(dialogContext);
+              final compactDialog = dialogSize.width < 600;
 
               return AlertDialog(
-                titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+                insetPadding: EdgeInsets.symmetric(
+                  horizontal: compactDialog ? 12 : 40,
+                  vertical: compactDialog ? 12 : 24,
+                ),
+                titlePadding: EdgeInsets.fromLTRB(
+                  compactDialog ? 16 : 24,
+                  compactDialog ? 16 : 20,
+                  compactDialog ? 16 : 24,
+                  0,
+                ),
+                contentPadding: EdgeInsets.fromLTRB(
+                  compactDialog ? 16 : 24,
+                  12,
+                  compactDialog ? 16 : 24,
+                  8,
+                ),
                 title: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1901,26 +1917,29 @@ class _HomeScreenState extends State<HomeScreen>
                     TabBar(
                       isScrollable: true,
                       tabAlignment: TabAlignment.start,
-                      tabs: const [
-                        Tab(
+                      labelPadding: EdgeInsets.symmetric(
+                        horizontal: compactDialog ? 12 : 16,
+                      ),
+                      tabs: [
+                        const Tab(
                           icon: Icon(Icons.palette_outlined),
                           text: 'Apariencia',
                         ),
                         Tab(
-                          icon: Icon(Icons.person_outline_rounded),
-                          text: 'Cuenta y nube',
+                          icon: const Icon(Icons.person_outline_rounded),
+                          text: compactDialog ? 'Cuenta' : 'Cuenta y nube',
                         ),
                         Tab(
-                          icon: Icon(Icons.notifications_outlined),
-                          text: 'Notificaciones',
+                          icon: const Icon(Icons.notifications_outlined),
+                          text: compactDialog ? 'Avisos' : 'Notificaciones',
                         ),
                       ],
                     ),
                   ],
                 ),
                 content: SizedBox(
-                  width: 720,
-                  height: 570,
+                  width: compactDialog ? dialogSize.width : 720,
+                  height: compactDialog ? dialogSize.height * 0.68 : 570,
                   child: TabBarView(
                     children: [
                       SingleChildScrollView(
@@ -1970,7 +1989,7 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                             const SizedBox(height: 12),
                             Container(
-                              padding: const EdgeInsets.all(16),
+                              padding: EdgeInsets.all(compactDialog ? 12 : 16),
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.surfaceContainerLow,
                                 borderRadius: BorderRadius.circular(18),
@@ -1982,7 +2001,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   CircleAvatar(
-                                    radius: 38,
+                                    radius: compactDialog ? 30 : 38,
                                     backgroundColor:
                                         theme.colorScheme.surfaceContainerHigh,
                                     backgroundImage:
@@ -1994,13 +2013,13 @@ class _HomeScreenState extends State<HomeScreen>
                                     child: profile?.avatarUrl == null
                                         ? Icon(
                                             Icons.person_rounded,
-                                            size: 38,
+                                            size: compactDialog ? 30 : 38,
                                             color: theme.colorScheme
                                                 .onSurfaceVariant,
                                           )
                                         : null,
                                   ),
-                                  const SizedBox(width: 16),
+                                  SizedBox(width: compactDialog ? 12 : 16),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -2018,6 +2037,8 @@ class _HomeScreenState extends State<HomeScreen>
                                         const SizedBox(height: 3),
                                         Text(
                                           email ?? 'Cuenta local',
+                                          maxLines: compactDialog ? 2 : 1,
+                                          overflow: TextOverflow.ellipsis,
                                           style: theme.textTheme.bodyMedium
                                               ?.copyWith(
                                             color: theme.colorScheme
@@ -2116,7 +2137,9 @@ class _HomeScreenState extends State<HomeScreen>
                                               label: Text(
                                                 profileBusy
                                                     ? 'Subiendo…'
-                                                    : 'Cambiar foto',
+                                                    : (compactDialog
+                                                        ? 'Foto'
+                                                        : 'Cambiar foto'),
                                               ),
                                             ),
                                             if (profile?.avatarPath != null)
@@ -2157,8 +2180,11 @@ class _HomeScreenState extends State<HomeScreen>
                                                 icon: const Icon(
                                                   Icons.delete_outline_rounded,
                                                 ),
-                                                label:
-                                                    const Text('Quitar foto'),
+                                                label: Text(
+                                                  compactDialog
+                                                      ? 'Quitar'
+                                                      : 'Quitar foto',
+                                                ),
                                               ),
                                           ],
                                         ),
@@ -2492,46 +2518,95 @@ class _HomeScreenState extends State<HomeScreen>
                                   color: theme.colorScheme.outlineVariant,
                                 ),
                               ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.notifications_active_outlined,
-                                    size: 30,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 14),
-                                  const Expanded(
-                                    child: Text(
-                                      'Envía una notificación de prueba para verificar permisos y funcionamiento.',
+                              child: compactDialog
+                                  ? Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Icon(
+                                            Icons
+                                                .notifications_active_outlined,
+                                            size: 30,
+                                            color:
+                                                theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        const Text(
+                                          'Envía una notificación de prueba para verificar permisos y funcionamiento.',
+                                        ),
+                                        const SizedBox(height: 14),
+                                        FilledButton.icon(
+                                          onPressed: () async {
+                                            await widget.notificationService
+                                                .requestPermissions();
+                                            final shown = await widget
+                                                .notificationService
+                                                .showNow(
+                                              title: 'Orbitask',
+                                              body:
+                                                  'Las notificaciones están funcionando.',
+                                            );
+                                            if (mounted) {
+                                              _showMessage(
+                                                shown
+                                                    ? 'Notificación de prueba enviada.'
+                                                    : 'El sistema de notificaciones no está disponible en este dispositivo.',
+                                              );
+                                            }
+                                          },
+                                          icon: const Icon(
+                                            Icons
+                                                .notifications_active_rounded,
+                                          ),
+                                          label: const Text('Probar'),
+                                        ),
+                                      ],
+                                    )
+                                  : Row(
+                                      children: [
+                                        Icon(
+                                          Icons
+                                              .notifications_active_outlined,
+                                          size: 30,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 14),
+                                        const Expanded(
+                                          child: Text(
+                                            'Envía una notificación de prueba para verificar permisos y funcionamiento.',
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        FilledButton.icon(
+                                          onPressed: () async {
+                                            await widget.notificationService
+                                                .requestPermissions();
+                                            final shown = await widget
+                                                .notificationService
+                                                .showNow(
+                                              title: 'Orbitask',
+                                              body:
+                                                  'Las notificaciones están funcionando.',
+                                            );
+                                            if (mounted) {
+                                              _showMessage(
+                                                shown
+                                                    ? 'Notificación de prueba enviada.'
+                                                    : 'El sistema de notificaciones no está disponible en este dispositivo.',
+                                              );
+                                            }
+                                          },
+                                          icon: const Icon(
+                                            Icons
+                                                .notifications_active_rounded,
+                                          ),
+                                          label: const Text('Probar'),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  FilledButton.icon(
-                                    onPressed: () async {
-                                      await widget.notificationService
-                                          .requestPermissions();
-                                      final shown = await widget
-                                          .notificationService
-                                          .showNow(
-                                        title: 'Orbitask',
-                                        body:
-                                            'Las notificaciones están funcionando.',
-                                      );
-                                      if (mounted) {
-                                        _showMessage(
-                                          shown
-                                              ? 'Notificación de prueba enviada.'
-                                              : 'El sistema de notificaciones no está disponible en este dispositivo.',
-                                        );
-                                      }
-                                    },
-                                    icon: const Icon(
-                                      Icons.notifications_active_rounded,
-                                    ),
-                                    label: const Text('Probar'),
-                                  ),
-                                ],
-                              ),
                             ),
                           ],
                         ),
