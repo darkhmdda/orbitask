@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/list_icons.dart';
+import '../../models/orbitask_profile.dart';
 import '../../models/reminder.dart';
 import '../../models/subtask.dart';
 import '../../models/task.dart';
@@ -1859,313 +1861,697 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _showSettingsInfo() async {
     var selectedThemeId = widget.themeId;
     var uploadingCloud = false;
+    var profileBusy = false;
+    String? profileError;
+    OrbitaskProfile? profile;
 
-    await showDialog<void>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          final theme = Theme.of(context);
+    if (widget.authService.currentUser != null &&
+        widget.profileService.isConfigured) {
+      try {
+        profile = await widget.profileService.loadCurrentProfile();
+      } catch (error) {
+        profileError = 'No se pudo cargar el perfil: $error';
+      }
+    }
 
-          return AlertDialog(
-            title: const Text('Ajustes'),
-            content: SizedBox(
-              width: 590,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+    final usernameController = TextEditingController(
+      text: profile?.username ?? '',
+    );
+
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => DefaultTabController(
+          length: 3,
+          child: StatefulBuilder(
+            builder: (dialogContext, setDialogState) {
+              final theme = Theme.of(dialogContext);
+              final email = widget.authService.currentUser?.email;
+
+              return AlertDialog(
+                titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Tema de Orbitask',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.authService.currentUser == null
-                          ? 'Elige la apariencia que prefieras. La selección se guarda localmente.'
-                          : 'Elige la apariencia que prefieras. La selección se sincroniza con tu cuenta.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
+                    const Text('Ajustes'),
                     const SizedBox(height: 14),
-                    ThemePicker(
-                      currentThemeId: selectedThemeId,
-                      onSelected: (themeId) {
-                        setDialogState(() => selectedThemeId = themeId);
-                        widget.onThemeChanged(themeId);
-                        _scheduleCloudSync();
-                      },
+                    TabBar(
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      tabs: const [
+                        Tab(
+                          icon: Icon(Icons.palette_outlined),
+                          text: 'Apariencia',
+                        ),
+                        Tab(
+                          icon: Icon(Icons.person_outline_rounded),
+                          text: 'Cuenta y nube',
+                        ),
+                        Tab(
+                          icon: Icon(Icons.notifications_outlined),
+                          text: 'Notificaciones',
+                        ),
+                      ],
                     ),
-                    if (widget.authService.isConfigured) ...[
-                      const SizedBox(height: 22),
-                      const Divider(),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Cuenta',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.authService.currentUser?.email ??
-                            'Sesión de Supabase activa.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'La cuenta está conectada. Orbitask combina la nube con SQLite usando la versión más reciente de cada elemento.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: theme.colorScheme.outlineVariant,
-                          ),
-                        ),
+                  ],
+                ),
+                content: SizedBox(
+                  width: 720,
+                  height: 570,
+                  child: TabBarView(
+                    children: [
+                      SingleChildScrollView(
+                        padding: const EdgeInsets.only(top: 8, bottom: 12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  _cloudSyncFailed
-                                      ? Icons.cloud_off_outlined
-                                      : (_cloudSyncing
-                                          ? Icons.sync_rounded
-                                          : Icons.cloud_done_outlined),
-                                  size: 20,
+                            Text(
+                              'Tema de Orbitask',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.authService.currentUser == null
+                                  ? 'Elige la apariencia que prefieras. La selección se guarda localmente.'
+                                  : 'Elige la apariencia que prefieras. La selección se sincroniza con tu cuenta.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ThemePicker(
+                              currentThemeId: selectedThemeId,
+                              onSelected: (themeId) {
+                                setDialogState(
+                                  () => selectedThemeId = themeId,
+                                );
+                                widget.onThemeChanged(themeId);
+                                _scheduleCloudSync();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      SingleChildScrollView(
+                        padding: const EdgeInsets.only(top: 8, bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Perfil',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: theme.colorScheme.outlineVariant,
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _cloudSyncing
-                                        ? 'Sincronizando…'
-                                        : (_cloudSyncFailed
-                                            ? 'Pendiente de sincronizar'
-                                            : 'Sincronización activa'),
-                                    style:
-                                        theme.textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w800,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 38,
+                                    backgroundColor:
+                                        theme.colorScheme.surfaceContainerHigh,
+                                    backgroundImage:
+                                        profile?.avatarUrl == null
+                                            ? null
+                                            : NetworkImage(
+                                                profile!.avatarUrl!,
+                                              ),
+                                    child: profile?.avatarUrl == null
+                                        ? Icon(
+                                            Icons.person_rounded,
+                                            size: 38,
+                                            color: theme.colorScheme
+                                                .onSurfaceVariant,
+                                          )
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          profile?.username == null
+                                              ? 'Configura tu username'
+                                              : '@${profile!.username}',
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          email ?? 'Cuenta local',
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                            color: theme.colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 8,
+                                          children: [
+                                            OutlinedButton.icon(
+                                              onPressed: profileBusy ||
+                                                      email == null
+                                                  ? null
+                                                  : () async {
+                                                      final picked =
+                                                          await FilePicker
+                                                              .platform
+                                                              .pickFiles(
+                                                        type: FileType.custom,
+                                                        allowedExtensions: const [
+                                                          'jpg',
+                                                          'jpeg',
+                                                          'png',
+                                                          'webp',
+                                                        ],
+                                                        withData: true,
+                                                        allowMultiple: false,
+                                                      );
+
+                                                      if (picked == null ||
+                                                          picked.files
+                                                              .isEmpty) {
+                                                        return;
+                                                      }
+
+                                                      final file =
+                                                          picked.files.single;
+                                                      final bytes = file.bytes;
+                                                      if (bytes == null) {
+                                                        setDialogState(() {
+                                                          profileError =
+                                                              'No se pudo leer la imagen seleccionada.';
+                                                        });
+                                                        return;
+                                                      }
+
+                                                      final extension = file
+                                                          .extension
+                                                          ?.toLowerCase();
+                                                      final mimeType =
+                                                          extension == 'png'
+                                                              ? 'image/png'
+                                                              : extension ==
+                                                                      'webp'
+                                                                  ? 'image/webp'
+                                                                  : 'image/jpeg';
+
+                                                      setDialogState(() {
+                                                        profileBusy = true;
+                                                        profileError = null;
+                                                      });
+
+                                                      try {
+                                                        final updated =
+                                                            await widget
+                                                                .profileService
+                                                                .uploadAvatar(
+                                                          bytes: bytes,
+                                                          mimeType: mimeType,
+                                                        );
+                                                        if (!dialogContext
+                                                            .mounted) {
+                                                          return;
+                                                        }
+                                                        setDialogState(() {
+                                                          profile = updated;
+                                                          profileBusy = false;
+                                                        });
+                                                      } catch (error) {
+                                                        if (dialogContext
+                                                            .mounted) {
+                                                          setDialogState(() {
+                                                            profileBusy =
+                                                                false;
+                                                            profileError =
+                                                                'No se pudo actualizar la foto: $error';
+                                                          });
+                                                        }
+                                                      }
+                                                    },
+                                              icon: const Icon(
+                                                Icons.photo_camera_outlined,
+                                              ),
+                                              label: Text(
+                                                profileBusy
+                                                    ? 'Subiendo…'
+                                                    : 'Cambiar foto',
+                                              ),
+                                            ),
+                                            if (profile?.avatarPath != null)
+                                              TextButton.icon(
+                                                onPressed: profileBusy
+                                                    ? null
+                                                    : () async {
+                                                        setDialogState(() {
+                                                          profileBusy = true;
+                                                          profileError = null;
+                                                        });
+                                                        try {
+                                                          final updated =
+                                                              await widget
+                                                                  .profileService
+                                                                  .removeAvatar();
+                                                          if (!dialogContext
+                                                              .mounted) {
+                                                            return;
+                                                          }
+                                                          setDialogState(() {
+                                                            profile = updated;
+                                                            profileBusy =
+                                                                false;
+                                                          });
+                                                        } catch (error) {
+                                                          if (dialogContext
+                                                              .mounted) {
+                                                            setDialogState(() {
+                                                              profileBusy =
+                                                                  false;
+                                                              profileError =
+                                                                  'No se pudo quitar la foto: $error';
+                                                            });
+                                                          }
+                                                        }
+                                                      },
+                                                icon: const Icon(
+                                                  Icons.delete_outline_rounded,
+                                                ),
+                                                label:
+                                                    const Text('Quitar foto'),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Última sincronización: '
-                              '${_formatSyncTime(widget.cloudSyncService.lastSuccessfulSyncAt)}',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 3),
-                            Text(
-                              'Última subida local: '
-                              '${_formatSyncTime(widget.cloudSyncService.lastSuccessfulUploadAt)}',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                            const SizedBox(height: 14),
+                            TextField(
+                              controller: usernameController,
+                              enabled: !profileBusy && email != null,
+                              maxLength: 24,
+                              textInputAction: TextInputAction.done,
+                              decoration: const InputDecoration(
+                                labelText: 'Username',
+                                prefixText: '@',
+                                helperText:
+                                    '3–24 caracteres: letras, números y guion bajo.',
+                                prefixIcon:
+                                    Icon(Icons.alternate_email_rounded),
                               ),
                             ),
-                            if (_cloudSyncFailed &&
-                                _cloudSyncError != null) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                'Hay cambios locales pendientes. Orbitask volverá a intentarlo automáticamente.',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.error,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
                             const SizedBox(height: 8),
                             Align(
                               alignment: Alignment.centerLeft,
-                              child: TextButton.icon(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  _showSyncStatus();
-                                },
-                                icon: const Icon(Icons.info_outline_rounded),
-                                label: const Text('Ver detalles'),
+                              child: FilledButton.icon(
+                                onPressed: profileBusy || email == null
+                                    ? null
+                                    : () async {
+                                        setDialogState(() {
+                                          profileBusy = true;
+                                          profileError = null;
+                                        });
+
+                                        try {
+                                          final updated = await widget
+                                              .profileService
+                                              .updateUsername(
+                                                usernameController.text,
+                                              );
+                                          if (!dialogContext.mounted) return;
+                                          usernameController.text =
+                                              updated.username ?? '';
+                                          setDialogState(() {
+                                            profile = updated;
+                                            profileBusy = false;
+                                          });
+                                          if (mounted) {
+                                            _showMessage(
+                                              'Perfil actualizado.',
+                                            );
+                                          }
+                                        } on PostgrestException catch (error) {
+                                          if (dialogContext.mounted) {
+                                            setDialogState(() {
+                                              profileBusy = false;
+                                              profileError =
+                                                  error.code == '23505'
+                                                      ? 'Ese username ya está en uso.'
+                                                      : error.message;
+                                            });
+                                          }
+                                        } catch (error) {
+                                          if (dialogContext.mounted) {
+                                            setDialogState(() {
+                                              profileBusy = false;
+                                              profileError =
+                                                  error is FormatException
+                                                      ? error.message
+                                                      : 'No se pudo guardar el username: $error';
+                                            });
+                                          }
+                                        }
+                                      },
+                                icon: const Icon(Icons.save_outlined),
+                                label: Text(
+                                  profileBusy
+                                      ? 'Guardando…'
+                                      : 'Guardar username',
+                                ),
+                              ),
+                            ),
+                            if (profileError != null) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.errorContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  profileError!,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color:
+                                        theme.colorScheme.onErrorContainer,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                            Text(
+                              'Sincronización',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        _cloudSyncFailed
+                                            ? Icons.cloud_off_outlined
+                                            : (_cloudSyncing
+                                                ? Icons.sync_rounded
+                                                : Icons.cloud_done_outlined),
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _cloudSyncing
+                                              ? 'Sincronizando…'
+                                              : (_cloudSyncFailed
+                                                  ? 'Pendiente de sincronizar'
+                                                  : 'Sincronización activa'),
+                                          style: theme.textTheme.titleSmall
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Última sincronización: '
+                                    '${_formatSyncTime(widget.cloudSyncService.lastSuccessfulSyncAt)}',
+                                    style:
+                                        theme.textTheme.bodySmall?.copyWith(
+                                      color: theme
+                                          .colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Última subida local: '
+                                    '${_formatSyncTime(widget.cloudSyncService.lastSuccessfulUploadAt)}',
+                                    style:
+                                        theme.textTheme.bodySmall?.copyWith(
+                                      color: theme
+                                          .colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      Navigator.of(dialogContext).pop();
+                                      _showSyncStatus();
+                                    },
+                                    icon: const Icon(
+                                      Icons.info_outline_rounded,
+                                    ),
+                                    label: const Text('Ver detalles'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                FilledButton.icon(
+                                  onPressed: uploadingCloud || _cloudSyncing
+                                      ? null
+                                      : () async {
+                                          setDialogState(
+                                            () => uploadingCloud = true,
+                                          );
+                                          setState(
+                                            () => _cloudSyncing = true,
+                                          );
+                                          try {
+                                            final result = await widget
+                                                .cloudSyncService
+                                                .syncNow();
+                                            if (!mounted) return;
+
+                                            widget.onCloudThemeChanged(
+                                              result.themeId,
+                                            );
+                                            setDialogState(() {
+                                              selectedThemeId =
+                                                  result.themeId;
+                                            });
+
+                                            setState(() {
+                                              _cloudSyncFailed = false;
+                                              _cloudSyncError = null;
+                                              _lastCloudSyncAt = widget
+                                                  .cloudSyncService
+                                                  .lastSuccessfulSyncAt;
+                                            });
+
+                                            _notificationsReconciled = false;
+                                            await _loadData();
+
+                                            if (mounted) {
+                                              _showMessage(
+                                                'Sincronización completada.',
+                                              );
+                                            }
+                                          } catch (error) {
+                                            if (mounted) {
+                                              setState(() {
+                                                _cloudSyncFailed = true;
+                                                _cloudSyncError =
+                                                    error.toString();
+                                              });
+                                              _showMessage(
+                                                'No se pudo sincronizar con Supabase: $error',
+                                              );
+                                            }
+                                          } finally {
+                                            if (dialogContext.mounted) {
+                                              setDialogState(
+                                                () => uploadingCloud = false,
+                                              );
+                                            }
+                                            if (mounted) {
+                                              setState(
+                                                () => _cloudSyncing = false,
+                                              );
+                                            }
+                                          }
+                                        },
+                                  icon: uploadingCloud
+                                      ? const SizedBox.square(
+                                          dimension: 18,
+                                          child:
+                                              CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.sync_rounded),
+                                  label: Text(
+                                    uploadingCloud
+                                        ? 'Sincronizando…'
+                                        : 'Sincronizar ahora',
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: email == null
+                                      ? null
+                                      : () async {
+                                          Navigator.of(dialogContext).pop();
+                                          await _showChangePasswordDialog();
+                                        },
+                                  icon:
+                                      const Icon(Icons.password_rounded),
+                                  label:
+                                      const Text('Cambiar contraseña'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: email == null
+                                      ? null
+                                      : () async {
+                                          try {
+                                            await widget.authService
+                                                .signOut();
+                                            if (dialogContext.mounted) {
+                                              Navigator.of(dialogContext)
+                                                  .pop();
+                                            }
+                                          } catch (error) {
+                                            if (mounted) {
+                                              _showMessage(
+                                                'No se pudo cerrar la sesión: $error',
+                                              );
+                                            }
+                                          }
+                                        },
+                                  icon: const Icon(Icons.logout_rounded),
+                                  label: const Text('Cerrar sesión'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      SingleChildScrollView(
+                        padding: const EdgeInsets.only(top: 8, bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Notificaciones',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Comprueba que Orbitask puede mostrar avisos en este dispositivo.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.notifications_active_outlined,
+                                    size: 30,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 14),
+                                  const Expanded(
+                                    child: Text(
+                                      'Envía una notificación de prueba para verificar permisos y funcionamiento.',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  FilledButton.icon(
+                                    onPressed: () async {
+                                      await widget.notificationService
+                                          .requestPermissions();
+                                      final shown = await widget
+                                          .notificationService
+                                          .showNow(
+                                        title: 'Orbitask',
+                                        body:
+                                            'Las notificaciones están funcionando.',
+                                      );
+                                      if (mounted) {
+                                        _showMessage(
+                                          shown
+                                              ? 'Notificación de prueba enviada.'
+                                              : 'El sistema de notificaciones no está disponible en este dispositivo.',
+                                        );
+                                      }
+                                    },
+                                    icon: const Icon(
+                                      Icons.notifications_active_rounded,
+                                    ),
+                                    label: const Text('Probar'),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          FilledButton.icon(
-                            onPressed: uploadingCloud || _cloudSyncing
-                                ? null
-                                : () async {
-                                    setDialogState(
-                                      () => uploadingCloud = true,
-                                    );
-                                    setState(() => _cloudSyncing = true);
-                                    try {
-                                      final result = await widget
-                                          .cloudSyncService
-                                          .syncNow();
-                                      if (!mounted) return;
-
-                                      widget.onCloudThemeChanged(
-                                        result.themeId,
-                                      );
-                                      setDialogState(
-                                        () => selectedThemeId = result.themeId,
-                                      );
-
-                                      setState(() {
-                                        _cloudSyncFailed = false;
-                                        _cloudSyncError = null;
-                                        _lastCloudSyncAt = widget
-                                            .cloudSyncService
-                                            .lastSuccessfulSyncAt;
-                                      });
-
-                                      _notificationsReconciled = false;
-                                      await _loadData();
-
-                                      if (!mounted) return;
-                                      _showMessage(
-                                        'Sincronización completada. '
-                                        'Nube revisada: '
-                                        '${result.remoteLists} listas, '
-                                        '${result.remoteTasks} tareas, '
-                                        '${result.remoteSubtasks} subtareas, '
-                                        '${result.remoteReminders} recordatorios y '
-                                        '${result.remoteDeletions} eliminaciones.',
-                                      );
-                                    } catch (error) {
-                                      if (mounted) {
-                                        setState(() {
-                                          _cloudSyncFailed = true;
-                                          _cloudSyncError = error.toString();
-                                        });
-                                        _showMessage(
-                                          'No se pudo sincronizar con Supabase: $error',
-                                        );
-                                      }
-                                    } finally {
-                                      if (context.mounted) {
-                                        setDialogState(
-                                          () => uploadingCloud = false,
-                                        );
-                                      }
-                                      if (mounted) {
-                                        setState(() => _cloudSyncing = false);
-                                      }
-                                    }
-                                  },
-                            icon: uploadingCloud
-                                ? const SizedBox.square(
-                                    dimension: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.cloud_upload_outlined),
-                            label: Text(
-                              uploadingCloud
-                                  ? 'Sincronizando…'
-                                  : 'Sincronizar ahora',
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: uploadingCloud
-                                ? null
-                                : () async {
-                                    Navigator.of(context).pop();
-                                    await _showChangePasswordDialog();
-                                  },
-                            icon: const Icon(Icons.password_rounded),
-                            label: const Text('Cambiar contraseña'),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                              try {
-                                await widget.authService.signOut();
-                                if (context.mounted) {
-                                  Navigator.of(context).pop();
-                                }
-                              } catch (error) {
-                                if (mounted) {
-                                  _showMessage(
-                                    'No se pudo cerrar la sesión: $error',
-                                  );
-                                }
-                              }
-                            },
-                            icon: const Icon(Icons.logout_rounded),
-                            label: const Text('Cerrar sesión'),
-                          ),
-                        ],
-                      ),
                     ],
-                    const SizedBox(height: 22),
-                    const Divider(),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Notificaciones',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Envía un aviso de prueba para comprobar el acceso al sistema de notificaciones.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cerrar'),
-              ),
-              FilledButton.icon(
-                onPressed: () async {
-                  await widget.notificationService.requestPermissions();
-                  final shown = await widget.notificationService.showNow(
-                    title: 'Orbitask',
-                    body: 'Las notificaciones están funcionando.',
-                  );
-                  if (mounted) {
-                    _showMessage(
-                      shown
-                          ? 'Notificación de prueba enviada.'
-                          : 'El sistema de notificaciones no está disponible en este dispositivo.',
-                    );
-                  }
-                },
-                icon: const Icon(Icons.notifications_active_rounded),
-                label: const Text('Probar notificación'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+                actions: [
+                  TextButton(
+                    onPressed: () =>
+                        Navigator.of(dialogContext).pop(),
+                    child: const Text('Cerrar'),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      );
+    } finally {
+      usernameController.dispose();
+    }
   }
 }
 
