@@ -317,11 +317,17 @@ class _HomeScreenState extends State<HomeScreen>
                       selectedIcon: Icon(Icons.check_circle_rounded),
                       label: 'Hechas',
                     ),
+                    NavigationDestination(
+                      icon: Icon(Icons.delete_outline_rounded),
+                      selectedIcon: Icon(Icons.delete_rounded),
+                      label: 'Papelera',
+                    ),
                   ],
                 ),
-          floatingActionButton: _loading || _loadError != null
-              ? null
-              : FloatingActionButton.extended(
+          floatingActionButton:
+              _loading || _loadError != null || _filterIndex == 4
+                  ? null
+                  : FloatingActionButton.extended(
                   onPressed: () => _openTaskForm(),
                   icon: const Icon(Icons.add_rounded),
                   label: const Text('Nueva tarea'),
@@ -374,6 +380,13 @@ class _HomeScreenState extends State<HomeScreen>
               selected: _selectedListId == null && _filterIndex == 3,
               onTap: () => _selectFilter(3),
             ),
+            _SidebarItem(
+              icon: Icons.delete_outline_rounded,
+              selectedIcon: Icons.delete_rounded,
+              label: 'Papelera',
+              selected: _selectedListId == null && _filterIndex == 4,
+              onTap: () => _selectFilter(4),
+            ),
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
               child: Divider(height: 1),
@@ -412,7 +425,9 @@ class _HomeScreenState extends State<HomeScreen>
                         count: _tasks
                             .where(
                               (task) =>
-                                  task.listId == list.id && !task.completed,
+                                  task.listId == list.id &&
+                                  !task.completed &&
+                                  task.trashedAt == null,
                             )
                             .length,
                         selected: _selectedListId == list.id,
@@ -588,7 +603,8 @@ class _HomeScreenState extends State<HomeScreen>
                   },
                 )
               else ...[
-                if (_filterIndex != 3 || _selectedListId != null) ...[
+                if ((_filterIndex != 3 && _filterIndex != 4) ||
+                    _selectedListId != null) ...[
                   _buildQuickAdd(context),
                   const SizedBox(height: 20),
                 ],
@@ -605,6 +621,14 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ),
                     const Spacer(),
+                    if (_filterIndex == 4 && visibleTasks.isNotEmpty) ...[
+                      TextButton.icon(
+                        onPressed: _emptyTrash,
+                        icon: const Icon(Icons.delete_sweep_outlined),
+                        label: const Text('Vaciar papelera'),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     Text(
                       '${visibleTasks.length} ${visibleTasks.length == 1 ? 'tarea' : 'tareas'}',
                       style: theme.textTheme.bodyMedium?.copyWith(
@@ -620,17 +644,27 @@ class _HomeScreenState extends State<HomeScreen>
                   ...visibleTasks.map(
                     (task) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: TaskCard(
-                        task: task,
-                        list: _listForId(task.listId),
-                        subtasks: _subtasksByTask[task.id] ?? const [],
-                        reminders: _remindersByTask[task.id] ?? const [],
-                        onChanged: (value) =>
-                            _toggleCompleted(task, value ?? false),
-                        onEdit: () => _openTaskForm(task: task),
-                        onDelete: () => _deleteTask(task),
-                        onSubtaskChanged: _toggleSubtask,
-                      ),
+                      child: _filterIndex == 4
+                          ? _TrashTaskCard(
+                              task: task,
+                              list: _listForId(task.listId),
+                              onRestore: () => _restoreTaskFromTrash(task),
+                              onDeletePermanently: () =>
+                                  _deleteTaskPermanently(task),
+                            )
+                          : TaskCard(
+                              task: task,
+                              list: _listForId(task.listId),
+                              subtasks:
+                                  _subtasksByTask[task.id] ?? const [],
+                              reminders:
+                                  _remindersByTask[task.id] ?? const [],
+                              onChanged: (value) =>
+                                  _toggleCompleted(task, value ?? false),
+                              onEdit: () => _openTaskForm(task: task),
+                              onDelete: () => _deleteTask(task),
+                              onSubtaskChanged: _toggleSubtask,
+                            ),
                     ),
                   ),
               ],
@@ -888,20 +922,35 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (_selectedListId != null) {
       tasks = _tasks.where(
-        (task) => !task.completed && task.listId == _selectedListId,
+        (task) =>
+            task.trashedAt == null &&
+            !task.completed &&
+            task.listId == _selectedListId,
       );
     } else {
       tasks = switch (_filterIndex) {
-        0 => _tasks.where((task) => !task.completed),
+        0 => _tasks.where(
+            (task) => task.trashedAt == null && !task.completed,
+          ),
         1 => _tasks.where(
-            (task) => !task.completed && _isToday(task.dueDate),
+            (task) =>
+                task.trashedAt == null &&
+                !task.completed &&
+                _isToday(task.dueDate),
           ),
         2 => _tasks.where(
             (task) =>
-                !task.completed && task.priority == TaskPriority.high,
+                task.trashedAt == null &&
+                !task.completed &&
+                task.priority == TaskPriority.high,
           ),
-        3 => _tasks.where((task) => task.completed),
-        _ => _tasks.where((task) => !task.completed),
+        3 => _tasks.where(
+            (task) => task.trashedAt == null && task.completed,
+          ),
+        4 => _tasks.where((task) => task.trashedAt != null),
+        _ => _tasks.where(
+            (task) => task.trashedAt == null && !task.completed,
+          ),
       };
     }
 
@@ -1014,13 +1063,16 @@ class _HomeScreenState extends State<HomeScreen>
       1 => 'Hoy',
       2 => 'Importantes',
       3 => 'Completadas',
+      4 => 'Papelera',
       _ => 'Orbitask',
     };
   }
 
   String _listLabel() {
     if (_selectedListId != null) return 'Pendientes de la lista';
-    return _filterIndex == 3 ? 'Tareas completadas' : 'Pendientes';
+    if (_filterIndex == 3) return 'Tareas completadas';
+    if (_filterIndex == 4) return 'Tareas en papelera';
+    return 'Pendientes';
   }
 
   String _emptyMessage() {
@@ -1036,6 +1088,7 @@ class _HomeScreenState extends State<HomeScreen>
       1 => 'No tienes tareas pendientes para hoy.',
       2 => 'No tienes tareas importantes pendientes.',
       3 => 'Todavía no has completado tareas.',
+      4 => 'La papelera está vacía.',
       _ => 'No tienes tareas pendientes.',
     };
   }
@@ -1286,26 +1339,25 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _deleteTask(Task task) async {
-    final index = _tasks.indexWhere((item) => item.id == task.id);
-    if (index == -1) return;
-
-    final deletedSubtasks = _subtasksByTask[task.id] ?? const <Subtask>[];
-    final deletedReminders = _remindersByTask[task.id] ?? const <Reminder>[];
+    final reminders = _remindersByTask[task.id] ?? const <Reminder>[];
 
     try {
-      await widget.repository.deleteTask(task.id);
-      await widget.notificationService.cancelReminders(deletedReminders);
+      await widget.repository.trashTask(task.id);
+      await widget.notificationService.cancelReminders(reminders);
       if (!mounted) return;
 
-      final newSubtaskMap = Map<String, List<Subtask>>.from(_subtasksByTask)
-        ..remove(task.id);
-      final newReminderMap = Map<String, List<Reminder>>.from(_remindersByTask)
-        ..remove(task.id);
-
+      final trashedAt = DateTime.now();
       setState(() {
-        _tasks = _tasks.where((item) => item.id != task.id).toList();
-        _subtasksByTask = newSubtaskMap;
-        _remindersByTask = newReminderMap;
+        _tasks = _tasks
+            .map(
+              (item) => item.id == task.id
+                  ? item.copyWith(
+                      trashedAt: trashedAt,
+                      updatedAt: trashedAt,
+                    )
+                  : item,
+            )
+            .toList(growable: false);
       });
 
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -1313,15 +1365,10 @@ class _HomeScreenState extends State<HomeScreen>
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Se eliminó “${task.title}”.'),
+          content: Text('“${task.title}” se movió a la papelera.'),
           action: SnackBarAction(
             label: 'Deshacer',
-            onPressed: () => _restoreDeletedTask(
-              task,
-              deletedSubtasks,
-              deletedReminders,
-              index,
-            ),
+            onPressed: () => _restoreTaskFromTrash(task),
           ),
         ),
       );
@@ -1331,51 +1378,146 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  Future<void> _restoreDeletedTask(
-    Task task,
-    List<Subtask> subtasks,
-    List<Reminder> reminders,
-    int index,
-  ) async {
+  Future<void> _restoreTaskFromTrash(Task task) async {
     try {
-      final restoredAt = DateTime.now();
-      final restoredTask = task.copyWith(updatedAt: restoredAt);
+      await widget.repository.restoreTask(task.id);
+      if (!mounted) return;
 
-      await widget.repository.createTask(
-        restoredTask,
-        subtasks,
-        reminders,
+      final restoredAt = DateTime.now();
+      final restoredTask = task.copyWith(
+        clearTrashedAt: true,
+        updatedAt: restoredAt,
       );
 
+      setState(() {
+        _tasks = _tasks
+            .map((item) => item.id == task.id ? restoredTask : item)
+            .toList(growable: false);
+      });
+
+      final reminders = _remindersByTask[task.id] ?? const <Reminder>[];
       String? reminderWarning;
       if (!restoredTask.completed) {
-        reminderWarning = await widget.notificationService
-            .scheduleTaskReminders(
-              task: restoredTask,
-              reminders: reminders,
-            );
+        reminderWarning =
+            await widget.notificationService.scheduleTaskReminders(
+          task: restoredTask,
+          reminders: reminders,
+        );
       }
 
       if (!mounted) return;
-
-      setState(() {
-        final restored = [..._tasks];
-        final safeIndex = index > restored.length ? restored.length : index;
-        restored.insert(safeIndex, restoredTask);
-        _tasks = restored;
-        _subtasksByTask = {
-          ..._subtasksByTask,
-          task.id: subtasks,
-        };
-        _remindersByTask = {
-          ..._remindersByTask,
-          task.id: reminders,
-        };
-      });
-
       if (reminderWarning != null) {
         _showMessage(reminderWarning);
+      } else {
+        _showMessage('Tarea restaurada.');
       }
+      _scheduleCloudSync();
+    } catch (error) {
+      if (!mounted) return;
+      _showDatabaseError(error);
+    }
+  }
+
+  Future<void> _deleteTaskPermanently(Task task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar definitivamente'),
+        content: Text(
+          '“${task.title}” se eliminará de forma permanente. '
+          'Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final reminders = _remindersByTask[task.id] ?? const <Reminder>[];
+      await widget.repository.deleteTask(task.id);
+      await widget.notificationService.cancelReminders(reminders);
+      if (!mounted) return;
+
+      setState(() {
+        _tasks = _tasks.where((item) => item.id != task.id).toList();
+        _subtasksByTask = Map<String, List<Subtask>>.from(_subtasksByTask)
+          ..remove(task.id);
+        _remindersByTask =
+            Map<String, List<Reminder>>.from(_remindersByTask)
+              ..remove(task.id);
+      });
+
+      _showMessage('Tarea eliminada definitivamente.');
+      _scheduleCloudSync();
+    } catch (error) {
+      if (!mounted) return;
+      _showDatabaseError(error);
+    }
+  }
+
+  Future<void> _emptyTrash() async {
+    final trashedTasks =
+        _tasks.where((task) => task.trashedAt != null).toList(growable: false);
+    if (trashedTasks.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Vaciar papelera'),
+        content: Text(
+          'Se eliminarán definitivamente ${trashedTasks.length} '
+          '${trashedTasks.length == 1 ? 'tarea' : 'tareas'}. '
+          'Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Vaciar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      for (final task in trashedTasks) {
+        final reminders = _remindersByTask[task.id] ?? const <Reminder>[];
+        await widget.repository.deleteTask(task.id);
+        await widget.notificationService.cancelReminders(reminders);
+      }
+
+      if (!mounted) return;
+      final trashedIds = trashedTasks.map((task) => task.id).toSet();
+      final newSubtasks =
+          Map<String, List<Subtask>>.from(_subtasksByTask)
+            ..removeWhere((id, _) => trashedIds.contains(id));
+      final newReminders =
+          Map<String, List<Reminder>>.from(_remindersByTask)
+            ..removeWhere((id, _) => trashedIds.contains(id));
+
+      setState(() {
+        _tasks =
+            _tasks.where((task) => !trashedIds.contains(task.id)).toList();
+        _subtasksByTask = newSubtasks;
+        _remindersByTask = newReminders;
+      });
+
+      _showMessage('Papelera vaciada.');
       _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
@@ -1389,7 +1531,7 @@ class _HomeScreenState extends State<HomeScreen>
   ) async {
     for (final task in tasks) {
       final reminders = remindersByTask[task.id] ?? const <Reminder>[];
-      if (task.completed) {
+      if (task.trashedAt != null || task.completed) {
         await widget.notificationService.cancelReminders(reminders);
         continue;
       }
@@ -2629,6 +2771,98 @@ class _HomeScreenState extends State<HomeScreen>
     } finally {
       usernameController.dispose();
     }
+  }
+}
+
+class _TrashTaskCard extends StatelessWidget {
+  const _TrashTaskCard({
+    required this.task,
+    required this.onRestore,
+    required this.onDeletePermanently,
+    this.list,
+  });
+
+  final Task task;
+  final TaskList? list;
+  final VoidCallback onRestore;
+  final VoidCallback onDeletePermanently;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final trashedAt = task.trashedAt;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.delete_outline_rounded,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (task.description.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      task.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      if (list != null)
+                        Text(
+                          list!.name,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      if (trashedAt != null)
+                        Text(
+                          'En papelera desde ${trashedAt.day}/${trashedAt.month}/${trashedAt.year}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              tooltip: 'Restaurar',
+              onPressed: onRestore,
+              icon: const Icon(Icons.restore_rounded),
+            ),
+            IconButton(
+              tooltip: 'Eliminar definitivamente',
+              onPressed: onDeletePermanently,
+              icon: const Icon(Icons.delete_forever_outlined),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
