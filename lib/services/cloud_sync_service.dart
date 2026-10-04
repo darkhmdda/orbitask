@@ -49,7 +49,8 @@ class CloudSyncResult {
 }
 
 class CloudSyncService {
-  static const Duration deletionRetention = Duration(days: 180);
+  static const Duration deletionRetention = Duration(days: 365);
+  static const Duration deletionCleanupInterval = Duration(days: 1);
 
   CloudSyncService({
     required this._client,
@@ -642,7 +643,19 @@ class CloudSyncService {
     SupabaseClient client,
     String userId,
   ) async {
-    final cutoff = DateTime.now().toUtc().subtract(deletionRetention);
+    final now = DateTime.now().toUtc();
+    final lastCleanupRaw =
+        _database.getSetting('last_tombstone_cleanup_at');
+    final lastCleanup = lastCleanupRaw == null
+        ? null
+        : DateTime.tryParse(lastCleanupRaw)?.toUtc();
+
+    if (lastCleanup != null &&
+        now.difference(lastCleanup) < deletionCleanupInterval) {
+      return 0;
+    }
+
+    final cutoff = now.subtract(deletionRetention);
     final cutoffMillis = cutoff.millisecondsSinceEpoch;
     final cutoffIso = cutoff.toIso8601String();
 
@@ -676,7 +689,7 @@ class CloudSyncService {
 
     _database.setSetting(
       'last_tombstone_cleanup_at',
-      DateTime.now().toUtc().toIso8601String(),
+      now.toIso8601String(),
     );
 
     return localCount;
