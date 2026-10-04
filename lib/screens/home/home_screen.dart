@@ -65,7 +65,10 @@ class _HomeScreenState extends State<HomeScreen>
   bool _notificationsReconciled = false;
   bool _loading = true;
   bool _cloudSyncing = false;
+  bool _cloudSyncQueued = false;
   bool _cloudSyncFailed = false;
+  String? _cloudSyncError;
+  DateTime? _lastCloudSyncAt;
   String? _loadError;
   Timer? _cloudSyncDebounce;
   Timer? _cloudSyncTimer;
@@ -90,6 +93,10 @@ class _HomeScreenState extends State<HomeScreen>
     await widget.notificationService.requestPermissions();
     await _loadData();
     if (!mounted) return;
+
+    setState(() {
+      _lastCloudSyncAt = widget.cloudSyncService.lastSuccessfulSyncAt;
+    });
 
     _startRealtimeSubscription();
     _scheduleCloudSync(immediate: true);
@@ -146,9 +153,13 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _runAutomaticCloudSync() async {
-    if (_cloudSyncing ||
-        !widget.cloudSyncService.isConfigured ||
+    if (!widget.cloudSyncService.isConfigured ||
         widget.authService.currentUser == null) {
+      return;
+    }
+
+    if (_cloudSyncing) {
+      _cloudSyncQueued = true;
       return;
     }
 
@@ -166,21 +177,33 @@ class _HomeScreenState extends State<HomeScreen>
 
       widget.onCloudThemeChanged(result.themeId);
 
-      if (_cloudSyncFailed) {
-        setState(() => _cloudSyncFailed = false);
-      }
+      setState(() {
+        _cloudSyncFailed = false;
+        _cloudSyncError = null;
+        _lastCloudSyncAt = widget.cloudSyncService.lastSuccessfulSyncAt;
+      });
 
       _notificationsReconciled = false;
       await _loadData();
-    } catch (_) {
-      if (mounted && !_cloudSyncFailed) {
-        setState(() => _cloudSyncFailed = true);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _cloudSyncFailed = true;
+          _cloudSyncError = error.toString();
+        });
       }
       // SQLite sigue siendo usable y el siguiente cambio, reanudación
       // o ciclo periódico vuelve a intentar la sincronización.
     } finally {
+      final shouldRetry = _cloudSyncQueued;
+      _cloudSyncQueued = false;
+
       if (mounted) {
         setState(() => _cloudSyncing = false);
+      }
+
+      if (shouldRetry) {
+        _scheduleCloudSync(immediate: true);
       }
     }
   }
@@ -463,6 +486,8 @@ class _HomeScreenState extends State<HomeScreen>
                               widget.authService.currentUser != null,
                           cloudSyncing: _cloudSyncing,
                           cloudSyncFailed: _cloudSyncFailed,
+                          lastCloudSyncAt: _lastCloudSyncAt,
+                          onTap: _showSyncStatus,
                         ),
                       ),
                     ),
@@ -517,6 +542,8 @@ class _HomeScreenState extends State<HomeScreen>
                           widget.authService.currentUser != null,
                       cloudSyncing: _cloudSyncing,
                       cloudSyncFailed: _cloudSyncFailed,
+                      lastCloudSyncAt: _lastCloudSyncAt,
+                      onTap: _showSyncStatus,
                     ),
                     if (showMobileListButton) ...[
                       const SizedBox(width: 4),
@@ -1455,6 +1482,118 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  String _formatSyncTime(DateTime? value) {
+    if (value == null) return 'Todavía no se ha sincronizado';
+
+    final now = DateTime.now();
+    final difference = now.difference(value);
+
+    if (difference.inSeconds < 60) return 'Hace unos segundos';
+    if (difference.inMinutes < 60) {
+      return 'Hace ${difference.inMinutes} min';
+    }
+    if (difference.inHours < 24) {
+      return 'Hace ${difference.inHours} h';
+    }
+
+    final day = value.day.toString().padLeft(2, '0');
+    final month = value.month.toString().padLeft(2, '0');
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
+    return '$day/$month/${value.year} $hour:$minute';
+  }
+
+  Future<void> _showSyncStatus() async {
+    final connected = widget.authService.currentUser != null;
+    final theme = Theme.of(context);
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Estado de sincronización'),
+        content: SizedBox(
+          width: 460,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  _cloudSyncFailed
+                      ? Icons.cloud_off_outlined
+                      : (_cloudSyncing
+                          ? Icons.sync_rounded
+                          : (connected
+                              ? Icons.cloud_done_outlined
+                              : Icons.storage_rounded)),
+                ),
+                title: Text(
+                  _cloudSyncing
+                      ? 'Sincronizando…'
+                      : (_cloudSyncFailed
+                          ? 'Hay cambios pendientes de sincronizar'
+                          : (connected
+                              ? 'Sincronización activa'
+                              : 'Solo almacenamiento local')),
+                ),
+                subtitle: Text(
+                  connected
+                      ? 'Última sincronización: ${_formatSyncTime(_lastCloudSyncAt)}'
+                      : 'Inicia sesión para sincronizar este dispositivo con la nube.',
+                ),
+              ),
+              if (_cloudSyncFailed && _cloudSyncError != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _cloudSyncError!,
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+              ],
+              if (connected) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Orbitask reintenta automáticamente cuando vuelves a abrir la app, recuperas conexión o llega un cambio por Realtime.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+          if (connected)
+            FilledButton.icon(
+              onPressed: _cloudSyncing
+                  ? null
+                  : () {
+                      Navigator.of(context).pop();
+                      _scheduleCloudSync(immediate: true);
+                    },
+              icon: const Icon(Icons.sync_rounded),
+              label: const Text('Sincronizar ahora'),
+            ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showSettingsInfo() async {
     var selectedThemeId = widget.themeId;
     var uploadingCloud = false;
@@ -1549,11 +1688,13 @@ class _HomeScreenState extends State<HomeScreen>
                                         () => selectedThemeId = result.themeId,
                                       );
 
-                                      if (_cloudSyncFailed) {
-                                        setState(
-                                          () => _cloudSyncFailed = false,
-                                        );
-                                      }
+                                      setState(() {
+                                        _cloudSyncFailed = false;
+                                        _cloudSyncError = null;
+                                        _lastCloudSyncAt = widget
+                                            .cloudSyncService
+                                            .lastSuccessfulSyncAt;
+                                      });
 
                                       _notificationsReconciled = false;
                                       await _loadData();
@@ -1570,9 +1711,10 @@ class _HomeScreenState extends State<HomeScreen>
                                       );
                                     } catch (error) {
                                       if (mounted) {
-                                        setState(
-                                          () => _cloudSyncFailed = true,
-                                        );
+                                        setState(() {
+                                          _cloudSyncFailed = true;
+                                          _cloudSyncError = error.toString();
+                                        });
                                         _showMessage(
                                           'No se pudo sincronizar con Supabase: $error',
                                         );
@@ -1807,50 +1949,68 @@ class _LocalStatusChip extends StatelessWidget {
     required this.cloudConnected,
     required this.cloudSyncing,
     required this.cloudSyncFailed,
+    required this.lastCloudSyncAt,
+    required this.onTap,
   });
 
   final bool loading;
   final bool cloudConnected;
   final bool cloudSyncing;
   final bool cloudSyncFailed;
+  final DateTime? lastCloudSyncAt;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final label = loading
+        ? 'Cargando…'
+        : (cloudSyncing
+            ? 'Sincronizando…'
+            : (cloudSyncFailed
+                ? 'Pendiente de sincronizar'
+                : (cloudConnected
+                    ? (lastCloudSyncAt == null
+                        ? 'Nube conectada'
+                        : 'Sincronizado')
+                    : 'Guardado local')));
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
+    return Tooltip(
+      message: 'Ver estado de sincronización',
+      child: Material(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            loading || cloudSyncing
-                ? Icons.sync_rounded
-                : (cloudSyncFailed
-                    ? Icons.cloud_off_outlined
-                    : (cloudConnected
-                        ? Icons.cloud_done_outlined
-                        : Icons.storage_rounded)),
-            size: 16,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  loading || cloudSyncing
+                      ? Icons.sync_rounded
+                      : (cloudSyncFailed
+                          ? Icons.cloud_off_outlined
+                          : (cloudConnected
+                              ? Icons.cloud_done_outlined
+                              : Icons.storage_rounded)),
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelMedium,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: 6),
-          Text(
-            loading
-                ? 'Cargando…'
-                : (cloudSyncing
-                    ? 'Sincronizando…'
-                    : (cloudSyncFailed
-                        ? 'Sin conexión'
-                        : (cloudConnected
-                            ? 'Nube conectada'
-                            : 'Guardado local'))),
-            style: theme.textTheme.labelMedium,
-          ),
-        ],
+        ),
       ),
     );
   }
