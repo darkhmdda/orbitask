@@ -294,7 +294,9 @@ class _HomeScreenState extends State<HomeScreen>
           bottomNavigationBar: useSidebar
               ? null
               : NavigationBar(
-                  selectedIndex: _selectedListId == null ? _filterIndex : 0,
+                  selectedIndex: _selectedListId == null && _filterIndex < 4
+                      ? _filterIndex
+                      : 0,
                   onDestinationSelected: _selectFilter,
                   destinations: const [
                     NavigationDestination(
@@ -316,11 +318,6 @@ class _HomeScreenState extends State<HomeScreen>
                       icon: Icon(Icons.check_circle_outline_rounded),
                       selectedIcon: Icon(Icons.check_circle_rounded),
                       label: 'Hechas',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.delete_outline_rounded),
-                      selectedIcon: Icon(Icons.delete_rounded),
-                      label: 'Papelera',
                     ),
                   ],
                 ),
@@ -511,6 +508,15 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                       ),
                     ),
+                    IconButton(
+                      tooltip: 'Papelera',
+                      onPressed: () => _selectFilter(4),
+                      icon: Icon(
+                        _filterIndex == 4
+                            ? Icons.delete_rounded
+                            : Icons.delete_outline_rounded,
+                      ),
+                    ),
                     if (showMobileListButton)
                       IconButton(
                         tooltip: 'Listas',
@@ -567,6 +573,15 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                     if (showMobileListButton) ...[
                       const SizedBox(width: 4),
+                      IconButton(
+                        tooltip: 'Papelera',
+                        onPressed: () => _selectFilter(4),
+                        icon: Icon(
+                          _filterIndex == 4
+                              ? Icons.delete_rounded
+                              : Icons.delete_outline_rounded,
+                        ),
+                      ),
                       IconButton(
                         tooltip: 'Listas',
                         onPressed: _showListsPicker,
