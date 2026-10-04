@@ -18,6 +18,10 @@ import '../../widgets/theme_picker.dart';
 import '../list_manager/list_manager_dialog.dart';
 import '../task_form/task_form_dialog.dart';
 
+enum _TaskPriorityFilter { all, high, medium, low, none }
+
+enum _TaskSort { smart, dueDate, priority, newest, oldest, alphabetical }
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
@@ -47,6 +51,12 @@ class _HomeScreenState extends State<HomeScreen>
   int _filterIndex = 0;
   String? _selectedListId;
   final TextEditingController _quickAddController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  bool _searchVisible = false;
+  String _searchQuery = '';
+  String? _filterListId;
+  _TaskPriorityFilter _priorityFilter = _TaskPriorityFilter.all;
+  _TaskSort _taskSort = _TaskSort.smart;
 
   List<Task> _tasks = const [];
   List<TaskList> _lists = const [];
@@ -101,6 +111,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     _quickAddController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -462,9 +473,13 @@ class _HomeScreenState extends State<HomeScreen>
                         icon: const Icon(Icons.folder_outlined),
                       ),
                     IconButton(
-                      tooltip: 'Buscar',
-                      onPressed: _showSearchInfo,
-                      icon: const Icon(Icons.search_rounded),
+                      tooltip: _searchVisible ? 'Cerrar búsqueda' : 'Buscar y filtrar',
+                      onPressed: _toggleSearch,
+                      icon: Icon(
+                        _searchVisible
+                            ? Icons.search_off_rounded
+                            : Icons.search_rounded,
+                      ),
                     ),
                     IconButton(
                       tooltip: 'Ajustes',
@@ -512,9 +527,13 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ],
                     IconButton(
-                      tooltip: 'Buscar',
-                      onPressed: _showSearchInfo,
-                      icon: const Icon(Icons.search_rounded),
+                      tooltip: _searchVisible ? 'Cerrar búsqueda' : 'Buscar y filtrar',
+                      onPressed: _toggleSearch,
+                      icon: Icon(
+                        _searchVisible
+                            ? Icons.search_off_rounded
+                            : Icons.search_rounded,
+                      ),
                     ),
                     IconButton(
                       tooltip: 'Ajustes',
@@ -539,7 +558,11 @@ class _HomeScreenState extends State<HomeScreen>
               else ...[
                 if (_filterIndex != 3 || _selectedListId != null) ...[
                   _buildQuickAdd(context),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 20),
+                ],
+                if (_searchVisible || _hasTaskFilters) ...[
+                  _buildSearchAndFilters(context),
+                  const SizedBox(height: 22),
                 ],
                 Row(
                   children: [
@@ -617,8 +640,212 @@ class _HomeScreenState extends State<HomeScreen>
   void _selectList(String id) {
     setState(() {
       _selectedListId = id;
+      _filterListId = null;
       _filterIndex = 0;
     });
+  }
+
+  bool get _hasTaskFilters =>
+      _searchQuery.isNotEmpty ||
+      _filterListId != null ||
+      _priorityFilter != _TaskPriorityFilter.all ||
+      _taskSort != _TaskSort.smart;
+
+  void _toggleSearch() {
+    setState(() {
+      _searchVisible = !_searchVisible;
+      if (!_searchVisible && !_hasTaskFilters) {
+        _searchQuery = '';
+        _searchController.clear();
+      }
+    });
+  }
+
+  void _clearTaskFilters() {
+    setState(() {
+      _searchQuery = '';
+      _searchController.clear();
+      _filterListId = null;
+      _priorityFilter = _TaskPriorityFilter.all;
+      _taskSort = _TaskSort.smart;
+    });
+  }
+
+  Widget _buildSearchAndFilters(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectedFilterList = _filterListId == null
+        ? null
+        : _listForId(_filterListId!);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _searchController,
+              autofocus: _searchVisible,
+              onChanged: (value) {
+                setState(() => _searchQuery = value.trim().toLowerCase());
+              },
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search_rounded),
+                hintText: 'Buscar por título, descripción o subtarea…',
+                suffixIcon: _searchQuery.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Limpiar búsqueda',
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _searchQuery = '';
+                          });
+                        },
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                PopupMenuButton<_TaskPriorityFilter>(
+                  initialValue: _priorityFilter,
+                  onSelected: (value) {
+                    setState(() => _priorityFilter = value);
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: _TaskPriorityFilter.all,
+                      child: Text('Todas las prioridades'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskPriorityFilter.high,
+                      child: Text('Prioridad alta'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskPriorityFilter.medium,
+                      child: Text('Prioridad media'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskPriorityFilter.low,
+                      child: Text('Prioridad baja'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskPriorityFilter.none,
+                      child: Text('Sin prioridad'),
+                    ),
+                  ],
+                  child: _FilterButton(
+                    icon: Icons.flag_outlined,
+                    label: _priorityFilterLabel(),
+                    active: _priorityFilter != _TaskPriorityFilter.all,
+                  ),
+                ),
+                if (_selectedListId == null)
+                  PopupMenuButton<String?>(
+                    initialValue: _filterListId,
+                    onSelected: (value) {
+                      setState(() => _filterListId = value);
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem<String?>(
+                        value: null,
+                        child: Text('Todas las listas'),
+                      ),
+                      ..._lists.map(
+                        (list) => PopupMenuItem<String?>(
+                          value: list.id,
+                          child: Text(list.name),
+                        ),
+                      ),
+                    ],
+                    child: _FilterButton(
+                      icon: Icons.folder_outlined,
+                      label: selectedFilterList?.name ?? 'Todas las listas',
+                      active: _filterListId != null,
+                    ),
+                  ),
+                PopupMenuButton<_TaskSort>(
+                  initialValue: _taskSort,
+                  onSelected: (value) {
+                    setState(() => _taskSort = value);
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: _TaskSort.smart,
+                      child: Text('Orden inteligente'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskSort.dueDate,
+                      child: Text('Fecha límite'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskSort.priority,
+                      child: Text('Prioridad'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskSort.newest,
+                      child: Text('Más recientes'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskSort.oldest,
+                      child: Text('Más antiguas'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskSort.alphabetical,
+                      child: Text('A–Z'),
+                    ),
+                  ],
+                  child: _FilterButton(
+                    icon: Icons.sort_rounded,
+                    label: _taskSortLabel(),
+                    active: _taskSort != _TaskSort.smart,
+                  ),
+                ),
+                if (_hasTaskFilters)
+                  TextButton.icon(
+                    onPressed: _clearTaskFilters,
+                    icon: const Icon(Icons.filter_alt_off_outlined),
+                    label: const Text('Limpiar'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _priorityFilterLabel() {
+    return switch (_priorityFilter) {
+      _TaskPriorityFilter.all => 'Prioridad',
+      _TaskPriorityFilter.high => 'Alta',
+      _TaskPriorityFilter.medium => 'Media',
+      _TaskPriorityFilter.low => 'Baja',
+      _TaskPriorityFilter.none => 'Sin prioridad',
+    };
+  }
+
+  String _taskSortLabel() {
+    return switch (_taskSort) {
+      _TaskSort.smart => 'Orden',
+      _TaskSort.dueDate => 'Fecha límite',
+      _TaskSort.priority => 'Prioridad',
+      _TaskSort.newest => 'Recientes',
+      _TaskSort.oldest => 'Antiguas',
+      _TaskSort.alphabetical => 'A–Z',
+    };
   }
 
   List<Task> _visibleTasks() {
@@ -643,18 +870,94 @@ class _HomeScreenState extends State<HomeScreen>
       };
     }
 
+    if (_filterListId != null && _selectedListId == null) {
+      tasks = tasks.where((task) => task.listId == _filterListId);
+    }
+
+    tasks = switch (_priorityFilter) {
+      _TaskPriorityFilter.all => tasks,
+      _TaskPriorityFilter.high =>
+        tasks.where((task) => task.priority == TaskPriority.high),
+      _TaskPriorityFilter.medium =>
+        tasks.where((task) => task.priority == TaskPriority.medium),
+      _TaskPriorityFilter.low =>
+        tasks.where((task) => task.priority == TaskPriority.low),
+      _TaskPriorityFilter.none =>
+        tasks.where((task) => task.priority == TaskPriority.none),
+    };
+
+    final query = _searchQuery;
+    if (query.isNotEmpty) {
+      tasks = tasks.where((task) {
+        if (task.title.toLowerCase().contains(query) ||
+            task.description.toLowerCase().contains(query)) {
+          return true;
+        }
+
+        final subtasks = _subtasksByTask[task.id] ?? const <Subtask>[];
+        return subtasks.any(
+          (subtask) => subtask.title.toLowerCase().contains(query),
+        );
+      });
+    }
+
     final result = tasks.toList();
     result.sort((a, b) {
-      final aDate = a.dueDate;
-      final bDate = b.dueDate;
-      if (aDate == null && bDate == null) {
-        return b.createdAt.compareTo(a.createdAt);
-      }
-      if (aDate == null) return 1;
-      if (bDate == null) return -1;
-      return aDate.compareTo(bDate);
+      return switch (_taskSort) {
+        _TaskSort.smart => _compareSmart(a, b),
+        _TaskSort.dueDate => _compareDueDate(a, b),
+        _TaskSort.priority => _comparePriority(a, b),
+        _TaskSort.newest => b.createdAt.compareTo(a.createdAt),
+        _TaskSort.oldest => a.createdAt.compareTo(b.createdAt),
+        _TaskSort.alphabetical =>
+          a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      };
     });
     return result;
+  }
+
+  int _compareSmart(Task a, Task b) {
+    final aDate = a.dueDate;
+    final bDate = b.dueDate;
+    if (aDate == null && bDate == null) {
+      final priority = _comparePriority(a, b);
+      if (priority != 0) return priority;
+      return b.createdAt.compareTo(a.createdAt);
+    }
+    if (aDate == null) return 1;
+    if (bDate == null) return -1;
+
+    final date = aDate.compareTo(bDate);
+    if (date != 0) return date;
+    return _comparePriority(a, b);
+  }
+
+  int _compareDueDate(Task a, Task b) {
+    final aDate = a.dueDate;
+    final bDate = b.dueDate;
+    if (aDate == null && bDate == null) {
+      return b.createdAt.compareTo(a.createdAt);
+    }
+    if (aDate == null) return 1;
+    if (bDate == null) return -1;
+    return aDate.compareTo(bDate);
+  }
+
+  int _comparePriority(Task a, Task b) {
+    final priority = _priorityRank(b.priority).compareTo(
+      _priorityRank(a.priority),
+    );
+    if (priority != 0) return priority;
+    return _compareDueDate(a, b);
+  }
+
+  int _priorityRank(TaskPriority priority) {
+    return switch (priority) {
+      TaskPriority.high => 3,
+      TaskPriority.medium => 2,
+      TaskPriority.low => 1,
+      TaskPriority.none => 0,
+    };
   }
 
   bool _isToday(DateTime? date) {
@@ -1145,10 +1448,6 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  void _showSearchInfo() {
-    _showMessage('La búsqueda se añadirá en una versión posterior.');
-  }
-
   Future<void> _showSettingsInfo() async {
     var selectedThemeId = widget.themeId;
     var uploadingCloud = false;
@@ -1363,6 +1662,53 @@ class _HomeScreenState extends State<HomeScreen>
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _FilterButton extends StatelessWidget {
+  const _FilterButton({
+    required this.icon,
+    required this.label,
+    required this.active,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: active
+            ? theme.colorScheme.secondaryContainer
+            : theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: active
+              ? theme.colorScheme.secondary.withValues(alpha: 0.6)
+              : theme.colorScheme.outlineVariant,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 7),
+          Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.arrow_drop_down_rounded, size: 19),
+        ],
       ),
     );
   }
