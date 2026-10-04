@@ -44,6 +44,21 @@ class AuthService {
     );
   }
 
+  Future<void> sendPasswordReset(String email) async {
+    final client = _requireClient();
+    await client.auth.resetPasswordForEmail(
+      email.trim(),
+      redirectTo: emailRedirectTo,
+    );
+  }
+
+  Future<UserResponse> updatePassword(String password) async {
+    final client = _requireClient();
+    return client.auth.updateUser(
+      UserAttributes(password: password),
+    );
+  }
+
   Future<void> signOut() async {
     final client = _requireClient();
     await client.auth.signOut();
