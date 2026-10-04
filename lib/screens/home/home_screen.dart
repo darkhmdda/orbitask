@@ -12,6 +12,7 @@ import '../../repositories/todo_repository.dart';
 import '../../services/auth_service.dart';
 import '../../services/cloud_sync_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/profile_service.dart';
 import '../../widgets/orbitask_brand.dart';
 import '../../widgets/task_card.dart';
 import '../../widgets/theme_picker.dart';
@@ -29,6 +30,7 @@ class HomeScreen extends StatefulWidget {
     required this.notificationService,
     required this.authService,
     required this.cloudSyncService,
+    required this.profileService,
     required this.themeId,
     required this.onThemeChanged,
     required this.onCloudThemeChanged,
@@ -38,6 +40,7 @@ class HomeScreen extends StatefulWidget {
   final NotificationService notificationService;
   final AuthService authService;
   final CloudSyncService cloudSyncService;
+  final ProfileService profileService;
   final String themeId;
   final ValueChanged<String> onThemeChanged;
   final ValueChanged<String> onCloudThemeChanged;
