@@ -52,6 +52,13 @@ static void my_application_activate(GApplication* application) {
     gtk_window_set_title(window, "Orbitask");
   }
 
+  // Use the bundled Orbitask icon for the Linux window/task switcher.
+  const gchar* icon_path = "resources/orbitask.png";
+  g_autoptr(GError) icon_error = nullptr;
+  if (!gtk_window_set_icon_from_file(window, icon_path, &icon_error)) {
+    g_warning("Failed to load Orbitask window icon: %s", icon_error->message);
+  }
+
   gtk_window_set_default_size(window, 1280, 720);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
