@@ -71,9 +71,9 @@ class ProfileService {
     final client = _requireClient();
     final user = _requireUser(client);
 
-    if (bytes.length > 2 * 1024 * 1024) {
+    if (bytes.length > 3 * 1024 * 1024) {
       throw const FormatException(
-        'La imagen supera el límite de 2 MB.',
+        'La imagen supera el límite de 3 MB.',
       );
     }
 
