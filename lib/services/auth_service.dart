@@ -59,6 +59,29 @@ class AuthService {
     );
   }
 
+  Future<UserResponse> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final client = _requireClient();
+    final email = client.auth.currentUser?.email;
+
+    if (email == null || email.isEmpty) {
+      throw StateError(
+        'La sesión actual no tiene un correo disponible para verificar la cuenta.',
+      );
+    }
+
+    await client.auth.signInWithPassword(
+      email: email,
+      password: currentPassword,
+    );
+
+    return client.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
+  }
+
   Future<void> signOut() async {
     final client = _requireClient();
     await client.auth.signOut();
