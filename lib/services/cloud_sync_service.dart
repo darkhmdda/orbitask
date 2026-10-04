@@ -197,6 +197,8 @@ class CloudSyncService {
                     task.dueDate == null ? null : _iso(task.dueDate!),
                 'completed': task.completed,
                 'list_id': task.listId,
+                'trashed_at':
+                    task.trashedAt == null ? null : _iso(task.trashedAt!),
                 'created_at': _iso(task.createdAt),
                 'updated_at': _iso(task.updatedAt),
               },
@@ -344,8 +346,8 @@ class CloudSyncService {
       final taskStatement = database.prepare('''
         INSERT INTO tasks (
           id, title, description, priority, due_date, completed,
-          list_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          list_id, trashed_at, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           title = excluded.title,
           description = excluded.description,
@@ -353,6 +355,7 @@ class CloudSyncService {
           due_date = excluded.due_date,
           completed = excluded.completed,
           list_id = excluded.list_id,
+          trashed_at = excluded.trashed_at,
           updated_at = excluded.updated_at
         WHERE excluded.updated_at > tasks.updated_at;
       ''');
@@ -405,6 +408,7 @@ class CloudSyncService {
             _nullableMillis(row['due_date']),
             ((row['completed'] as bool?) ?? false) ? 1 : 0,
             (row['list_id'] as String?) ?? 'inbox',
+            _nullableMillis(row['trashed_at']),
             _millis(row['created_at']),
             _millis(row['updated_at']),
           ]);
