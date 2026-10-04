@@ -2,126 +2,201 @@
 
 **Tus tareas, siempre en órbita.**
 
-Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para organizar tareas, prioridades, fechas, listas y subtareas. El objetivo es funcionar en Android, Windows y Linux y, en etapas posteriores, sincronizar tareas y recordatorios entre dispositivos.
+Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para organizar tareas, listas, subtareas, prioridades, fechas y recordatorios. Funciona de forma local con SQLite y puede sincronizar datos entre dispositivos mediante Supabase.
 
-## Estado actual — v0.8-dev (multiplataforma en desarrollo)
+## Estado actual — v0.9-dev
 
-- CRUD de tareas.
-- Captura rápida.
-- Prioridades.
-- Fechas y horas límite.
-- Filtros de tareas.
-- Persistencia local con SQLite.
-- Listas personalizadas.
-- Subtareas y progreso.
-- Migración de datos de versiones anteriores.
-- Identidad nativa Orbitask en Android, Linux y Windows.
-- Migración segura de `todo_app.sqlite` a `orbitask.sqlite`.
-- Iconos Material para listas, sin depender de emojis del sistema.
-- Interfaz adaptable para escritorio y pantallas pequeñas.
-- Linux v0.4.1-dev validado con análisis limpio y persistencia confirmada tras reinicio.
-- Recordatorios persistentes por tarea.
-- Múltiples recordatorios relativos o personalizados.
-- Programación/cancelación automática de notificaciones.
-- Prueba manual de notificación desde Ajustes.
-- En Linux/Crostini, los recordatorios usan temporizadores de usuario del sistema y sobreviven al cierre de Orbitask.
-- Edición directa de recordatorios conservando su identificador y reprogramando el mismo timer.
-- Cancelación automática del timer al completar o eliminar una tarea.
-- Persistencia de recordatorios confirmada tras cerrar y volver a abrir Orbitask.
-- v0.5-dev validado en Linux/Crostini con notificaciones reales entregadas con Orbitask cerrada.
-- Selector de temas visuales: Rimuru, Emilia, Itsuki, Rem, Veldora y Zoro.
-- Tema elegido persistente en SQLite.
-- Paleta completa aplicada a fondo, superficies, botones, chips, selección e iconos.
-- Logo orbital de Orbitask adaptable al color principal de cada tema.
-- Persistencia del tema validada tras cerrar y volver a abrir Orbitask en Linux/Crostini.
-- v0.6-dev validado visualmente con los seis temas en Linux/Crostini.
-- Base de autenticación con Supabase.
-- Inicio de sesión y creación de cuenta mediante correo y contraseña.
-- Sesión persistente administrada por Supabase.
-- Orbitask sigue funcionando en modo local si no se proporcionan credenciales de Supabase.
-- Estado de cuenta y cierre de sesión desde Ajustes.
-- Copia inicial SQLite → Supabase validada con datos reales.
-- Sincronización manual nube ↔ dispositivo en desarrollo: primero combina los datos remotos con SQLite por `updated_at` y después vuelve a subir el estado resultante.
-- Registro de eliminaciones local y remoto mediante tombstones para evitar que tareas, listas, subtareas o recordatorios borrados reaparezcan.
-- Las eliminaciones se aplican solo cuando el tombstone no es más antiguo que el elemento existente.
-- Sincronización automática mientras Orbitask está abierto: al iniciar, después de cambios locales y mediante un ciclo periódico cada minuto.
-- El tema seleccionado también se sincroniza por cuenta y resuelve conflictos usando `updated_at`, sin sobrescribir una preferencia más reciente con una más antigua.
-- Supabase Realtime está habilitado para preferencias, listas, tareas, subtareas, recordatorios y tombstones. Los cambios remotos disparan una sincronización inmediata, manteniendo el ciclo periódico de un minuto como respaldo.
-- Por seguridad, cada espacio SQLite local queda vinculado a una sola cuenta Supabase; una cuenta distinta se bloquea para evitar mezclar o subir datos de otro usuario.
-- Al volver a Orbitask desde segundo plano, se fuerza un nuevo intento de sincronización.
-- El indicador superior distingue entre `Sincronizando…`, `Nube conectada` y `Sin conexión`.
-- El botón manual `Sincronizar ahora` se conserva para forzar una sincronización inmediata.
-- Inicio de la adaptación Android de v0.8-dev.
-- El manifiesto Android de producción incluye acceso a Internet para Supabase y permiso de notificaciones.
-- Android registra el callback nativo `com.darkhmdda.orbitask://login-callback` para confirmaciones de Auth.
-- Orbitask solicita el permiso de notificaciones antes de restaurar los recordatorios en Android.
-
-## Historial
-
-- `v0.1-dev`: base visual, modelo Task y diseño responsive.
-- `v0.2-dev`: CRUD, prioridades, fechas y filtros.
-- `v0.3-dev`: SQLite y persistencia local.
-- `v0.4-dev`: listas, subtareas, progreso y migración SQLite.
-- `v0.4.1-dev`: limpieza de identidad Orbitask, migración de nombre de base de datos e iconos Material.
-- `v0.5-dev`: recordatorios persistentes, edición y cancelación de avisos, y notificaciones locales validadas en Linux/Crostini.
-- `v0.6-dev`: sistema de seis temas persistentes, paletas completas e identidad visual adaptable.
-- `v0.7-dev`: autenticación con Supabase, sincronización bidireccional SQLite ↔ nube, tombstones de eliminación, preferencias por cuenta y Supabase Realtime.
-
-## Configuración de Supabase
-
-Orbitask no guarda claves privadas en el repositorio. Para habilitar cuentas, ejecuta la app con la URL del proyecto y la clave publicable de Supabase:
-
-```bash
-flutter run -d linux \\
-  --dart-define=SUPABASE_URL=https://TU-PROYECTO.supabase.co \\
-  --dart-define=SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE
-```
-
-Sin estas variables Orbitask continúa funcionando en modo local, igual que en v0.6-dev. Nunca debe usarse una clave `service_role` dentro de la aplicación cliente.
-
-## Roadmap
-
-- Validar Android: build, SQLite, Auth, deep link, Supabase, Realtime y recordatorios.
-- Ajustar la interfaz para pantallas móviles según lo que revele la prueba Android.
-- Validar Windows: build, SQLite, Auth, Supabase, Realtime y notificaciones.
-- Completar v0.8-dev como primera base multiplataforma real.
-- Versión estable `v1.0`.
-
-## Tecnologías
-
-- Flutter / Dart
-- SQLite (`sqlite3`)
-- `path_provider`
-
-## Plataformas objetivo
+Orbitask v0.9-dev está validado en:
 
 - Android
-- Windows
-- Linux
+- Linux x64
+- Windows x64
 
+La versión actual incluye:
 
-### Redirect de confirmación de correo
+- CRUD completo de tareas.
+- Captura rápida.
+- Prioridades, fechas y horas límite.
+- Listas personalizadas.
+- Subtareas y progreso.
+- Búsqueda, filtros y ordenamiento.
+- Persistencia local con SQLite.
+- Recordatorios persistentes por tarea.
+- Múltiples recordatorios relativos o personalizados.
+- Edición, reprogramación y cancelación automática de recordatorios.
+- Autenticación con Supabase.
+- Inicio de sesión, registro, cierre de sesión y recuperación/cambio de contraseña.
+- Sincronización bidireccional SQLite ↔ Supabase.
+- Supabase Realtime.
+- Resolución de cambios mediante `updated_at`.
+- Cola/reintentos de sincronización y estado visible de conexión.
+- Tombstones para eliminaciones definitivas.
+- Papelera de tareas con restauración, vaciado y eliminación permanente.
+- Sincronización de Papelera entre dispositivos.
+- Perfil de usuario con nombre y avatar.
+- Preferencias sincronizadas por cuenta.
+- Interfaz adaptable para escritorio y móvil.
+- Identidad nativa Orbitask en Android, Linux y Windows.
+- 12 temas visuales.
+- Icono propio de Orbitask en las tres plataformas.
 
-Orbitask admite un redirect de autenticación opcional mediante:
+## Descargar Orbitask
+
+Las compilaciones se publican en **GitHub Releases**:
+
+https://github.com/darkhmdda/orbitask/releases/tag/v0.9-dev
+
+### Android
+
+Descarga:
+
+`Orbitask-v0.9-android-universal.apk`
+
+Después abre el APK desde Android y confirma la instalación. Si Android lo solicita, permite temporalmente la instalación de aplicaciones desde esa fuente.
+
+### Windows x64
+
+Descarga:
+
+`Orbitask-v0.9-windows-x64.zip`
+
+1. Descomprime el ZIP completo.
+2. No separes `orbitask.exe` de los demás archivos y carpetas incluidos.
+3. Abre `orbitask.exe`.
+
+La compilación actual no utiliza firma de código de Windows, por lo que Windows puede mostrar una advertencia de SmartScreen.
+
+### Linux x64
+
+Puedes descargar y ejecutar Orbitask desde la terminal:
 
 ```bash
---dart-define=SUPABASE_AUTH_REDIRECT_URL=<url-permitida-en-supabase>
+mkdir -p ~/Applications/orbitask
+cd ~/Applications/orbitask
+
+curl -L   -o Orbitask-v0.9-linux-x64.tar.gz   https://github.com/darkhmdda/orbitask/releases/download/v0.9-dev/Orbitask-v0.9-linux-x64.tar.gz
+
+tar -xzf Orbitask-v0.9-linux-x64.tar.gz
+chmod +x bundle/orbitask
+./bundle/orbitask
 ```
 
-La URL debe existir también en **Authentication → URL Configuration → Redirect URLs** del proyecto Supabase. Si no se define, Supabase usa el **Site URL** configurado en el proyecto.
+Para volver a abrirlo después:
 
+```bash
+~/Applications/orbitask/bundle/orbitask
+```
+
+> La build publicada está dirigida a Linux x64. La disponibilidad de bibliotecas del sistema puede variar entre distribuciones.
+
+## Verificar descargas
+
+Cada release incluye `SHA256SUMS.txt`.
+
+En Linux:
+
+```bash
+sha256sum -c SHA256SUMS.txt
+```
+
+En Windows PowerShell puedes obtener el hash de un archivo con:
+
+```powershell
+Get-FileHash .\Orbitask-v0.9-windows-x64.zip -Algorithm SHA256
+```
+
+## Funcionamiento local y en la nube
+
+Orbitask usa SQLite como almacenamiento local. La aplicación puede seguir trabajando localmente sin una conexión activa a Supabase.
+
+Cuando Supabase está configurado y el usuario inicia sesión:
+
+- los datos locales y remotos se combinan;
+- los cambios se sincronizan automáticamente;
+- Realtime permite reaccionar a cambios de otros dispositivos;
+- existe un ciclo periódico de respaldo;
+- el usuario también puede forzar una sincronización manual;
+- cada espacio local queda vinculado a una cuenta para evitar mezclar información entre usuarios.
+
+## Papelera
+
+Eliminar una tarea desde la vista principal la mueve primero a la Papelera.
+
+Desde la Papelera se puede:
+
+- restaurar una tarea;
+- eliminarla permanentemente;
+- vaciar toda la Papelera.
+
+Las tareas enviadas a la Papelera también sincronizan su estado entre los dispositivos de la misma cuenta. La eliminación permanente utiliza el sistema de tombstones para impedir que datos antiguos reaparezcan durante una sincronización posterior.
+
+## Recordatorios
+
+Orbitask permite programar recordatorios por tarea.
+
+En Linux/Crostini los recordatorios persistentes utilizan temporizadores de usuario del sistema. En Android se utilizan notificaciones locales. Los recordatorios se cancelan o reprograman cuando corresponde al completar, editar, enviar a Papelera, restaurar o eliminar una tarea.
+
+## Temas
+
+Orbitask incluye 12 temas:
+
+- Rimuru
+- Emilia
+- Itsuki
+- Rem
+- Veldora
+- Zoro
+- Luffy
+- Senku
+- Marin Kitagawa
+- Satoru Gojo
+- Deku
+- Eren
+
+El tema elegido puede sincronizarse por cuenta.
+
+## Configuración de desarrollo
+
+### Requisitos principales
+
+- Flutter
+- Dart
+- Git
+- SQLite
+- proyecto Supabase opcional para Auth y sincronización
+
+Clona el repositorio:
+
+```bash
+git clone https://github.com/darkhmdda/orbitask.git
+cd orbitask
+flutter pub get
+```
+
+Orbitask no guarda claves privadas de Supabase en el repositorio.
+
+Para desarrollo usa variables `dart-define`:
+
+```bash
+flutter run -d linux \
+  --dart-define=SUPABASE_URL=https://TU-PROYECTO.supabase.co \
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE \
+  --dart-define=SUPABASE_AUTH_REDIRECT_URL=https://github.com/darkhmdda/orbitask
+```
+
+Nunca debe usarse una clave `service_role` dentro de la aplicación cliente.
 
 ### Android — callback nativo
 
-Para Android, Orbitask registra este deep link:
+Orbitask usa:
 
 ```text
 com.darkhmdda.orbitask://login-callback
 ```
 
-Debe agregarse también en **Authentication → URL Configuration → Redirect URLs** de Supabase.
+Ese redirect debe estar permitido también en **Supabase → Authentication → URL Configuration → Redirect URLs**.
 
-Ejemplo de ejecución Android con Auth nativo:
+Ejemplo:
 
 ```bash
 flutter run -d <ANDROID_DEVICE> \
@@ -129,3 +204,32 @@ flutter run -d <ANDROID_DEVICE> \
   --dart-define=SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE \
   --dart-define=SUPABASE_AUTH_REDIRECT_URL=com.darkhmdda.orbitask://login-callback
 ```
+
+## Tecnologías
+
+- Flutter / Dart
+- SQLite
+- Supabase Auth
+- Supabase Database
+- Supabase Realtime
+- Supabase Storage
+- Git / GitHub
+
+## Historial principal
+
+- `v0.1-dev`: base visual, modelo Task y diseño responsive.
+- `v0.2-dev`: CRUD, prioridades, fechas y filtros.
+- `v0.3-dev`: SQLite y persistencia local.
+- `v0.4-dev`: listas, subtareas, progreso y migración SQLite.
+- `v0.4.1-dev`: identidad Orbitask y migración de base de datos.
+- `v0.5-dev`: recordatorios persistentes y notificaciones.
+- `v0.6-dev`: sistema de temas.
+- `v0.7-dev`: Auth, sincronización bidireccional, tombstones y Realtime.
+- `v0.8-dev`: consolidación multiplataforma Android/Linux/Windows.
+- `v0.9-dev`: productividad, búsqueda/filtros/ordenamiento, mejoras de sync, cuenta/perfil, 12 temas, identidad visual, builds de distribución y Papelera.
+
+## Estado del proyecto
+
+La rama de desarrollo de v0.9 ha sido validada funcionalmente en Android, Linux y Windows. La release `v0.9-dev` contiene paquetes para las tres plataformas y un archivo de hashes SHA-256.
+
+El siguiente cierre del proyecto contempla la consolidación de la versión estable y su documentación completa.
