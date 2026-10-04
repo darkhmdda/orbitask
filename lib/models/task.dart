@@ -14,6 +14,7 @@ class Task {
     this.dueDate,
     this.completed = false,
     this.listId = 'inbox',
+    this.trashedAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -25,6 +26,7 @@ class Task {
   final DateTime? dueDate;
   final bool completed;
   final String listId;
+  final DateTime? trashedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -37,6 +39,8 @@ class Task {
     bool clearDueDate = false,
     bool? completed,
     String? listId,
+    DateTime? trashedAt,
+    bool clearTrashedAt = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -48,6 +52,7 @@ class Task {
       dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
       completed: completed ?? this.completed,
       listId: listId ?? this.listId,
+      trashedAt: clearTrashedAt ? null : (trashedAt ?? this.trashedAt),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
