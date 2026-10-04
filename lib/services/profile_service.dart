@@ -83,7 +83,10 @@ class ProfileService {
       );
     }
 
-    final path = '${user.id}/avatar';
+    final previousProfile = await loadCurrentProfile();
+    final previousPath = previousProfile?.avatarPath;
+    final path =
+        '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}';
 
     await client.storage.from(avatarBucket).uploadBinary(
       path,
@@ -102,6 +105,12 @@ class ProfileService {
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', user.id);
+
+    if (previousPath != null &&
+        previousPath.isNotEmpty &&
+        previousPath != path) {
+      await client.storage.from(avatarBucket).remove([previousPath]);
+    }
 
     final profile = await loadCurrentProfile();
     return profile ?? OrbitaskProfile(
