@@ -753,18 +753,21 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
                 if (_selectedListId == null)
-                  PopupMenuButton<String?>(
-                    initialValue: _filterListId,
+                  PopupMenuButton<String>(
+                    initialValue: _filterListId ?? '__all__',
                     onSelected: (value) {
-                      setState(() => _filterListId = value);
+                      setState(
+                        () => _filterListId =
+                            value == '__all__' ? null : value,
+                      );
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem<String?>(
-                        value: null,
+                      const PopupMenuItem<String>(
+                        value: '__all__',
                         child: Text('Todas las listas'),
                       ),
                       ..._lists.map(
-                        (list) => PopupMenuItem<String?>(
+                        (list) => PopupMenuItem<String>(
                           value: list.id,
                           child: Text(list.name),
                         ),
@@ -989,6 +992,10 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   String _emptyMessage() {
+    if (_hasTaskFilters) {
+      return 'No hay tareas que coincidan con la búsqueda o los filtros.';
+    }
+
     if (_selectedListId != null) {
       return 'Esta lista no tiene tareas pendientes.';
     }
