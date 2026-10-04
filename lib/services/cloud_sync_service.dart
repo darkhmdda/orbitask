@@ -59,6 +59,18 @@ class CloudSyncService {
 
   bool get isConfigured => _client != null;
 
+  DateTime? get lastSuccessfulSyncAt {
+    final raw = _database.getSetting('last_cloud_sync_at');
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw)?.toLocal();
+  }
+
+  DateTime? get lastSuccessfulUploadAt {
+    final raw = _database.getSetting('last_cloud_upload_at');
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw)?.toLocal();
+  }
+
   RealtimeChannel? subscribeToRemoteChanges(void Function() onChange) {
     final client = _client;
     final user = client?.auth.currentUser;
