@@ -1594,6 +1594,265 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  Future<void> _showChangePasswordDialog() async {
+    final formKey = GlobalKey<FormState>();
+    final currentController = TextEditingController();
+    final newController = TextEditingController();
+    final confirmController = TextEditingController();
+    var hideCurrent = true;
+    var hideNew = true;
+    var loading = false;
+    String? errorMessage;
+
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: !loading,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            final theme = Theme.of(dialogContext);
+
+            return AlertDialog(
+              title: const Text('Cambiar contraseña'),
+              content: SizedBox(
+                width: 460,
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Por seguridad, confirma tu contraseña actual antes de establecer una nueva.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: currentController,
+                          obscureText: hideCurrent,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText: 'Contraseña actual',
+                            prefixIcon:
+                                const Icon(Icons.lock_outline_rounded),
+                            suffixIcon: IconButton(
+                              tooltip: hideCurrent
+                                  ? 'Mostrar contraseña'
+                                  : 'Ocultar contraseña',
+                              onPressed: loading
+                                  ? null
+                                  : () => setDialogState(
+                                        () => hideCurrent = !hideCurrent,
+                                      ),
+                              icon: Icon(
+                                hideCurrent
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
+                            ),
+                          ),
+                          validator: (value) {
+                            if ((value ?? '').isEmpty) {
+                              return 'Escribe tu contraseña actual.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: newController,
+                          obscureText: hideNew,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.newPassword],
+                          decoration: InputDecoration(
+                            labelText: 'Nueva contraseña',
+                            prefixIcon:
+                                const Icon(Icons.password_rounded),
+                            suffixIcon: IconButton(
+                              tooltip: hideNew
+                                  ? 'Mostrar contraseña'
+                                  : 'Ocultar contraseña',
+                              onPressed: loading
+                                  ? null
+                                  : () => setDialogState(
+                                        () => hideNew = !hideNew,
+                                      ),
+                              icon: Icon(
+                                hideNew
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
+                            ),
+                          ),
+                          validator: (value) {
+                            final password = value ?? '';
+                            if (password.length < 6) {
+                              return 'Usa al menos 6 caracteres.';
+                            }
+                            if (password == currentController.text) {
+                              return 'La nueva contraseña debe ser diferente.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: confirmController,
+                          obscureText: hideNew,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: loading
+                              ? null
+                              : (_) async {
+                                  if (!(formKey.currentState?.validate() ??
+                                      false)) {
+                                    return;
+                                  }
+
+                                  setDialogState(() {
+                                    loading = true;
+                                    errorMessage = null;
+                                  });
+
+                                  try {
+                                    await widget.authService.changePassword(
+                                      currentPassword:
+                                          currentController.text,
+                                      newPassword: newController.text,
+                                    );
+
+                                    if (!dialogContext.mounted) return;
+                                    Navigator.of(dialogContext).pop();
+
+                                    if (mounted) {
+                                      _showMessage(
+                                        'Contraseña actualizada correctamente.',
+                                      );
+                                    }
+                                  } on AuthException catch (error) {
+                                    if (dialogContext.mounted) {
+                                      setDialogState(() {
+                                        errorMessage = error.message;
+                                        loading = false;
+                                      });
+                                    }
+                                  } catch (error) {
+                                    if (dialogContext.mounted) {
+                                      setDialogState(() {
+                                        errorMessage =
+                                            'No se pudo cambiar la contraseña: $error';
+                                        loading = false;
+                                      });
+                                    }
+                                  }
+                                },
+                          decoration: const InputDecoration(
+                            labelText: 'Confirmar nueva contraseña',
+                            prefixIcon: Icon(Icons.lock_reset_rounded),
+                          ),
+                          validator: (value) {
+                            if (value != newController.text) {
+                              return 'Las contraseñas no coinciden.';
+                            }
+                            return null;
+                          },
+                        ),
+                        if (errorMessage != null) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.errorContainer,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              errorMessage!,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onErrorContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: loading
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton.icon(
+                  onPressed: loading
+                      ? null
+                      : () async {
+                          if (!(formKey.currentState?.validate() ?? false)) {
+                            return;
+                          }
+
+                          setDialogState(() {
+                            loading = true;
+                            errorMessage = null;
+                          });
+
+                          try {
+                            await widget.authService.changePassword(
+                              currentPassword: currentController.text,
+                              newPassword: newController.text,
+                            );
+
+                            if (!dialogContext.mounted) return;
+                            Navigator.of(dialogContext).pop();
+
+                            if (mounted) {
+                              _showMessage(
+                                'Contraseña actualizada correctamente.',
+                              );
+                            }
+                          } on AuthException catch (error) {
+                            if (dialogContext.mounted) {
+                              setDialogState(() {
+                                errorMessage = error.message;
+                                loading = false;
+                              });
+                            }
+                          } catch (error) {
+                            if (dialogContext.mounted) {
+                              setDialogState(() {
+                                errorMessage =
+                                    'No se pudo cambiar la contraseña: $error';
+                                loading = false;
+                              });
+                            }
+                          }
+                        },
+                  icon: loading
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.password_rounded),
+                  label: Text(
+                    loading ? 'Actualizando…' : 'Guardar contraseña',
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    } finally {
+      currentController.dispose();
+      newController.dispose();
+      confirmController.dispose();
+    }
+  }
+
   Future<void> _showSettingsInfo() async {
     var selectedThemeId = widget.themeId;
     var uploadingCloud = false;
@@ -1745,20 +2004,30 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                           ),
                           OutlinedButton.icon(
+                            onPressed: uploadingCloud
+                                ? null
+                                : () async {
+                                    Navigator.of(context).pop();
+                                    await _showChangePasswordDialog();
+                                  },
+                            icon: const Icon(Icons.password_rounded),
+                            label: const Text('Cambiar contraseña'),
+                          ),
+                          OutlinedButton.icon(
                             onPressed: () async {
-                            try {
-                              await widget.authService.signOut();
-                              if (context.mounted) {
-                                Navigator.of(context).pop();
+                              try {
+                                await widget.authService.signOut();
+                                if (context.mounted) {
+                                  Navigator.of(context).pop();
+                                }
+                              } catch (error) {
+                                if (mounted) {
+                                  _showMessage(
+                                    'No se pudo cerrar la sesión: $error',
+                                  );
+                                }
                               }
-                            } catch (error) {
-                              if (mounted) {
-                                _showMessage(
-                                  'No se pudo cerrar la sesión: $error',
-                                );
-                              }
-                            }
-                          },
+                            },
                             icon: const Icon(Icons.logout_rounded),
                             label: const Text('Cerrar sesión'),
                           ),
