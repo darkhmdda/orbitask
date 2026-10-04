@@ -1921,6 +1921,87 @@ class _HomeScreenState extends State<HomeScreen>
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  _cloudSyncFailed
+                                      ? Icons.cloud_off_outlined
+                                      : (_cloudSyncing
+                                          ? Icons.sync_rounded
+                                          : Icons.cloud_done_outlined),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _cloudSyncing
+                                        ? 'Sincronizando…'
+                                        : (_cloudSyncFailed
+                                            ? 'Pendiente de sincronizar'
+                                            : 'Sincronización activa'),
+                                    style:
+                                        theme.textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Última sincronización: '
+                              '${_formatSyncTime(widget.cloudSyncService.lastSuccessfulSyncAt)}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'Última subida local: '
+                              '${_formatSyncTime(widget.cloudSyncService.lastSuccessfulUploadAt)}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            if (_cloudSyncFailed &&
+                                _cloudSyncError != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                'Hay cambios locales pendientes. Orbitask volverá a intentarlo automáticamente.',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.error,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  _showSyncStatus();
+                                },
+                                icon: const Icon(Icons.info_outline_rounded),
+                                label: const Text('Ver detalles'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 10,
@@ -2070,7 +2151,7 @@ class _HomeScreenState extends State<HomeScreen>
                     _showMessage(
                       shown
                           ? 'Notificación de prueba enviada.'
-                          : 'El sistema de notificaciones de Linux no está disponible.',
+                          : 'El sistema de notificaciones no está disponible en este dispositivo.',
                     );
                   }
                 },
