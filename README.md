@@ -4,17 +4,16 @@
 
 Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para organizar tareas, listas, subtareas, prioridades, fechas y recordatorios. Funciona de forma local con SQLite y puede sincronizar datos entre dispositivos mediante Supabase.
 
-## Estado actual — v0.9.0 estable
+## Estado actual — v0.9.1 estable
 
-Orbitask v0.9.0 está validado en:
+Orbitask v0.9.1 está validado en:
 
 - Android
 - Linux x64
 - Windows x64
+- Web
 
-Estas son las plataformas soportadas oficialmente en v0.9.0.
-
-En el ciclo de hardening posterior a v0.9.0, **Web ya fue habilitado y validado como plataforma oficial para la siguiente versión estable**. iOS y macOS continúan fuera del soporte oficial por ahora.
+Estas son las plataformas soportadas oficialmente en v0.9.1. iOS y macOS continúan fuera del soporte oficial por ahora.
 
 La versión actual incluye:
 
@@ -50,13 +49,13 @@ La versión actual incluye:
 
 Las compilaciones se publican en **GitHub Releases**:
 
-https://github.com/darkhmdda/orbitask/releases/tag/v0.9.0
+https://github.com/darkhmdda/orbitask/releases/tag/v0.9.1
 
 ### Android
 
 Descarga:
 
-`Orbitask-v0.9-android.apk`
+`Orbitask-v0.9.1-android.apk`
 
 Después abre el APK desde Android y confirma la instalación.
 
@@ -68,7 +67,7 @@ Si Android lo solicita, permite temporalmente la instalación de aplicaciones de
 
 Descarga:
 
-`Orbitask-v0.9-windows-setup.exe`
+`Orbitask-v0.9.1-windows-setup.exe`
 
 Ejecuta el instalador y sigue los pasos del asistente.
 
@@ -78,7 +77,7 @@ Orbitask se instalará como una aplicación normal de Windows y podrá abrirse d
 
 También está disponible:
 
-`Orbitask-v0.9-windows-x64-portable.zip`
+`Orbitask-v0.9.1-windows-x64-portable.zip`
 
 Para utilizarla:
 
@@ -94,12 +93,12 @@ La compilación actual no utiliza firma de código de Windows, por lo que Window
 
 Descarga:
 
-`Orbitask-v0.9-linux-amd64.deb`
+`Orbitask-v0.9.1-linux-amd64.deb`
 
 En distribuciones basadas en Debian o Ubuntu puedes instalarlo desde la carpeta donde descargaste el archivo:
 
 ```bash
-sudo apt install ./Orbitask-v0.9-linux-amd64.deb
+sudo apt install ./Orbitask-v0.9.1-linux-amd64.deb
 ```
 
 Después de instalarlo puedes abrir Orbitask desde el menú de aplicaciones o desde la terminal:
@@ -112,7 +111,7 @@ orbitask
 
 También está disponible:
 
-`Orbitask-v0.9-linux-x64-portable.tar.gz`
+`Orbitask-v0.9.1-linux-x64-portable.tar.gz`
 
 Ejemplo de instalación manual:
 
@@ -121,10 +120,10 @@ mkdir -p ~/Applications/orbitask
 cd ~/Applications/orbitask
 
 curl -L \
-  -o Orbitask-v0.9-linux-x64-portable.tar.gz \
-  https://github.com/darkhmdda/orbitask/releases/download/v0.9.0/Orbitask-v0.9-linux-x64-portable.tar.gz
+  -o Orbitask-v0.9.1-linux-x64-portable.tar.gz \
+  https://github.com/darkhmdda/orbitask/releases/download/v0.9.0/Orbitask-v0.9.1-linux-x64-portable.tar.gz
 
-tar -xzf Orbitask-v0.9-linux-x64-portable.tar.gz
+tar -xzf Orbitask-v0.9.1-linux-x64-portable.tar.gz
 chmod +x orbitask
 ./orbitask
 ```
@@ -136,6 +135,10 @@ Para volver a abrir la versión portable después:
 ```
 
 > La build publicada está dirigida a Linux x64. La disponibilidad de bibliotecas del sistema puede variar entre distribuciones.
+
+### Web
+
+Orbitask Web forma parte del soporte oficial desde v0.9.1. La build de producción puede desplegarse en hosting estático y utiliza almacenamiento persistente del navegador, autenticación y sincronización con Supabase.
 
 ## Verificar descargas
 
@@ -154,7 +157,7 @@ sha256sum -c SHA256SUMS.txt
 En Windows PowerShell puedes consultar el hash de un archivo, por ejemplo:
 
 ```powershell
-Get-FileHash .\Orbitask-v0.9-windows-setup.exe -Algorithm SHA256
+Get-FileHash .\Orbitask-v0.9.1-windows-setup.exe -Algorithm SHA256
 ```
 
 ## Funcionamiento local y en la nube
@@ -324,13 +327,13 @@ flutter run -d <ANDROID_DEVICE> \
 - `v0.8-dev`: consolidación multiplataforma Android, Linux y Windows.
 - `v0.9-dev`: productividad, búsqueda, filtros, ordenamiento, mejoras de sincronización, cuenta y perfil, 12 temas, identidad visual, builds de distribución y Papelera.
 - `v0.9.0`: primera versión estable del ciclo v0.9 para Android, Linux x64 y Windows x64.
-- `v0.9.1` (en desarrollo): hardening, tests/CI, reproducibilidad, mejoras de sincronización y soporte oficial de Web.
+- `v0.9.1`: hardening, tests/CI, reproducibilidad, mejoras de sincronización, refactor de Home y soporte oficial de Web.
 
 ## Estado del proyecto
 
-Orbitask v0.9.0 es la versión estable actual del proyecto.
+Orbitask v0.9.1 es la versión estable actual del proyecto.
 
-La release estable `v0.9.0` incluye:
+La release estable `v0.9.1` incluye:
 
 - APK para Android.
 - Instalador `.deb` para Linux x64.
@@ -341,9 +344,9 @@ La release estable `v0.9.0` incluye:
 
 La antigua release `v0.9-dev` se conserva únicamente como prerelease histórica del ciclo de desarrollo.
 
-El trabajo posterior a v0.9.0 se centra en mantenimiento, reproducibilidad del backend, tests automatizados, CI, hardening del repositorio y la incorporación de Web como cuarta plataforma oficial para la siguiente versión estable.
+v0.9.1 completa el ciclo de hardening posterior a v0.9.0: reproducibilidad del backend, tests automatizados, CI, scripts de release, mejoras de sincronización, refactor de Home y Web como cuarta plataforma oficial.
 
-Actualmente el soporte Web del ciclo v0.9.1 ya fue validado con build de producción, persistencia local en navegador, autenticación con Supabase y sincronización real entre Web y dispositivos móviles, incluyendo creación de tareas, Papelera, restauración y eliminación definitiva.
+El soporte Web fue validado con build de producción, persistencia local en navegador, autenticación con Supabase y sincronización real entre Web y dispositivos, incluyendo creación de tareas, Papelera, restauración y eliminación definitiva.
 
 
 ## Licencia
