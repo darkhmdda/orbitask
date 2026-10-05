@@ -2,7 +2,7 @@
 
 Todos los cambios importantes de Orbitask se documentan en este archivo.
 
-## [0.9.1] - En desarrollo
+## [0.9.1] - 2026-10-05
 
 ### Añadido
 
@@ -25,6 +25,8 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 - Identidad Web actualizada de `todo_app` a Orbitask.
 - README actualizado con Web, desarrollo, sincronización y licencia.
 - Protección de `main` mediante reglas de GitHub.
+- Sincronización más reactiva en Windows, Android, Linux y Web.
+- Refactor de `home_screen.dart` por responsabilidades: widgets auxiliares, sincronización, acciones de tareas/Papelera y ajustes/cuenta.
 
 ### Validado
 
@@ -32,6 +34,8 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 - 14 tests automatizados.
 - Build de producción Web correcta.
 - Sincronización real Web ↔ Supabase ↔ Android validada con creación, Papelera, restauración y eliminación definitiva.
+- Linux, Android y Windows validados funcionalmente para v0.9.1.
+- Refactor de Home validado con `flutter analyze` sin issues y 14/14 tests.
 
 ## [0.9.0] - 2026-10-05
 
