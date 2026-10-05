@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/list_icons.dart';
@@ -183,6 +184,8 @@ class _HomeScreenState extends State<HomeScreen>
           _selectedListId = null;
         }
       });
+
+      unawaited(_updateAndroidHomeWidgets(tasks));
 
       if (!_notificationsReconciled) {
         _notificationsReconciled = true;
@@ -404,20 +407,38 @@ class _HomeScreenState extends State<HomeScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (MediaQuery.sizeOf(context).width < 600) ...[
-                Text(
-                  _sectionTitle(),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${now.day} de ${months[now.month - 1]} de ${now.year}',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _sectionTitle(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${now.day} de ${months[now.month - 1]} de ${now.year}',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_selectedListId == null && _filterIndex == 0)
+                      IconButton.filledTonal(
+                        tooltip: 'Resumen',
+                        onPressed: _showMobileSummarySheet,
+                        icon: const Icon(Icons.bar_chart_rounded),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -546,12 +567,6 @@ class _HomeScreenState extends State<HomeScreen>
                   },
                 )
               else ...[
-                if (MediaQuery.sizeOf(context).width < 600 &&
-                    _selectedListId == null &&
-                    _filterIndex == 0) ...[
-                  _buildMobileSummaries(context),
-                  const SizedBox(height: 20),
-                ],
                 if ((_filterIndex != 3 && _filterIndex != 4) ||
                     _selectedListId != null) ...[
                   _buildQuickAdd(context),
@@ -624,11 +639,10 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildMobileSummaries(BuildContext context) {
+  Future<void> _showMobileSummarySheet() async {
     final activeTasks = _tasks.where(
       (task) => task.trashedAt == null && !task.completed,
     );
-
     final todayCount =
         activeTasks.where((task) => _isToday(task.dueDate)).length;
     final nextSevenDaysCount =
@@ -639,52 +653,59 @@ class _HomeScreenState extends State<HomeScreen>
         .where((task) => task.priority == TaskPriority.high)
         .length;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Resumen',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-        ),
-        const SizedBox(height: 10),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 1.9,
-          children: [
-            _SummaryCard(
-              icon: Icons.today_rounded,
-              label: 'Hoy',
-              count: todayCount,
-              onTap: () => _selectFilter(1),
-            ),
-            _SummaryCard(
-              icon: Icons.date_range_rounded,
-              label: 'Próximos 7 días',
-              count: nextSevenDaysCount,
-              onTap: () => _selectFilter(5),
-            ),
-            _SummaryCard(
-              icon: Icons.warning_amber_rounded,
-              label: 'Vencidas',
-              count: overdueCount,
-              onTap: () => _selectFilter(6),
-            ),
-            _SummaryCard(
-              icon: Icons.star_rounded,
-              label: 'Importantes',
-              count: importantCount,
-              onTap: () => _selectFilter(2),
-            ),
-          ],
-        ),
-      ],
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => _MobileSummarySheet(
+        todayCount: todayCount,
+        nextSevenDaysCount: nextSevenDaysCount,
+        overdueCount: overdueCount,
+        importantCount: importantCount,
+      ),
     );
+
+    if (!mounted || selected == null) return;
+    _selectFilter(selected);
+  }
+
+  Future<void> _updateAndroidHomeWidgets(List<Task> tasks) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+
+    final active = tasks
+        .where((task) => task.trashedAt == null && !task.completed)
+        .toList();
+
+    final todayTasks = active
+        .where((task) => _isToday(task.dueDate))
+        .toList()
+      ..sort(_compareSmart);
+
+    final completedCount = tasks
+        .where((task) => task.trashedAt == null && task.completed)
+        .length;
+
+    const channel = MethodChannel('com.darkhmdda.orbitask/widgets');
+    try {
+      await channel.invokeMethod<void>('updateWidgets', {
+        'todayCount': todayTasks.length,
+        'nextSevenDaysCount':
+            active.where((task) => _isWithinNextSevenDays(task.dueDate)).length,
+        'overdueCount':
+            active.where((task) => _isOverdue(task.dueDate)).length,
+        'importantCount': active
+            .where((task) => task.priority == TaskPriority.high)
+            .length,
+        'completedCount': completedCount,
+        'pendingCount': active.length,
+        'todayTasks': todayTasks
+            .take(4)
+            .map((task) => task.title)
+            .toList(growable: false),
+      });
+    } catch (_) {
+      // Home-screen widgets are an Android-only enhancement.
+    }
   }
 
   Widget _buildQuickAdd(BuildContext context) {
