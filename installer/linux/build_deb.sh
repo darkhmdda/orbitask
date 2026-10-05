@@ -4,7 +4,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BUNDLE="$ROOT/build/linux/x64/release/bundle"
 STAGE="$ROOT/build/deb/orbitask"
-OUTPUT="$ROOT/Orbitask-v0.9-linux-amd64.deb"
+PUBSPEC_VERSION="$(awk '/^version:/ {print $2; exit}' "$ROOT/pubspec.yaml")"
+APP_VERSION="${PUBSPEC_VERSION%%+*}"
+OUTPUT="$ROOT/Orbitask-v${APP_VERSION}-linux-amd64.deb"
 
 if [ ! -x "$BUNDLE/orbitask" ]; then
   echo "Error: no existe una build release de Linux."
@@ -21,6 +23,7 @@ mkdir -p "$STAGE/usr/share/applications"
 mkdir -p "$STAGE/usr/share/icons/hicolor/256x256/apps"
 
 cp "$ROOT/installer/linux/DEBIAN/control" "$STAGE/DEBIAN/control"
+sed -i "s/^Version:.*/Version: $APP_VERSION/" "$STAGE/DEBIAN/control"
 cp -a "$BUNDLE/." "$STAGE/opt/orbitask/"
 cp "$ROOT/installer/linux/usr/share/applications/orbitask.desktop" \
    "$STAGE/usr/share/applications/orbitask.desktop"
