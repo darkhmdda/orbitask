@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:orbitask/database/local_database.dart';
+import 'package:orbitask/database/local_database_native.dart';
 import 'package:orbitask/models/reminder.dart';
 import 'package:orbitask/models/subtask.dart';
 import 'package:orbitask/models/task.dart';
 import 'package:orbitask/models/task_list.dart';
-import 'package:orbitask/repositories/todo_repository.dart';
+import 'package:orbitask/repositories/todo_repository_native.dart';
 
 void main() {
   late LocalDatabase database;
