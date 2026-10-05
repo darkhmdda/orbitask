@@ -57,6 +57,8 @@
 
 ## Cierre
 
+- [x] Mejora de sincronización multiplataforma validada con analyze, tests y build Web
+
 - [x] Sincronización Windows optimizada y validada
 
 - [x] Confirmar CI en verde
