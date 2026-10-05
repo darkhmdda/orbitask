@@ -77,6 +77,8 @@ class _HomeScreenState extends State<HomeScreen>
   String? _loadError;
   Timer? _cloudSyncDebounce;
   Timer? _cloudSyncTimer;
+  Timer? _cloudSyncRetryTimer;
+  int _cloudSyncFailureCount = 0;
   RealtimeChannel? _cloudRealtimeChannel;
   DateTime? _ignoreRealtimeUntil;
 
@@ -116,6 +118,7 @@ class _HomeScreenState extends State<HomeScreen>
     WidgetsBinding.instance.removeObserver(this);
     _cloudSyncDebounce?.cancel();
     _cloudSyncTimer?.cancel();
+    _cloudSyncRetryTimer?.cancel();
 
     final realtimeChannel = _cloudRealtimeChannel;
     if (realtimeChannel != null) {
@@ -182,6 +185,10 @@ class _HomeScreenState extends State<HomeScreen>
 
       widget.onCloudThemeChanged(result.themeId);
 
+      _cloudSyncFailureCount = 0;
+      _cloudSyncRetryTimer?.cancel();
+      _cloudSyncRetryTimer = null;
+
       setState(() {
         _cloudSyncFailed = false;
         _cloudSyncError = null;
@@ -197,8 +204,7 @@ class _HomeScreenState extends State<HomeScreen>
           _cloudSyncError = error.toString();
         });
       }
-      // SQLite sigue siendo usable y el siguiente cambio, reanudación
-      // o ciclo periódico vuelve a intentar la sincronización.
+      _scheduleCloudRetry();
     } finally {
       final shouldRetry = _cloudSyncQueued;
       _cloudSyncQueued = false;
@@ -208,9 +214,31 @@ class _HomeScreenState extends State<HomeScreen>
       }
 
       if (shouldRetry) {
+        _cloudSyncRetryTimer?.cancel();
+        _cloudSyncRetryTimer = null;
         _scheduleCloudSync(immediate: true);
       }
     }
+  }
+
+  void _scheduleCloudRetry() {
+    _cloudSyncFailureCount += 1;
+    _cloudSyncRetryTimer?.cancel();
+
+    const delays = <Duration>[
+      Duration(seconds: 5),
+      Duration(seconds: 15),
+      Duration(seconds: 30),
+      Duration(minutes: 1),
+    ];
+
+    final index = _cloudSyncFailureCount - 1;
+    final delay = delays[index < delays.length ? index : delays.length - 1];
+
+    _cloudSyncRetryTimer = Timer(
+      delay,
+      () => _scheduleCloudSync(immediate: true),
+    );
   }
 
   Future<void> _loadData() async {
