@@ -4,13 +4,16 @@
 
 Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para organizar tareas, listas, subtareas, prioridades, fechas y recordatorios. Funciona de forma local con SQLite y puede sincronizar datos entre dispositivos mediante Supabase.
 
-## Estado actual — v0.9-dev
+## Estado actual — v0.9.0 estable
 
-Orbitask v0.9-dev está validado en:
+Orbitask v0.9.0 está validado en:
 
 - Android
 - Linux x64
 - Windows x64
+
+Estas son las plataformas soportadas oficialmente en v0.9.0.
+iOS, macOS y Web no están soportados oficialmente por ahora.
 
 La versión actual incluye:
 
@@ -44,7 +47,7 @@ La versión actual incluye:
 
 Las compilaciones se publican en **GitHub Releases**:
 
-https://github.com/darkhmdda/orbitask/releases/tag/v0.9-dev
+https://github.com/darkhmdda/orbitask/releases/tag/v0.9.0
 
 ### Android
 
@@ -116,7 +119,7 @@ cd ~/Applications/orbitask
 
 curl -L \
   -o Orbitask-v0.9-linux-x64-portable.tar.gz \
-  https://github.com/darkhmdda/orbitask/releases/download/v0.9-dev/Orbitask-v0.9-linux-x64-portable.tar.gz
+  https://github.com/darkhmdda/orbitask/releases/download/v0.9.0/Orbitask-v0.9-linux-x64-portable.tar.gz
 
 tar -xzf Orbitask-v0.9-linux-x64-portable.tar.gz
 chmod +x orbitask
@@ -291,12 +294,13 @@ flutter run -d <ANDROID_DEVICE> \
 - `v0.7-dev`: autenticación, sincronización bidireccional, tombstones y Realtime.
 - `v0.8-dev`: consolidación multiplataforma Android, Linux y Windows.
 - `v0.9-dev`: productividad, búsqueda, filtros, ordenamiento, mejoras de sincronización, cuenta y perfil, 12 temas, identidad visual, builds de distribución y Papelera.
+- `v0.9.0`: primera versión estable del ciclo v0.9 para Android, Linux x64 y Windows x64.
 
 ## Estado del proyecto
 
-La rama de desarrollo de v0.9 ha sido validada funcionalmente en Android, Linux y Windows.
+Orbitask v0.9.0 es la versión estable actual del proyecto.
 
-La release `v0.9-dev` incluye:
+La release estable `v0.9.0` incluye:
 
 - APK para Android.
 - Instalador `.deb` para Linux x64.
@@ -305,4 +309,6 @@ La release `v0.9-dev` incluye:
 - Versión portable para Windows x64.
 - Archivo `SHA256SUMS.txt` para verificar las descargas.
 
-El siguiente cierre del proyecto contempla la consolidación de la versión estable y su documentación completa.
+La antigua release `v0.9-dev` se conserva únicamente como prerelease histórica del ciclo de desarrollo.
+
+El trabajo posterior a v0.9.0 se centra en mantenimiento, reproducibilidad del backend, tests automatizados, CI y hardening del repositorio.
