@@ -643,25 +643,23 @@ class _HomeScreenState extends State<HomeScreen>
     final activeTasks = _tasks.where(
       (task) => task.trashedAt == null && !task.completed,
     );
-    final todayCount =
-        activeTasks.where((task) => _isToday(task.dueDate)).length;
     final nextSevenDaysCount =
         activeTasks.where((task) => _isWithinNextSevenDays(task.dueDate)).length;
     final overdueCount =
         activeTasks.where((task) => _isOverdue(task.dueDate)).length;
-    final importantCount = activeTasks
-        .where((task) => task.priority == TaskPriority.high)
-        .length;
+    final withoutDateCount =
+        activeTasks.where((task) => task.dueDate == null).length;
+    final totalPendingCount = activeTasks.length;
 
     final selected = await showModalBottomSheet<int>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (context) => _MobileSummarySheet(
-        todayCount: todayCount,
         nextSevenDaysCount: nextSevenDaysCount,
         overdueCount: overdueCount,
-        importantCount: importantCount,
+        withoutDateCount: withoutDateCount,
+        totalPendingCount: totalPendingCount,
       ),
     );
 
@@ -674,10 +672,6 @@ class _HomeScreenState extends State<HomeScreen>
 
     final active = tasks
         .where((task) => task.trashedAt == null && !task.completed)
-        .toList();
-
-    final todayTasks = active
-        .where((task) => _isToday(task.dueDate))
         .toList()
       ..sort(_compareSmart);
 
@@ -685,23 +679,40 @@ class _HomeScreenState extends State<HomeScreen>
         .where((task) => task.trashedAt == null && task.completed)
         .length;
 
+    final now = DateTime.now();
+    final calendarCounts = <String, int>{};
+    for (final task in active) {
+      final date = task.dueDate;
+      if (date == null || date.year != now.year || date.month != now.month) {
+        continue;
+      }
+      final key = date.day.toString();
+      calendarCounts[key] = (calendarCounts[key] ?? 0) + 1;
+    }
+
     const channel = MethodChannel('com.darkhmdda.orbitask/widgets');
     try {
       await channel.invokeMethod<void>('updateWidgets', {
-        'todayCount': todayTasks.length,
+        'todayCount': active.where((task) => _isToday(task.dueDate)).length,
         'nextSevenDaysCount':
             active.where((task) => _isWithinNextSevenDays(task.dueDate)).length,
         'overdueCount':
             active.where((task) => _isOverdue(task.dueDate)).length,
-        'importantCount': active
-            .where((task) => task.priority == TaskPriority.high)
-            .length,
+        'importantCount':
+            active.where((task) => task.priority == TaskPriority.high).length,
         'completedCount': completedCount,
         'pendingCount': active.length,
-        'todayTasks': todayTasks
-            .take(4)
-            .map((task) => task.title)
+        'allTasks': active
+            .take(6)
+            .map((task) {
+              final date = task.dueDate;
+              if (date == null) return task.title;
+              return '${task.title} · ${date.day}/${date.month}';
+            })
             .toList(growable: false),
+        'calendarYear': now.year,
+        'calendarMonth': now.month,
+        'calendarCounts': calendarCounts,
       });
     } catch (_) {
       // Home-screen widgets are an Android-only enhancement.
@@ -993,6 +1004,12 @@ class _HomeScreenState extends State<HomeScreen>
                 !task.completed &&
                 _isOverdue(task.dueDate),
           ),
+        7 => _tasks.where(
+            (task) =>
+                task.trashedAt == null &&
+                !task.completed &&
+                task.dueDate == null,
+          ),
         _ => _tasks.where(
             (task) => task.trashedAt == null && !task.completed,
           ),
@@ -1128,6 +1145,7 @@ class _HomeScreenState extends State<HomeScreen>
       4 => 'Papelera',
       5 => 'Próximos 7 días',
       6 => 'Vencidas',
+      7 => 'Sin fecha',
       _ => 'Orbitask',
     };
   }
@@ -1138,6 +1156,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (_filterIndex == 4) return 'Tareas en papelera';
     if (_filterIndex == 5) return 'Próximos 7 días';
     if (_filterIndex == 6) return 'Tareas vencidas';
+    if (_filterIndex == 7) return 'Tareas sin fecha';
     return 'Pendientes';
   }
 
@@ -1157,6 +1176,7 @@ class _HomeScreenState extends State<HomeScreen>
       4 => 'La papelera está vacía.',
       5 => 'No tienes tareas pendientes para los próximos 7 días.',
       6 => 'No tienes tareas vencidas.',
+      7 => 'No tienes tareas pendientes sin fecha.',
       _ => 'No tienes tareas pendientes.',
     };
   }
