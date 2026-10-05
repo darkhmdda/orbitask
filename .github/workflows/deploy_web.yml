@@ -48,6 +48,9 @@ jobs:
           --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_12El4MU7eURPm6as1XhRBg_5j02cxU0
           --dart-define=SUPABASE_AUTH_REDIRECT_URL=https://darkhmdda.github.io/orbitask/
 
+      - name: Use official Orbitask favicon
+        run: cp linux/runner/resources/orbitask.png build/web/favicon.png
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
