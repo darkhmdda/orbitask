@@ -11,6 +11,13 @@ class LocalDatabase {
 
   Database get raw => _database;
 
+  static LocalDatabase openInMemoryForTesting() {
+    final database = sqlite3.openInMemory();
+    database.execute('PRAGMA foreign_keys = ON;');
+    _createAndMigrate(database);
+    return LocalDatabase._(database, ':memory:');
+  }
+
   static Future<LocalDatabase> open() async {
     final directory = await getApplicationSupportDirectory();
     await directory.create(recursive: true);
