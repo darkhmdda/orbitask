@@ -56,9 +56,17 @@ class CloudSyncService {
     required SupabaseClient? client,
     required TodoRepository repository,
     required LocalDatabase database,
-  })  : _client = client,
-        _repository = repository,
-        _database = database;
+  }) : this._internal(
+          client,
+          repository,
+          database,
+        );
+
+  CloudSyncService._internal(
+    this._client,
+    this._repository,
+    this._database,
+  );
 
   final SupabaseClient? _client;
   final TodoRepository _repository;
