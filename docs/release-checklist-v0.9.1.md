@@ -26,7 +26,9 @@
 - [x] Verificar versión 0.9.1
 - [x] Abrir Orbitask
 - [x] Crear/editar/completar tarea
-- [x] Sincronización con Supabase
+- [x] Sincronización
+- [x] Recordatorios en Windows
+- [x] Recordatorio creado en Windows recibido también en Android tras sincronización con Supabase
 - [x] Recordatorio persistente
 - [x] Papelera/restauración/eliminación definitiva
 
@@ -44,14 +46,14 @@
 
 ## Windows x64
 
-- [ ] flutter build windows --release
-- [ ] Generar instalador Inno Setup
-- [ ] Verificar nombre Orbitask-v0.9.1-windows-setup.exe
-- [ ] Instalar/abrir Orbitask
-- [ ] Inicio de sesión
-- [ ] Crear/editar/completar tarea
-- [ ] Sincronización
-- [ ] Papelera/restauración/eliminación definitiva
+- [x] flutter build windows --release
+- [x] Generar instalador Inno Setup
+- [x] Verificar nombre Orbitask-v0.9.1-windows-setup.exe
+- [x] Instalar/abrir Orbitask
+- [x] Inicio de sesión
+- [x] Crear/editar/completar tarea
+- [x] Sincronización
+- [x] Papelera/restauración/eliminación definitiva
 
 ## Cierre
 
