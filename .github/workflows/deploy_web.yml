@@ -1,0 +1,58 @@
+# Orbitask Web deployment via GitHub Pages
+name: Deploy Orbitask Web
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build and deploy Web
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Orbitask Web
+        run: >
+          flutter build web --release
+          --base-href /orbitask/
+          --dart-define=SUPABASE_URL=https://sscfamlzjxyusvybajrt.supabase.co
+          --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_12El4MU7eURPm6as1XhRBg_5j02cxU0
+          --dart-define=SUPABASE_AUTH_REDIRECT_URL=https://darkhmdda.github.io/orbitask/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
