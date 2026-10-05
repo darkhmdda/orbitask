@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/list_icons.dart';
@@ -183,6 +184,8 @@ class _HomeScreenState extends State<HomeScreen>
           _selectedListId = null;
         }
       });
+
+      unawaited(_updateAndroidHomeWidgets(tasks));
 
       if (!_notificationsReconciled) {
         _notificationsReconciled = true;
@@ -404,20 +407,38 @@ class _HomeScreenState extends State<HomeScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (MediaQuery.sizeOf(context).width < 600) ...[
-                Text(
-                  _sectionTitle(),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${now.day} de ${months[now.month - 1]} de ${now.year}',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _sectionTitle(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${now.day} de ${months[now.month - 1]} de ${now.year}',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_selectedListId == null && _filterIndex == 0)
+                      IconButton.filledTonal(
+                        tooltip: 'Resumen',
+                        onPressed: _showMobileSummarySheet,
+                        icon: const Icon(Icons.bar_chart_rounded),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -616,6 +637,75 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _showMobileSummarySheet() async {
+    final activeTasks = _tasks.where(
+      (task) => task.trashedAt == null && !task.completed,
+    );
+    final todayCount =
+        activeTasks.where((task) => _isToday(task.dueDate)).length;
+    final nextSevenDaysCount =
+        activeTasks.where((task) => _isWithinNextSevenDays(task.dueDate)).length;
+    final overdueCount =
+        activeTasks.where((task) => _isOverdue(task.dueDate)).length;
+    final importantCount = activeTasks
+        .where((task) => task.priority == TaskPriority.high)
+        .length;
+
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => _MobileSummarySheet(
+        todayCount: todayCount,
+        nextSevenDaysCount: nextSevenDaysCount,
+        overdueCount: overdueCount,
+        importantCount: importantCount,
+      ),
+    );
+
+    if (!mounted || selected == null) return;
+    _selectFilter(selected);
+  }
+
+  Future<void> _updateAndroidHomeWidgets(List<Task> tasks) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+
+    final active = tasks
+        .where((task) => task.trashedAt == null && !task.completed)
+        .toList();
+
+    final todayTasks = active
+        .where((task) => _isToday(task.dueDate))
+        .toList()
+      ..sort(_compareSmart);
+
+    final completedCount = tasks
+        .where((task) => task.trashedAt == null && task.completed)
+        .length;
+
+    const channel = MethodChannel('com.darkhmdda.orbitask/widgets');
+    try {
+      await channel.invokeMethod<void>('updateWidgets', {
+        'todayCount': todayTasks.length,
+        'nextSevenDaysCount':
+            active.where((task) => _isWithinNextSevenDays(task.dueDate)).length,
+        'overdueCount':
+            active.where((task) => _isOverdue(task.dueDate)).length,
+        'importantCount': active
+            .where((task) => task.priority == TaskPriority.high)
+            .length,
+        'completedCount': completedCount,
+        'pendingCount': active.length,
+        'todayTasks': todayTasks
+            .take(4)
+            .map((task) => task.title)
+            .toList(growable: false),
+      });
+    } catch (_) {
+      // Home-screen widgets are an Android-only enhancement.
+    }
   }
 
   Widget _buildQuickAdd(BuildContext context) {
@@ -891,6 +981,18 @@ class _HomeScreenState extends State<HomeScreen>
             (task) => task.trashedAt == null && task.completed,
           ),
         4 => _tasks.where((task) => task.trashedAt != null),
+        5 => _tasks.where(
+            (task) =>
+                task.trashedAt == null &&
+                !task.completed &&
+                _isWithinNextSevenDays(task.dueDate),
+          ),
+        6 => _tasks.where(
+            (task) =>
+                task.trashedAt == null &&
+                !task.completed &&
+                _isOverdue(task.dueDate),
+          ),
         _ => _tasks.where(
             (task) => task.trashedAt == null && !task.completed,
           ),
@@ -995,6 +1097,23 @@ class _HomeScreenState extends State<HomeScreen>
         date.day == now.day;
   }
 
+  bool _isWithinNextSevenDays(DateTime? date) {
+    if (date == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final taskDay = DateTime(date.year, date.month, date.day);
+    final end = today.add(const Duration(days: 6));
+    return !taskDay.isBefore(today) && !taskDay.isAfter(end);
+  }
+
+  bool _isOverdue(DateTime? date) {
+    if (date == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final taskDay = DateTime(date.year, date.month, date.day);
+    return taskDay.isBefore(today);
+  }
+
   String _sectionTitle() {
     final selectedList = _selectedList();
     if (selectedList != null) {
@@ -1007,6 +1126,8 @@ class _HomeScreenState extends State<HomeScreen>
       2 => 'Importantes',
       3 => 'Completadas',
       4 => 'Papelera',
+      5 => 'Próximos 7 días',
+      6 => 'Vencidas',
       _ => 'Orbitask',
     };
   }
@@ -1015,6 +1136,8 @@ class _HomeScreenState extends State<HomeScreen>
     if (_selectedListId != null) return 'Pendientes de la lista';
     if (_filterIndex == 3) return 'Tareas completadas';
     if (_filterIndex == 4) return 'Tareas en papelera';
+    if (_filterIndex == 5) return 'Próximos 7 días';
+    if (_filterIndex == 6) return 'Tareas vencidas';
     return 'Pendientes';
   }
 
@@ -1032,6 +1155,8 @@ class _HomeScreenState extends State<HomeScreen>
       2 => 'No tienes tareas importantes pendientes.',
       3 => 'Todavía no has completado tareas.',
       4 => 'La papelera está vacía.',
+      5 => 'No tienes tareas pendientes para los próximos 7 días.',
+      6 => 'No tienes tareas vencidas.',
       _ => 'No tienes tareas pendientes.',
     };
   }
