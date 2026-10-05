@@ -6,7 +6,8 @@ BUNDLE="$ROOT/build/linux/x64/release/bundle"
 STAGE="$ROOT/build/deb/orbitask"
 PUBSPEC_VERSION="$(awk '/^version:/ {print $2; exit}' "$ROOT/pubspec.yaml")"
 APP_VERSION="${PUBSPEC_VERSION%%+*}"
-OUTPUT="$ROOT/Orbitask-v${APP_VERSION}-linux-amd64.deb"
+OUTPUT_DIR="$ROOT/installer/linux/output"
+OUTPUT="$OUTPUT_DIR/Orbitask-v${APP_VERSION}-linux-amd64.deb"
 
 if [ ! -x "$BUNDLE/orbitask" ]; then
   echo "Error: no existe una build release de Linux."
@@ -15,6 +16,7 @@ if [ ! -x "$BUNDLE/orbitask" ]; then
 fi
 
 rm -rf "$STAGE"
+mkdir -p "$OUTPUT_DIR"
 
 mkdir -p "$STAGE/DEBIAN"
 mkdir -p "$STAGE/opt/orbitask"
