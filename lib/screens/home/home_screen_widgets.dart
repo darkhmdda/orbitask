@@ -1,5 +1,84 @@
 part of 'home_screen.dart';
 
+class _MobileSummarySheet extends StatelessWidget {
+  const _MobileSummarySheet({
+    required this.todayCount,
+    required this.nextSevenDaysCount,
+    required this.overdueCount,
+    required this.importantCount,
+  });
+
+  final int todayCount;
+  final int nextSevenDaysCount;
+  final int overdueCount;
+  final int importantCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Resumen',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Accesos rápidos a tus tareas',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 1.8,
+              children: [
+                _SummaryCard(
+                  icon: Icons.today_rounded,
+                  label: 'Hoy',
+                  count: todayCount,
+                  onTap: () => Navigator.of(context).pop(1),
+                ),
+                _SummaryCard(
+                  icon: Icons.date_range_rounded,
+                  label: 'Próximos 7 días',
+                  count: nextSevenDaysCount,
+                  onTap: () => Navigator.of(context).pop(5),
+                ),
+                _SummaryCard(
+                  icon: Icons.warning_amber_rounded,
+                  label: 'Vencidas',
+                  count: overdueCount,
+                  onTap: () => Navigator.of(context).pop(6),
+                ),
+                _SummaryCard(
+                  icon: Icons.star_rounded,
+                  label: 'Importantes',
+                  count: importantCount,
+                  onTap: () => Navigator.of(context).pop(2),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
     required this.icon,
