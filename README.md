@@ -2,17 +2,38 @@
 
 **Tus tareas, siempre en órbita.**
 
-Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para organizar tareas, listas, subtareas, prioridades, fechas y recordatorios. Funciona de forma local con SQLite y puede sincronizar datos entre dispositivos mediante Supabase.
+Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para organizar tareas, listas, subtareas, prioridades, fechas y recordatorios.
 
-## Estado actual — v0.9-dev
+Funciona de forma local y puede sincronizar datos entre dispositivos mediante Supabase.
 
-Orbitask v0.9-dev está validado en:
+## Estado actual — v0.9.0 estable
+
+La versión estable actual de Orbitask es **v0.9.0**.
+
+Orbitask v0.9.0 está validado oficialmente en:
 
 - Android
 - Linux x64
 - Windows x64
 
-La versión actual incluye:
+Actualmente también se encuentra en desarrollo **v0.9.1**, una actualización centrada en hardening, pruebas automatizadas, mejoras de sincronización, reproducibilidad y la incorporación de **Web como cuarta plataforma oficial**.
+
+### Estado de v0.9.1
+
+Hasta el momento:
+
+- Web: validado.
+- Linux x64: validado.
+- Android: validado.
+- Windows x64: pendiente de validación final.
+- PR a `main`: pendiente.
+- Release estable `v0.9.1`: pendiente.
+
+iOS y macOS todavía no forman parte de las plataformas soportadas oficialmente.
+
+## Funciones principales
+
+Orbitask incluye:
 
 - CRUD completo de tareas.
 - Captura rápida.
@@ -20,31 +41,37 @@ La versión actual incluye:
 - Listas personalizadas.
 - Subtareas y progreso.
 - Búsqueda, filtros y ordenamiento.
-- Persistencia local con SQLite.
-- Recordatorios persistentes por tarea.
+- Persistencia local con SQLite en Android, Linux y Windows.
+- Persistencia local en navegador para Web.
+- Recordatorios por tarea.
 - Múltiples recordatorios relativos o personalizados.
 - Edición, reprogramación y cancelación automática de recordatorios.
 - Autenticación con Supabase.
-- Inicio de sesión, registro, cierre de sesión y recuperación/cambio de contraseña.
-- Sincronización bidireccional SQLite ↔ Supabase.
+- Inicio de sesión, registro y cierre de sesión.
+- Recuperación y cambio de contraseña.
+- Sincronización bidireccional entre almacenamiento local y Supabase.
 - Supabase Realtime.
 - Resolución de cambios mediante `updated_at`.
-- Cola/reintentos de sincronización y estado visible de conexión.
+- Reintentos automáticos de sincronización.
+- Estado visible de sincronización.
 - Tombstones para eliminaciones definitivas.
-- Papelera de tareas con restauración, vaciado y eliminación permanente.
+- Papelera de tareas.
+- Restauración de tareas.
+- Vaciado de Papelera.
+- Eliminación permanente.
 - Sincronización de Papelera entre dispositivos.
-- Perfil de usuario con nombre y avatar.
+- Perfil de usuario.
+- Nombre y avatar.
 - Preferencias sincronizadas por cuenta.
-- Interfaz adaptable para escritorio y móvil.
-- Identidad nativa Orbitask en Android, Linux y Windows.
+- Interfaz adaptable para escritorio, móvil y navegador.
+- Identidad propia de Orbitask.
 - 12 temas visuales.
-- Icono propio de Orbitask en las tres plataformas.
 
 ## Descargar Orbitask
 
-Las compilaciones se publican en **GitHub Releases**:
+La versión estable actual se encuentra en GitHub Releases:
 
-https://github.com/darkhmdda/orbitask/releases/tag/v0.9-dev
+https://github.com/darkhmdda/orbitask/releases/tag/v0.9.0
 
 ### Android
 
@@ -66,7 +93,7 @@ Descarga:
 
 Ejecuta el instalador y sigue los pasos del asistente.
 
-Orbitask se instalará como una aplicación normal de Windows y podrá abrirse desde el menú Inicio o desde el acceso directo si se seleccionó durante la instalación.
+Orbitask se instalará como una aplicación normal de Windows y podrá abrirse desde el menú Inicio.
 
 #### Versión portable
 
@@ -80,7 +107,7 @@ Para utilizarla:
 2. Mantén `orbitask.exe` junto con las carpetas y archivos incluidos.
 3. Ejecuta `orbitask.exe`.
 
-La compilación actual no utiliza firma de código de Windows, por lo que Windows puede mostrar una advertencia de SmartScreen.
+La compilación actual de Windows no utiliza firma de código comercial, por lo que Windows puede mostrar una advertencia de SmartScreen.
 
 ### Linux x64
 
@@ -90,13 +117,13 @@ Descarga:
 
 `Orbitask-v0.9-linux-amd64.deb`
 
-En distribuciones basadas en Debian o Ubuntu puedes instalarlo desde la carpeta donde descargaste el archivo:
+En distribuciones basadas en Debian o Ubuntu:
 
 ```bash
 sudo apt install ./Orbitask-v0.9-linux-amd64.deb
 ```
 
-Después de instalarlo puedes abrir Orbitask desde el menú de aplicaciones o desde la terminal:
+Después puedes abrir Orbitask desde el menú de aplicaciones o desde la terminal:
 
 ```bash
 orbitask
@@ -108,7 +135,7 @@ También está disponible:
 
 `Orbitask-v0.9-linux-x64-portable.tar.gz`
 
-Ejemplo de instalación manual:
+Ejemplo:
 
 ```bash
 mkdir -p ~/Applications/orbitask
@@ -116,14 +143,14 @@ cd ~/Applications/orbitask
 
 curl -L \
   -o Orbitask-v0.9-linux-x64-portable.tar.gz \
-  https://github.com/darkhmdda/orbitask/releases/download/v0.9-dev/Orbitask-v0.9-linux-x64-portable.tar.gz
+  https://github.com/darkhmdda/orbitask/releases/download/v0.9.0/Orbitask-v0.9-linux-x64-portable.tar.gz
 
 tar -xzf Orbitask-v0.9-linux-x64-portable.tar.gz
 chmod +x orbitask
 ./orbitask
 ```
 
-Para volver a abrir la versión portable después:
+Para volver a abrir la versión portable:
 
 ```bash
 ~/Applications/orbitask/orbitask
@@ -131,21 +158,42 @@ Para volver a abrir la versión portable después:
 
 > La build publicada está dirigida a Linux x64. La disponibilidad de bibliotecas del sistema puede variar entre distribuciones.
 
+## Web
+
+Orbitask Web forma parte del ciclo de desarrollo de **v0.9.1**.
+
+Actualmente ya fue validado con:
+
+- build de producción;
+- persistencia local en navegador;
+- inicio de sesión con Supabase;
+- carga de tareas y listas;
+- creación y edición de tareas;
+- sincronización con Android y Linux;
+- Papelera;
+- restauración;
+- eliminación definitiva;
+- perfil de usuario;
+- Supabase Realtime;
+- reintentos automáticos de sincronización.
+
+La versión Web todavía no forma parte de la release estable `v0.9.0`.
+
 ## Verificar descargas
 
-Cada release incluye:
+Las releases incluyen:
 
 `SHA256SUMS.txt`
 
 Este archivo contiene los hashes SHA-256 de las compilaciones publicadas.
 
-En Linux, si los archivos descargados y `SHA256SUMS.txt` están en la misma carpeta:
+En Linux:
 
 ```bash
 sha256sum -c SHA256SUMS.txt
 ```
 
-En Windows PowerShell puedes consultar el hash de un archivo, por ejemplo:
+En Windows PowerShell:
 
 ```powershell
 Get-FileHash .\Orbitask-v0.9-windows-setup.exe -Algorithm SHA256
@@ -153,7 +201,9 @@ Get-FileHash .\Orbitask-v0.9-windows-setup.exe -Algorithm SHA256
 
 ## Funcionamiento local y en la nube
 
-Orbitask usa SQLite como almacenamiento local.
+Orbitask utiliza SQLite como almacenamiento local en Android, Linux y Windows.
+
+En Web utiliza almacenamiento persistente del navegador.
 
 La aplicación puede seguir trabajando localmente sin una conexión activa a Supabase.
 
@@ -162,9 +212,11 @@ Cuando Supabase está configurado y el usuario inicia sesión:
 - los datos locales y remotos se combinan;
 - los cambios se sincronizan automáticamente;
 - Realtime permite reaccionar a cambios realizados desde otros dispositivos;
-- existe un ciclo periódico de sincronización;
-- el usuario también puede forzar una sincronización manual;
-- cada espacio local queda vinculado a una cuenta para evitar mezclar información entre usuarios.
+- los eventos Realtime se filtran por la cuenta autenticada;
+- existe sincronización periódica;
+- los errores transitorios se reintentan automáticamente;
+- el usuario puede forzar una sincronización manual;
+- cada espacio local queda vinculado a una cuenta para evitar mezclar datos entre usuarios.
 
 ## Papelera
 
@@ -178,21 +230,42 @@ Desde la Papelera se puede:
 
 Las tareas enviadas a la Papelera también sincronizan su estado entre los dispositivos de la misma cuenta.
 
-La eliminación permanente utiliza tombstones para impedir que datos antiguos reaparezcan durante una sincronización posterior.
+La eliminación permanente utiliza tombstones para impedir que información antigua reaparezca durante una sincronización posterior.
 
 ## Recordatorios
 
 Orbitask permite programar recordatorios por tarea.
 
-Los recordatorios pueden ser relativos o utilizar una fecha y hora personalizada.
+Los recordatorios pueden ser:
 
-También pueden editarse, reprogramarse y cancelarse cuando sea necesario.
+- relativos a la fecha límite;
+- personalizados con fecha y hora.
 
-En Linux/Crostini los recordatorios persistentes utilizan temporizadores de usuario del sistema.
+También pueden editarse, reprogramarse y cancelarse.
 
-En Android se utilizan notificaciones locales.
+### Android
 
-Los recordatorios se cancelan o reprograman cuando corresponde al completar, editar, enviar a Papelera, restaurar o eliminar una tarea.
+Los recordatorios utilizan notificaciones locales de Android y pueden funcionar aunque Orbitask esté cerrado.
+
+### Linux
+
+Los recordatorios persistentes utilizan temporizadores de usuario de `systemd` y `notify-send`.
+
+Esto permite que el recordatorio pueda ejecutarse aunque Orbitask ya no esté abierto.
+
+### Web
+
+Los recordatorios Web funcionan mientras Orbitask permanece abierto en la pestaña.
+
+Actualmente Orbitask Web no utiliza notificaciones push desde servidor, por lo que no puede garantizar recordatorios persistentes con el navegador completamente cerrado.
+
+### Sincronización de recordatorios
+
+Los datos de los recordatorios se sincronizan mediante Supabase.
+
+Sin embargo, cada dispositivo programa sus propias notificaciones locales.
+
+Por ejemplo, un recordatorio creado en un dispositivo puede sincronizarse con otro, pero el segundo dispositivo necesita recibir y procesar ese cambio antes de la hora del aviso para poder programar su notificación local.
 
 ## Temas
 
@@ -211,7 +284,7 @@ Orbitask incluye 12 temas visuales:
 - Deku
 - Eren
 
-El tema elegido puede sincronizarse por cuenta.
+El tema seleccionado puede sincronizarse por cuenta.
 
 ## Configuración de desarrollo
 
@@ -221,7 +294,7 @@ El tema elegido puede sincronizarse por cuenta.
 - Dart
 - Git
 - SQLite
-- Proyecto Supabase opcional para autenticación y sincronización
+- Supabase para autenticación y sincronización
 
 Clona el repositorio:
 
@@ -231,11 +304,15 @@ cd orbitask
 flutter pub get
 ```
 
-Orbitask no guarda claves privadas de Supabase en el repositorio.
+Orbitask no almacena claves privadas de Supabase en el repositorio.
 
 Para desarrollo se utilizan variables `dart-define`.
 
-Ejemplo en Linux:
+Nunca debe utilizarse una clave `service_role` dentro de la aplicación cliente.
+
+### Linux
+
+Ejemplo:
 
 ```bash
 flutter run -d linux \
@@ -244,17 +321,27 @@ flutter run -d linux \
   --dart-define=SUPABASE_AUTH_REDIRECT_URL=https://github.com/darkhmdda/orbitask
 ```
 
-Nunca debe utilizarse una clave `service_role` dentro de la aplicación cliente.
+Para generar una release Linux preparada para Supabase:
 
-### Android — callback nativo
+```bash
+export SUPABASE_URL=https://TU-PROYECTO.supabase.co
+export SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE
+export SUPABASE_AUTH_REDIRECT_URL=https://github.com/darkhmdda/orbitask
 
-Orbitask utiliza:
+bash installer/linux/build_release.sh
+```
+
+El script evita generar accidentalmente un paquete oficial sin configuración de Supabase.
+
+### Android
+
+Orbitask utiliza el callback:
 
 ```text
 com.darkhmdda.orbitask://login-callback
 ```
 
-Ese redirect debe estar permitido también en:
+Debe estar permitido también en:
 
 **Supabase → Authentication → URL Configuration → Redirect URLs**
 
@@ -267,6 +354,56 @@ flutter run -d <ANDROID_DEVICE> \
   --dart-define=SUPABASE_AUTH_REDIRECT_URL=com.darkhmdda.orbitask://login-callback
 ```
 
+Para generar el APK release:
+
+```bash
+export SUPABASE_URL=https://TU-PROYECTO.supabase.co
+export SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE
+export SUPABASE_AUTH_REDIRECT_URL=com.darkhmdda.orbitask://login-callback
+
+bash installer/android/build_release.sh
+```
+
+El script requiere que exista la configuración local de firma Android antes de construir la release.
+
+### Web
+
+Para generar Orbitask Web:
+
+```bash
+flutter build web \
+  --dart-define=SUPABASE_URL=https://TU-PROYECTO.supabase.co \
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE \
+  --dart-define=SUPABASE_AUTH_REDIRECT_URL=http://localhost:8080
+```
+
+Para probarlo localmente:
+
+```bash
+cd build/web
+python3 -m http.server 8080 --bind 0.0.0.0
+```
+
+Después abre:
+
+```text
+http://localhost:8080
+```
+
+El redirect utilizado debe estar permitido en la configuración de autenticación de Supabase.
+
+## Pruebas y CI
+
+Orbitask cuenta actualmente con:
+
+- pruebas automatizadas de modelos;
+- pruebas de repositorio SQLite;
+- 14 tests automatizados;
+- `flutter analyze`;
+- `flutter test`;
+- build Web dentro de GitHub Actions;
+- Dependabot para revisar actualizaciones de dependencias.
+
 ## Tecnologías
 
 - Flutter
@@ -278,6 +415,7 @@ flutter run -d <ANDROID_DEVICE> \
 - Supabase Storage
 - Git
 - GitHub
+- GitHub Actions
 
 ## Historial principal
 
@@ -290,19 +428,42 @@ flutter run -d <ANDROID_DEVICE> \
 - `v0.6-dev`: sistema de temas.
 - `v0.7-dev`: autenticación, sincronización bidireccional, tombstones y Realtime.
 - `v0.8-dev`: consolidación multiplataforma Android, Linux y Windows.
-- `v0.9-dev`: productividad, búsqueda, filtros, ordenamiento, mejoras de sincronización, cuenta y perfil, 12 temas, identidad visual, builds de distribución y Papelera.
+- `v0.9-dev`: productividad, búsqueda, filtros, ordenamiento, mejoras de sincronización, perfil, identidad visual, builds de distribución y Papelera.
+- `v0.9.0`: primera versión estable del ciclo v0.9.
+- `v0.9.1` (en desarrollo): hardening, Web, tests, CI, reproducibilidad, mejoras de sincronización y empaquetado.
 
 ## Estado del proyecto
 
-La rama de desarrollo de v0.9 ha sido validada funcionalmente en Android, Linux y Windows.
+**v0.9.0** es la versión estable actual.
 
-La release `v0.9-dev` incluye:
+Está publicada para:
 
-- APK para Android.
-- Instalador `.deb` para Linux x64.
-- Versión portable para Linux x64.
-- Instalador para Windows x64.
-- Versión portable para Windows x64.
-- Archivo `SHA256SUMS.txt` para verificar las descargas.
+- Android
+- Linux x64
+- Windows x64
 
-El siguiente cierre del proyecto contempla la consolidación de la versión estable y su documentación completa.
+La antigua `v0.9-dev` se conserva como prerelease histórica.
+
+El trabajo de `v0.9.1` ya tiene validados:
+
+- Web;
+- Linux x64;
+- Android.
+
+Windows x64 todavía debe pasar la validación final antes de cerrar la actualización.
+
+Después de completar esa validación se realizará:
+
+1. PR de `chore/v0.9.1-hardening` hacia `main`.
+2. Revisión de CI.
+3. Merge.
+4. Tag `v0.9.1`.
+5. Generación de artefactos finales.
+6. Generación de `SHA256SUMS.txt`.
+7. Publicación de GitHub Release `v0.9.1`.
+
+## Licencia
+
+Orbitask se distribuye bajo la licencia MIT.
+
+Consulta el archivo `LICENSE` para ver los términos completos.
