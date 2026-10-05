@@ -2,6 +2,8 @@
 
 **Tus tareas, siempre en órbita.**
 
+**Orbitask Web:** https://darkhmdda.github.io/orbitask/
+
 Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para organizar tareas, listas, subtareas, prioridades, fechas y recordatorios. Funciona de forma local con SQLite y puede sincronizar datos entre dispositivos mediante Supabase.
 
 ## Estado actual — v0.9.1 estable
@@ -138,7 +140,11 @@ Para volver a abrir la versión portable después:
 
 ### Web
 
-Orbitask Web forma parte del soporte oficial desde v0.9.1. La build de producción puede desplegarse en hosting estático y utiliza almacenamiento persistente del navegador, autenticación y sincronización con Supabase.
+Orbitask Web forma parte del soporte oficial desde v0.9.1 y está disponible públicamente en:
+
+https://darkhmdda.github.io/orbitask/
+
+La versión Web utiliza almacenamiento persistente del navegador, autenticación y sincronización con Supabase.
 
 ## Verificar descargas
 
@@ -205,7 +211,7 @@ En Linux/Crostini los recordatorios persistentes utilizan temporizadores de usua
 
 En Android se utilizan notificaciones locales.
 
-En Web, los recordatorios funcionan mientras Orbitask permanece abierto en la pestaña. El soporte de recordatorios persistentes del navegador queda limitado por las capacidades y permisos del propio navegador.
+En Web, Orbitask puede mostrar notificaciones reales del navegador cuando el usuario concede permiso y la aplicación permanece abierta en la pestaña. El soporte de recordatorios persistentes con la pestaña cerrada queda pendiente de una implementación de Push/Service Worker.
 
 Los recordatorios se cancelan o reprograman cuando corresponde al completar, editar, enviar a Papelera, restaurar o eliminar una tarea.
 
