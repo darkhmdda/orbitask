@@ -546,6 +546,12 @@ class _HomeScreenState extends State<HomeScreen>
                   },
                 )
               else ...[
+                if (MediaQuery.sizeOf(context).width < 600 &&
+                    _selectedListId == null &&
+                    _filterIndex == 0) ...[
+                  _buildMobileSummaries(context),
+                  const SizedBox(height: 20),
+                ],
                 if ((_filterIndex != 3 && _filterIndex != 4) ||
                     _selectedListId != null) ...[
                   _buildQuickAdd(context),
@@ -615,6 +621,69 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMobileSummaries(BuildContext context) {
+    final activeTasks = _tasks.where(
+      (task) => task.trashedAt == null && !task.completed,
+    );
+
+    final todayCount =
+        activeTasks.where((task) => _isToday(task.dueDate)).length;
+    final nextSevenDaysCount =
+        activeTasks.where((task) => _isWithinNextSevenDays(task.dueDate)).length;
+    final overdueCount =
+        activeTasks.where((task) => _isOverdue(task.dueDate)).length;
+    final importantCount = activeTasks
+        .where((task) => task.priority == TaskPriority.high)
+        .length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Resumen',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+        const SizedBox(height: 10),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 1.9,
+          children: [
+            _SummaryCard(
+              icon: Icons.today_rounded,
+              label: 'Hoy',
+              count: todayCount,
+              onTap: () => _selectFilter(1),
+            ),
+            _SummaryCard(
+              icon: Icons.date_range_rounded,
+              label: 'Próximos 7 días',
+              count: nextSevenDaysCount,
+              onTap: () => _selectFilter(5),
+            ),
+            _SummaryCard(
+              icon: Icons.warning_amber_rounded,
+              label: 'Vencidas',
+              count: overdueCount,
+              onTap: () => _selectFilter(6),
+            ),
+            _SummaryCard(
+              icon: Icons.star_rounded,
+              label: 'Importantes',
+              count: importantCount,
+              onTap: () => _selectFilter(2),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -891,6 +960,18 @@ class _HomeScreenState extends State<HomeScreen>
             (task) => task.trashedAt == null && task.completed,
           ),
         4 => _tasks.where((task) => task.trashedAt != null),
+        5 => _tasks.where(
+            (task) =>
+                task.trashedAt == null &&
+                !task.completed &&
+                _isWithinNextSevenDays(task.dueDate),
+          ),
+        6 => _tasks.where(
+            (task) =>
+                task.trashedAt == null &&
+                !task.completed &&
+                _isOverdue(task.dueDate),
+          ),
         _ => _tasks.where(
             (task) => task.trashedAt == null && !task.completed,
           ),
@@ -995,6 +1076,23 @@ class _HomeScreenState extends State<HomeScreen>
         date.day == now.day;
   }
 
+  bool _isWithinNextSevenDays(DateTime? date) {
+    if (date == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final taskDay = DateTime(date.year, date.month, date.day);
+    final end = today.add(const Duration(days: 6));
+    return !taskDay.isBefore(today) && !taskDay.isAfter(end);
+  }
+
+  bool _isOverdue(DateTime? date) {
+    if (date == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final taskDay = DateTime(date.year, date.month, date.day);
+    return taskDay.isBefore(today);
+  }
+
   String _sectionTitle() {
     final selectedList = _selectedList();
     if (selectedList != null) {
@@ -1007,6 +1105,8 @@ class _HomeScreenState extends State<HomeScreen>
       2 => 'Importantes',
       3 => 'Completadas',
       4 => 'Papelera',
+      5 => 'Próximos 7 días',
+      6 => 'Vencidas',
       _ => 'Orbitask',
     };
   }
@@ -1015,6 +1115,8 @@ class _HomeScreenState extends State<HomeScreen>
     if (_selectedListId != null) return 'Pendientes de la lista';
     if (_filterIndex == 3) return 'Tareas completadas';
     if (_filterIndex == 4) return 'Tareas en papelera';
+    if (_filterIndex == 5) return 'Próximos 7 días';
+    if (_filterIndex == 6) return 'Tareas vencidas';
     return 'Pendientes';
   }
 
@@ -1032,6 +1134,8 @@ class _HomeScreenState extends State<HomeScreen>
       2 => 'No tienes tareas importantes pendientes.',
       3 => 'Todavía no has completado tareas.',
       4 => 'La papelera está vacía.',
+      5 => 'No tienes tareas pendientes para los próximos 7 días.',
+      6 => 'No tienes tareas vencidas.',
       _ => 'No tienes tareas pendientes.',
     };
   }
