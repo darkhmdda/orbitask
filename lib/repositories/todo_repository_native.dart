@@ -1,4 +1,4 @@
-import '../database/local_database.dart';
+import '../database/local_database_native.dart';
 import '../models/reminder.dart';
 import '../models/subtask.dart';
 import '../models/task.dart';
