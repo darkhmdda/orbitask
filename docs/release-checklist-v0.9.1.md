@@ -4,8 +4,8 @@
 
 - [ ] GitHub Actions: Analyze and test
 - [ ] GitHub Actions: Build Web
-- [ ] flutter analyze sin issues
-- [ ] flutter test con todos los tests en PASS
+- [x] flutter analyze sin issues
+- [x] flutter test con todos los tests en PASS
 
 ## Web
 
@@ -21,12 +21,12 @@
 
 ## Linux x64
 
-- [ ] flutter build linux --release
-- [ ] Generar paquete .deb
-- [ ] Verificar versión 0.9.1
-- [ ] Abrir Orbitask
+- [x] flutter build linux --release
+- [x] Generar paquete .deb
+- [x] Verificar versión 0.9.1
+- [x] Abrir Orbitask
 - [ ] Crear/editar/completar tarea
-- [ ] Sincronización con Supabase
+- [x] Sincronización con Supabase
 - [ ] Recordatorio persistente
 - [ ] Papelera/restauración/eliminación definitiva
 
