@@ -13,7 +13,8 @@ Orbitask v0.9.0 está validado en:
 - Windows x64
 
 Estas son las plataformas soportadas oficialmente en v0.9.0.
-iOS, macOS y Web no están soportados oficialmente por ahora.
+
+En el ciclo de hardening posterior a v0.9.0, **Web ya fue habilitado y validado como plataforma oficial para la siguiente versión estable**. iOS y macOS continúan fuera del soporte oficial por ahora.
 
 La versión actual incluye:
 
@@ -23,13 +24,14 @@ La versión actual incluye:
 - Listas personalizadas.
 - Subtareas y progreso.
 - Búsqueda, filtros y ordenamiento.
-- Persistencia local con SQLite.
+- Persistencia local con SQLite en Android, Linux y Windows.
+- Persistencia local en navegador para Web.
 - Recordatorios persistentes por tarea.
 - Múltiples recordatorios relativos o personalizados.
 - Edición, reprogramación y cancelación automática de recordatorios.
 - Autenticación con Supabase.
 - Inicio de sesión, registro, cierre de sesión y recuperación/cambio de contraseña.
-- Sincronización bidireccional SQLite ↔ Supabase.
+- Sincronización bidireccional entre almacenamiento local y Supabase.
 - Supabase Realtime.
 - Resolución de cambios mediante `updated_at`.
 - Cola/reintentos de sincronización y estado visible de conexión.
@@ -38,10 +40,11 @@ La versión actual incluye:
 - Sincronización de Papelera entre dispositivos.
 - Perfil de usuario con nombre y avatar.
 - Preferencias sincronizadas por cuenta.
-- Interfaz adaptable para escritorio y móvil.
+- Interfaz adaptable para escritorio, móvil y navegador.
 - Identidad nativa Orbitask en Android, Linux y Windows.
+- Web compatible con navegadores modernos.
 - 12 temas visuales.
-- Icono propio de Orbitask en las tres plataformas.
+- Icono propio de Orbitask en las plataformas nativas.
 
 ## Descargar Orbitask
 
@@ -156,7 +159,9 @@ Get-FileHash .\Orbitask-v0.9-windows-setup.exe -Algorithm SHA256
 
 ## Funcionamiento local y en la nube
 
-Orbitask usa SQLite como almacenamiento local.
+Orbitask usa SQLite como almacenamiento local en Android, Linux y Windows.
+
+En Web utiliza almacenamiento persistente del navegador para conservar listas, tareas, subtareas, recordatorios, preferencias y tombstones entre recargas.
 
 La aplicación puede seguir trabajando localmente sin una conexión activa a Supabase.
 
@@ -165,7 +170,9 @@ Cuando Supabase está configurado y el usuario inicia sesión:
 - los datos locales y remotos se combinan;
 - los cambios se sincronizan automáticamente;
 - Realtime permite reaccionar a cambios realizados desde otros dispositivos;
+- los eventos Realtime se filtran por la cuenta autenticada;
 - existe un ciclo periódico de sincronización;
+- los fallos transitorios se reintentan automáticamente con backoff;
 - el usuario también puede forzar una sincronización manual;
 - cada espacio local queda vinculado a una cuenta para evitar mezclar información entre usuarios.
 
@@ -194,6 +201,8 @@ También pueden editarse, reprogramarse y cancelarse cuando sea necesario.
 En Linux/Crostini los recordatorios persistentes utilizan temporizadores de usuario del sistema.
 
 En Android se utilizan notificaciones locales.
+
+En Web, los recordatorios funcionan mientras Orbitask permanece abierto en la pestaña. El soporte de recordatorios persistentes del navegador queda limitado por las capacidades y permisos del propio navegador.
 
 Los recordatorios se cancelan o reprograman cuando corresponde al completar, editar, enviar a Papelera, restaurar o eliminar una tarea.
 
@@ -249,6 +258,26 @@ flutter run -d linux \
 
 Nunca debe utilizarse una clave `service_role` dentro de la aplicación cliente.
 
+### Web — desarrollo local
+
+Para ejecutar Orbitask Web con autenticación y sincronización:
+
+```bash
+flutter build web \
+  --dart-define=SUPABASE_URL=https://TU-PROYECTO.supabase.co \
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE \
+  --dart-define=SUPABASE_AUTH_REDIRECT_URL=http://localhost:8080
+```
+
+Después puede servirse la compilación localmente, por ejemplo:
+
+```bash
+cd build/web
+python3 -m http.server 8080 --bind 0.0.0.0
+```
+
+El redirect usado para Web debe estar permitido en la configuración de autenticación de Supabase.
+
 ### Android — callback nativo
 
 Orbitask utiliza:
@@ -295,6 +324,7 @@ flutter run -d <ANDROID_DEVICE> \
 - `v0.8-dev`: consolidación multiplataforma Android, Linux y Windows.
 - `v0.9-dev`: productividad, búsqueda, filtros, ordenamiento, mejoras de sincronización, cuenta y perfil, 12 temas, identidad visual, builds de distribución y Papelera.
 - `v0.9.0`: primera versión estable del ciclo v0.9 para Android, Linux x64 y Windows x64.
+- `v0.9.1` (en desarrollo): hardening, tests/CI, reproducibilidad, mejoras de sincronización y soporte oficial de Web.
 
 ## Estado del proyecto
 
@@ -311,4 +341,6 @@ La release estable `v0.9.0` incluye:
 
 La antigua release `v0.9-dev` se conserva únicamente como prerelease histórica del ciclo de desarrollo.
 
-El trabajo posterior a v0.9.0 se centra en mantenimiento, reproducibilidad del backend, tests automatizados, CI y hardening del repositorio.
+El trabajo posterior a v0.9.0 se centra en mantenimiento, reproducibilidad del backend, tests automatizados, CI, hardening del repositorio y la incorporación de Web como cuarta plataforma oficial para la siguiente versión estable.
+
+Actualmente el soporte Web del ciclo v0.9.1 ya fue validado con build de producción, persistencia local en navegador, autenticación con Supabase y sincronización real entre Web y dispositivos móviles, incluyendo creación de tareas, Papelera, restauración y eliminación definitiva.
