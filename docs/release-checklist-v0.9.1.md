@@ -35,12 +35,12 @@
 - [x] flutter build apk --release
 - [x] Verificar versión 0.9.1+11
 - [x] APK firmado con esquema v2
-- [ ] Instalar APK de release
-- [ ] Inicio de sesión
-- [ ] Crear/editar/completar tarea
-- [ ] Sincronización con Web/Linux
-- [ ] Recordatorios
-- [ ] Papelera/restauración/eliminación definitiva
+- [x] Instalar APK de release
+- [x] Inicio de sesión
+- [x] Crear/editar/completar tarea
+- [x] Sincronización con Web/Linux
+- [x] Recordatorios
+- [x] Papelera/restauración/eliminación definitiva
 
 ## Windows x64
 
