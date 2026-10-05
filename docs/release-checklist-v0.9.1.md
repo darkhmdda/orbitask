@@ -32,8 +32,9 @@
 
 ## Android
 
-- [ ] flutter build apk --release
-- [ ] Verificar versión 0.9.1+11
+- [x] flutter build apk --release
+- [x] Verificar versión 0.9.1+11
+- [x] APK firmado con esquema v2
 - [ ] Instalar APK de release
 - [ ] Inicio de sesión
 - [ ] Crear/editar/completar tarea
