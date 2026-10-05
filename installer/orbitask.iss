@@ -1,9 +1,13 @@
-﻿#define MyAppName "Orbitask"
-#define MyAppVersion "0.9.0"
+﻿#ifndef MyAppVersion
+  #error "MyAppVersion must be provided by the build script"
+#endif
+
+#define MyAppName "Orbitask"
 #define MyAppPublisher "darkh"
 #define MyAppExeName "orbitask.exe"
 
 [Setup]
+; Keep this AppId permanently unchanged so upgrades replace the same installation.
 AppId={{F3B7419E-0B2F-4A87-A86D-ORBITASK090}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
@@ -12,7 +16,7 @@ DefaultDirName={autopf}\Orbitask
 DefaultGroupName=Orbitask
 DisableProgramGroupPage=yes
 OutputDir=output
-OutputBaseFilename=Orbitask-v0.9-windows-setup
+OutputBaseFilename=Orbitask-v{#MyAppVersion}-windows-setup
 SetupIconFile=..\windows\runner\resources\app_icon.ico
 UninstallDisplayIcon={app}\orbitask.exe
 Compression=lzma2
