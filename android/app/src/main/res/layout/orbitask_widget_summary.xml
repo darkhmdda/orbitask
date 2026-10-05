@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_summary_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/orbitask_widget_background"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Orbitask"
+            android:textColor="#F3F5F7"
+            android:textSize="18sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/widget_summary_add"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/orbitask_widget_chip"
+            android:gravity="center"
+            android:text="+"
+            android:textColor="#A8BD86"
+            android:textSize="26sp"/>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Hoy"
+        android:textColor="#AAB2BC"
+        android:textSize="12sp"/>
+
+    <TextView
+        android:id="@+id/widget_summary_today"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0"
+        android:textColor="#F3F5F7"
+        android:textSize="30sp"
+        android:textStyle="bold"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="bottom"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView android:id="@+id/widget_summary_completed" style="@style/OrbitaskWidgetCount"/>
+            <TextView style="@style/OrbitaskWidgetCaption" android:text="Completadas"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView android:id="@+id/widget_summary_pending" style="@style/OrbitaskWidgetCount"/>
+            <TextView style="@style/OrbitaskWidgetCaption" android:text="Pendientes"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView android:id="@+id/widget_summary_important" style="@style/OrbitaskWidgetCount"/>
+            <TextView style="@style/OrbitaskWidgetCaption" android:text="Importantes"/>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
