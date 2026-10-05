@@ -349,3 +349,18 @@ Actualmente el soporte Web del ciclo v0.9.1 ya fue validado con build de producc
 ## Licencia
 
 Orbitask se distribuye bajo la licencia MIT. Consulta el archivo `LICENSE` para ver los términos completos.
+
+
+### Linux — build de release con Supabase
+
+Para evitar generar por accidente un paquete oficial en modo solo local, la release Linux debe construirse con las variables de Supabase definidas:
+
+```bash
+export SUPABASE_URL=https://TU-PROYECTO.supabase.co
+export SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE
+export SUPABASE_AUTH_REDIRECT_URL=https://github.com/darkhmdda/orbitask
+
+bash installer/linux/build_release.sh
+```
+
+El script genera primero la build Linux con Supabase y después crea el paquete `.deb` versionado.
