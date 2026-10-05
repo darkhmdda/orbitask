@@ -91,13 +91,29 @@ class CloudSyncService {
     final user = client?.auth.currentUser;
     if (client == null || user == null) return null;
 
-    final channel = client
-        .channel('orbitask:${user.id}:changes')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          callback: (_) => onChange(),
-        );
+    final channel = client.channel('orbitask:${user.id}:changes');
+    const tables = <String>[
+      'user_preferences',
+      'task_lists',
+      'tasks',
+      'subtasks',
+      'reminders',
+      'sync_deletions',
+    ];
+
+    for (final table in tables) {
+      channel.onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: table,
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'user_id',
+          value: user.id,
+        ),
+        callback: (_) => onChange(),
+      );
+    }
 
     channel.subscribe();
     return channel;
