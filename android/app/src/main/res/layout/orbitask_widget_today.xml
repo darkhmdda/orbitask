@@ -18,9 +18,11 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Hoy"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="Todas las tareas"
             android:textColor="#F3F5F7"
-            android:textSize="19sp"
+            android:textSize="18sp"
             android:textStyle="bold"/>
 
         <TextView
@@ -40,7 +42,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:gravity="center"
-        android:text="No hay tareas para hoy"
+        android:text="No hay tareas pendientes"
         android:textColor="#AAB2BC"
         android:textSize="14sp"/>
 
@@ -48,4 +50,6 @@
     <TextView android:id="@+id/widget_today_task_2" style="@style/OrbitaskWidgetTaskRow"/>
     <TextView android:id="@+id/widget_today_task_3" style="@style/OrbitaskWidgetTaskRow"/>
     <TextView android:id="@+id/widget_today_task_4" style="@style/OrbitaskWidgetTaskRow"/>
+    <TextView android:id="@+id/widget_today_task_5" style="@style/OrbitaskWidgetTaskRow"/>
+    <TextView android:id="@+id/widget_today_task_6" style="@style/OrbitaskWidgetTaskRow"/>
 </LinearLayout>
