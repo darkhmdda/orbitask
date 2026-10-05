@@ -57,7 +57,9 @@
 
 ## Cierre
 
-- [ ] Confirmar CI en verde
+- [x] Sincronización Windows optimizada y validada
+
+- [x] Confirmar CI en verde
 - [ ] Confirmar rama limpia
 - [ ] Crear PR de chore/v0.9.1-hardening a main
 - [ ] Revisar required checks de main
