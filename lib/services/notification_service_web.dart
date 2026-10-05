@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:js_interop';
+
+import 'package:web/web.dart' as web;
 
 import '../models/reminder.dart';
 import '../models/task.dart';
@@ -25,7 +28,11 @@ class NotificationService {
     _initialized = true;
   }
 
-  Future<void> requestPermissions({bool exactAlarms = false}) async {}
+  Future<void> requestPermissions({bool exactAlarms = false}) async {
+    if (web.Notification.permission == 'default') {
+      await web.Notification.requestPermission().toDart;
+    }
+  }
 
   Future<ReminderScheduleResult> scheduleReminder({
     required Task task,
@@ -49,16 +56,28 @@ class NotificationService {
       );
     }
 
+    await requestPermissions();
+
     final id = notificationId(reminder.id);
-    _timers[id] = Timer(delay, () {
+    _timers[id] = Timer(delay, () async {
       _timers.remove(id);
+      await showNow(
+        title: task.title,
+        body: task.description.trim().isEmpty
+            ? 'Recordatorio de Orbitask'
+            : task.description.trim(),
+        payload: task.id,
+      );
     });
 
-    return const ReminderScheduleResult(
+    final permissionGranted = web.Notification.permission == 'granted';
+
+    return ReminderScheduleResult(
       scheduled: true,
       survivesAppExit: false,
-      warning:
-          'En Web, el recordatorio funciona solo mientras Orbitask permanezca abierto en esta pestaña.',
+      warning: permissionGranted
+          ? 'En Web, la notificación funciona mientras Orbitask permanezca abierto en esta pestaña.'
+          : 'Permite las notificaciones del navegador para recibir recordatorios mientras Orbitask esté abierto.',
     );
   }
 
@@ -89,7 +108,23 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
-    return false;
+    if (web.Notification.permission != 'granted') {
+      return false;
+    }
+
+    try {
+      web.Notification(
+        'Orbitask · $title',
+        web.NotificationOptions(
+          body: body,
+          icon: 'favicon.png',
+          tag: payload ?? 'orbitask-reminder',
+        ),
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   void dispose() {
