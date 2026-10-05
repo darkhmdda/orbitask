@@ -53,10 +53,12 @@ class CloudSyncService {
   static const Duration deletionCleanupInterval = Duration(days: 1);
 
   CloudSyncService({
-    required this._client,
-    required this._repository,
-    required this._database,
-  });
+    required SupabaseClient? client,
+    required TodoRepository repository,
+    required LocalDatabase database,
+  })  : _client = client,
+        _repository = repository,
+        _database = database;
 
   final SupabaseClient? _client;
   final TodoRepository _repository;
