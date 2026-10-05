@@ -57,7 +57,7 @@ extension _HomeScreenSync on _HomeScreenState {
     }
 
     if (mounted) {
-      setState(() => _cloudSyncing = true);
+      _applyState(() => _cloudSyncing = true);
     }
 
     _ignoreRealtimeUntil = DateTime.now().add(
@@ -74,7 +74,7 @@ extension _HomeScreenSync on _HomeScreenState {
       _cloudSyncRetryTimer?.cancel();
       _cloudSyncRetryTimer = null;
 
-      setState(() {
+      _applyState(() {
         _cloudSyncFailed = false;
         _cloudSyncError = null;
         _lastCloudSyncAt = widget.cloudSyncService.lastSuccessfulSyncAt;
@@ -84,7 +84,7 @@ extension _HomeScreenSync on _HomeScreenState {
       await _loadData();
     } catch (error) {
       if (mounted) {
-        setState(() {
+        _applyState(() {
           _cloudSyncFailed = true;
           _cloudSyncError = error.toString();
         });
@@ -95,7 +95,7 @@ extension _HomeScreenSync on _HomeScreenState {
       _cloudSyncQueued = false;
 
       if (mounted) {
-        setState(() => _cloudSyncing = false);
+        _applyState(() => _cloudSyncing = false);
       }
 
       if (shouldRetry) {
