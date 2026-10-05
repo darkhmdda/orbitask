@@ -2,7 +2,6 @@
 
 **Tus tareas, siempre en órbita.**
 
-**Orbitask Web:** https://darkhmdda.github.io/orbitask/
 
 Orbitask es una aplicación TO-DO multiplataforma desarrollada con Flutter para organizar tareas, listas, subtareas, prioridades, fechas y recordatorios. Funciona de forma local con SQLite y puede sincronizar datos entre dispositivos mediante Supabase.
 
@@ -140,7 +139,9 @@ Para volver a abrir la versión portable después:
 
 ### Web
 
-Orbitask Web forma parte del soporte oficial desde v0.9.1 y está disponible públicamente en:
+Orbitask Web forma parte del soporte oficial desde v0.9.1.
+
+Accede directamente desde el navegador:
 
 https://darkhmdda.github.io/orbitask/
 
