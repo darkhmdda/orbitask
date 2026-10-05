@@ -21,9 +21,27 @@ if (-not (Test-Path $Iscc)) {
     }
 }
 
+if (-not $env:SUPABASE_URL) {
+    throw "Falta SUPABASE_URL"
+}
+if (-not $env:SUPABASE_PUBLISHABLE_KEY) {
+    throw "Falta SUPABASE_PUBLISHABLE_KEY"
+}
+if (-not $env:SUPABASE_AUTH_REDIRECT_URL) {
+    $env:SUPABASE_AUTH_REDIRECT_URL = "com.darkhmdda.orbitask://login-callback"
+}
+
 Push-Location $Root
 try {
-    flutter build windows --release
+    flutter build windows --release `
+        --dart-define=SUPABASE_URL=$env:SUPABASE_URL `
+        --dart-define=SUPABASE_PUBLISHABLE_KEY=$env:SUPABASE_PUBLISHABLE_KEY `
+        --dart-define=SUPABASE_AUTH_REDIRECT_URL=$env:SUPABASE_AUTH_REDIRECT_URL
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Flutter build fallo con codigo $LASTEXITCODE"
+    }
+
     & $Iscc "/DMyAppVersion=$AppVersion" $Iss
     if ($LASTEXITCODE -ne 0) {
         throw "Inno Setup fallo con codigo $LASTEXITCODE"
