@@ -344,3 +344,8 @@ La antigua release `v0.9-dev` se conserva únicamente como prerelease histórica
 El trabajo posterior a v0.9.0 se centra en mantenimiento, reproducibilidad del backend, tests automatizados, CI, hardening del repositorio y la incorporación de Web como cuarta plataforma oficial para la siguiente versión estable.
 
 Actualmente el soporte Web del ciclo v0.9.1 ya fue validado con build de producción, persistencia local en navegador, autenticación con Supabase y sincronización real entre Web y dispositivos móviles, incluyendo creación de tareas, Papelera, restauración y eliminación definitiva.
+
+
+## Licencia
+
+Orbitask se distribuye bajo la licencia MIT. Consulta el archivo `LICENSE` para ver los términos completos.
