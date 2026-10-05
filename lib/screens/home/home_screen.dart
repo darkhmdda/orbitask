@@ -100,6 +100,11 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  void _applyState(VoidCallback callback) {
+    if (!mounted) return;
+    setState(callback);
+  }
+
   Future<void> _initializeHome() async {
     await widget.notificationService.requestPermissions();
     await _loadData();
