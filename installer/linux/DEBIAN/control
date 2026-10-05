@@ -1,0 +1,8 @@
+Package: orbitask
+Version: 0.9.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: drk
+Description: Orbitask - Tus tareas, siempre en orbita.
+ Aplicacion TO-DO multiplataforma desarrollada con Flutter.
