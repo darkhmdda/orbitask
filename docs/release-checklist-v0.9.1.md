@@ -25,10 +25,10 @@
 - [x] Generar paquete .deb
 - [x] Verificar versión 0.9.1
 - [x] Abrir Orbitask
-- [ ] Crear/editar/completar tarea
+- [x] Crear/editar/completar tarea
 - [x] Sincronización con Supabase
-- [ ] Recordatorio persistente
-- [ ] Papelera/restauración/eliminación definitiva
+- [x] Recordatorio persistente
+- [x] Papelera/restauración/eliminación definitiva
 
 ## Android
 
