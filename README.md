@@ -50,71 +50,119 @@ https://github.com/darkhmdda/orbitask/releases/tag/v0.9-dev
 
 Descarga:
 
-`Orbitask-v0.9-android-universal.apk`
+`Orbitask-v0.9-android.apk`
 
-Después abre el APK desde Android y confirma la instalación. Si Android lo solicita, permite temporalmente la instalación de aplicaciones desde esa fuente.
+Después abre el APK desde Android y confirma la instalación.
+
+Si Android lo solicita, permite temporalmente la instalación de aplicaciones desde esa fuente.
 
 ### Windows x64
 
+#### Instalador recomendado
+
 Descarga:
 
-`Orbitask-v0.9-windows-x64.zip`
+`Orbitask-v0.9-windows-setup.exe`
+
+Ejecuta el instalador y sigue los pasos del asistente.
+
+Orbitask se instalará como una aplicación normal de Windows y podrá abrirse desde el menú Inicio o desde el acceso directo si se seleccionó durante la instalación.
+
+#### Versión portable
+
+También está disponible:
+
+`Orbitask-v0.9-windows-x64-portable.zip`
+
+Para utilizarla:
 
 1. Descomprime el ZIP completo.
-2. No separes `orbitask.exe` de los demás archivos y carpetas incluidos.
-3. Abre `orbitask.exe`.
+2. Mantén `orbitask.exe` junto con las carpetas y archivos incluidos.
+3. Ejecuta `orbitask.exe`.
 
 La compilación actual no utiliza firma de código de Windows, por lo que Windows puede mostrar una advertencia de SmartScreen.
 
 ### Linux x64
 
-Puedes descargar y ejecutar Orbitask desde la terminal:
+#### Instalador recomendado
+
+Descarga:
+
+`Orbitask-v0.9-linux-amd64.deb`
+
+En distribuciones basadas en Debian o Ubuntu puedes instalarlo desde la carpeta donde descargaste el archivo:
+
+```bash
+sudo apt install ./Orbitask-v0.9-linux-amd64.deb
+```
+
+Después de instalarlo puedes abrir Orbitask desde el menú de aplicaciones o desde la terminal:
+
+```bash
+orbitask
+```
+
+#### Versión portable
+
+También está disponible:
+
+`Orbitask-v0.9-linux-x64-portable.tar.gz`
+
+Ejemplo de instalación manual:
 
 ```bash
 mkdir -p ~/Applications/orbitask
 cd ~/Applications/orbitask
 
-curl -L   -o Orbitask-v0.9-linux-x64.tar.gz   https://github.com/darkhmdda/orbitask/releases/download/v0.9-dev/Orbitask-v0.9-linux-x64.tar.gz
+curl -L \
+  -o Orbitask-v0.9-linux-x64-portable.tar.gz \
+  https://github.com/darkhmdda/orbitask/releases/download/v0.9-dev/Orbitask-v0.9-linux-x64-portable.tar.gz
 
-tar -xzf Orbitask-v0.9-linux-x64.tar.gz
-chmod +x bundle/orbitask
-./bundle/orbitask
+tar -xzf Orbitask-v0.9-linux-x64-portable.tar.gz
+chmod +x orbitask
+./orbitask
 ```
 
-Para volver a abrirlo después:
+Para volver a abrir la versión portable después:
 
 ```bash
-~/Applications/orbitask/bundle/orbitask
+~/Applications/orbitask/orbitask
 ```
 
 > La build publicada está dirigida a Linux x64. La disponibilidad de bibliotecas del sistema puede variar entre distribuciones.
 
 ## Verificar descargas
 
-Cada release incluye `SHA256SUMS.txt`.
+Cada release incluye:
 
-En Linux:
+`SHA256SUMS.txt`
+
+Este archivo contiene los hashes SHA-256 de las compilaciones publicadas.
+
+En Linux, si los archivos descargados y `SHA256SUMS.txt` están en la misma carpeta:
 
 ```bash
 sha256sum -c SHA256SUMS.txt
 ```
 
-En Windows PowerShell puedes obtener el hash de un archivo con:
+En Windows PowerShell puedes consultar el hash de un archivo, por ejemplo:
 
 ```powershell
-Get-FileHash .\Orbitask-v0.9-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\Orbitask-v0.9-windows-setup.exe -Algorithm SHA256
 ```
 
 ## Funcionamiento local y en la nube
 
-Orbitask usa SQLite como almacenamiento local. La aplicación puede seguir trabajando localmente sin una conexión activa a Supabase.
+Orbitask usa SQLite como almacenamiento local.
+
+La aplicación puede seguir trabajando localmente sin una conexión activa a Supabase.
 
 Cuando Supabase está configurado y el usuario inicia sesión:
 
 - los datos locales y remotos se combinan;
 - los cambios se sincronizan automáticamente;
-- Realtime permite reaccionar a cambios de otros dispositivos;
-- existe un ciclo periódico de respaldo;
+- Realtime permite reaccionar a cambios realizados desde otros dispositivos;
+- existe un ciclo periódico de sincronización;
 - el usuario también puede forzar una sincronización manual;
 - cada espacio local queda vinculado a una cuenta para evitar mezclar información entre usuarios.
 
@@ -128,17 +176,27 @@ Desde la Papelera se puede:
 - eliminarla permanentemente;
 - vaciar toda la Papelera.
 
-Las tareas enviadas a la Papelera también sincronizan su estado entre los dispositivos de la misma cuenta. La eliminación permanente utiliza el sistema de tombstones para impedir que datos antiguos reaparezcan durante una sincronización posterior.
+Las tareas enviadas a la Papelera también sincronizan su estado entre los dispositivos de la misma cuenta.
+
+La eliminación permanente utiliza tombstones para impedir que datos antiguos reaparezcan durante una sincronización posterior.
 
 ## Recordatorios
 
 Orbitask permite programar recordatorios por tarea.
 
-En Linux/Crostini los recordatorios persistentes utilizan temporizadores de usuario del sistema. En Android se utilizan notificaciones locales. Los recordatorios se cancelan o reprograman cuando corresponde al completar, editar, enviar a Papelera, restaurar o eliminar una tarea.
+Los recordatorios pueden ser relativos o utilizar una fecha y hora personalizada.
+
+También pueden editarse, reprogramarse y cancelarse cuando sea necesario.
+
+En Linux/Crostini los recordatorios persistentes utilizan temporizadores de usuario del sistema.
+
+En Android se utilizan notificaciones locales.
+
+Los recordatorios se cancelan o reprograman cuando corresponde al completar, editar, enviar a Papelera, restaurar o eliminar una tarea.
 
 ## Temas
 
-Orbitask incluye 12 temas:
+Orbitask incluye 12 temas visuales:
 
 - Rimuru
 - Emilia
@@ -163,7 +221,7 @@ El tema elegido puede sincronizarse por cuenta.
 - Dart
 - Git
 - SQLite
-- proyecto Supabase opcional para Auth y sincronización
+- Proyecto Supabase opcional para autenticación y sincronización
 
 Clona el repositorio:
 
@@ -175,7 +233,9 @@ flutter pub get
 
 Orbitask no guarda claves privadas de Supabase en el repositorio.
 
-Para desarrollo usa variables `dart-define`:
+Para desarrollo se utilizan variables `dart-define`.
+
+Ejemplo en Linux:
 
 ```bash
 flutter run -d linux \
@@ -184,17 +244,19 @@ flutter run -d linux \
   --dart-define=SUPABASE_AUTH_REDIRECT_URL=https://github.com/darkhmdda/orbitask
 ```
 
-Nunca debe usarse una clave `service_role` dentro de la aplicación cliente.
+Nunca debe utilizarse una clave `service_role` dentro de la aplicación cliente.
 
 ### Android — callback nativo
 
-Orbitask usa:
+Orbitask utiliza:
 
 ```text
 com.darkhmdda.orbitask://login-callback
 ```
 
-Ese redirect debe estar permitido también en **Supabase → Authentication → URL Configuration → Redirect URLs**.
+Ese redirect debe estar permitido también en:
+
+**Supabase → Authentication → URL Configuration → Redirect URLs**
 
 Ejemplo:
 
@@ -207,13 +269,15 @@ flutter run -d <ANDROID_DEVICE> \
 
 ## Tecnologías
 
-- Flutter / Dart
+- Flutter
+- Dart
 - SQLite
 - Supabase Auth
 - Supabase Database
 - Supabase Realtime
 - Supabase Storage
-- Git / GitHub
+- Git
+- GitHub
 
 ## Historial principal
 
@@ -224,12 +288,21 @@ flutter run -d <ANDROID_DEVICE> \
 - `v0.4.1-dev`: identidad Orbitask y migración de base de datos.
 - `v0.5-dev`: recordatorios persistentes y notificaciones.
 - `v0.6-dev`: sistema de temas.
-- `v0.7-dev`: Auth, sincronización bidireccional, tombstones y Realtime.
-- `v0.8-dev`: consolidación multiplataforma Android/Linux/Windows.
-- `v0.9-dev`: productividad, búsqueda/filtros/ordenamiento, mejoras de sync, cuenta/perfil, 12 temas, identidad visual, builds de distribución y Papelera.
+- `v0.7-dev`: autenticación, sincronización bidireccional, tombstones y Realtime.
+- `v0.8-dev`: consolidación multiplataforma Android, Linux y Windows.
+- `v0.9-dev`: productividad, búsqueda, filtros, ordenamiento, mejoras de sincronización, cuenta y perfil, 12 temas, identidad visual, builds de distribución y Papelera.
 
 ## Estado del proyecto
 
-La rama de desarrollo de v0.9 ha sido validada funcionalmente en Android, Linux y Windows. La release `v0.9-dev` contiene paquetes para las tres plataformas y un archivo de hashes SHA-256.
+La rama de desarrollo de v0.9 ha sido validada funcionalmente en Android, Linux y Windows.
+
+La release `v0.9-dev` incluye:
+
+- APK para Android.
+- Instalador `.deb` para Linux x64.
+- Versión portable para Linux x64.
+- Instalador para Windows x64.
+- Versión portable para Windows x64.
+- Archivo `SHA256SUMS.txt` para verificar las descargas.
 
 El siguiente cierre del proyecto contempla la consolidación de la versión estable y su documentación completa.
