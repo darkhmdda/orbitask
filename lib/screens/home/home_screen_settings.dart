@@ -781,7 +781,7 @@ extension _HomeScreenSettings on _HomeScreenState {
                                           setDialogState(
                                             () => uploadingCloud = true,
                                           );
-                                          setState(
+                                          _applyState(
                                             () => _cloudSyncing = true,
                                           );
                                           try {
@@ -798,7 +798,7 @@ extension _HomeScreenSettings on _HomeScreenState {
                                                   result.themeId;
                                             });
 
-                                            setState(() {
+                                            _applyState(() {
                                               _cloudSyncFailed = false;
                                               _cloudSyncError = null;
                                               _lastCloudSyncAt = widget
@@ -816,7 +816,7 @@ extension _HomeScreenSettings on _HomeScreenState {
                                             }
                                           } catch (error) {
                                             if (mounted) {
-                                              setState(() {
+                                              _applyState(() {
                                                 _cloudSyncFailed = true;
                                                 _cloudSyncError =
                                                     error.toString();
@@ -832,7 +832,7 @@ extension _HomeScreenSettings on _HomeScreenState {
                                               );
                                             }
                                             if (mounted) {
-                                              setState(
+                                              _applyState(
                                                 () => _cloudSyncing = false,
                                               );
                                             }
