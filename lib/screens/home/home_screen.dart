@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -108,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen>
     _startRealtimeSubscription();
     _scheduleCloudSync(immediate: true);
     _cloudSyncTimer = Timer.periodic(
-      const Duration(minutes: 1),
+      _cloudSyncPollInterval,
       (_) => _scheduleCloudSync(immediate: true),
     );
   }
@@ -129,6 +130,16 @@ class _HomeScreenState extends State<HomeScreen>
     _searchController.dispose();
     super.dispose();
   }
+
+  Duration get _cloudSyncPollInterval =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows
+          ? const Duration(seconds: 20)
+          : const Duration(minutes: 1);
+
+  Duration get _cloudSyncDebounceDelay =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows
+          ? const Duration(milliseconds: 500)
+          : const Duration(milliseconds: 1500);
 
   void _startRealtimeSubscription() {
     if (!widget.cloudSyncService.isConfigured ||
@@ -155,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     _cloudSyncDebounce?.cancel();
     _cloudSyncDebounce = Timer(
-      immediate ? Duration.zero : const Duration(milliseconds: 1500),
+      immediate ? Duration.zero : _cloudSyncDebounceDelay,
       () => unawaited(_runAutomaticCloudSync()),
     );
   }
