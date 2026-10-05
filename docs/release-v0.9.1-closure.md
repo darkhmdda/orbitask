@@ -61,6 +61,14 @@ Resultado: 7/7 puntos completados.
 - Las ramas automáticas de Dependabot se conservan para revisión posterior.
 - Los tags de archivo históricos se conservan.
 
+## Web pública
+
+Orbitask Web quedó publicado en GitHub Pages:
+
+https://darkhmdda.github.io/orbitask/
+
+El despliegue se realiza automáticamente desde `main` mediante GitHub Actions.
+
 ## Nota
 
 La versión v0.9.1 queda cerrada. Cualquier cambio posterior debe entrar en un nuevo ciclo de desarrollo.
