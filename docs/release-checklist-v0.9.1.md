@@ -2,8 +2,8 @@
 
 ## Validación automática
 
-- [ ] GitHub Actions: Analyze and test
-- [ ] GitHub Actions: Build Web
+- [x] GitHub Actions: Analyze and test
+- [x] GitHub Actions: Build Web
 - [x] flutter analyze sin issues
 - [x] flutter test con todos los tests en PASS
 
@@ -27,8 +27,7 @@
 - [x] Abrir Orbitask
 - [x] Crear/editar/completar tarea
 - [x] Sincronización
-- [x] Recordatorios en Windows
-- [x] Recordatorio creado en Windows recibido también en Android tras sincronización con Supabase
+- [x] Recordatorios en Linux
 - [x] Recordatorio persistente
 - [x] Papelera/restauración/eliminación definitiva
 
@@ -57,14 +56,16 @@
 
 ## Cierre
 
+- [x] Refactor de `home_screen.dart` completado y validado
+
 - [x] Mejora de sincronización multiplataforma validada con analyze, tests y build Web
 
 - [x] Sincronización Windows optimizada y validada
 
 - [x] Confirmar CI en verde
-- [ ] Confirmar rama limpia
-- [ ] Crear PR de chore/v0.9.1-hardening a main
-- [ ] Revisar required checks de main
+- [x] Confirmar rama limpia
+- [x] Crear PR de chore/v0.9.1-hardening a main
+- [x] Revisar required checks de main
 - [ ] Merge del PR
 - [ ] Crear tag v0.9.1
 - [ ] Generar artefactos finales
