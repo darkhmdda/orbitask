@@ -131,15 +131,19 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
-  Duration get _cloudSyncPollInterval =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows
-          ? const Duration(seconds: 20)
-          : const Duration(minutes: 1);
+  Duration get _cloudSyncPollInterval {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+      return const Duration(seconds: 20);
+    }
+    return const Duration(seconds: 30);
+  }
 
-  Duration get _cloudSyncDebounceDelay =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows
-          ? const Duration(milliseconds: 500)
-          : const Duration(milliseconds: 1500);
+  Duration get _cloudSyncDebounceDelay {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+      return const Duration(milliseconds: 500);
+    }
+    return const Duration(milliseconds: 750);
+  }
 
   void _startRealtimeSubscription() {
     if (!widget.cloudSyncService.isConfigured ||
