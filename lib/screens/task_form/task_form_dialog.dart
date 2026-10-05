@@ -112,209 +112,298 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final size = MediaQuery.sizeOf(context);
+    final compact = size.width < 600;
+    final fieldGap = compact ? 10.0 : 14.0;
 
     return AlertDialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: compact ? 12 : 40,
+        vertical: compact ? 12 : 24,
+      ),
+      titlePadding: EdgeInsets.fromLTRB(
+        compact ? 18 : 24,
+        compact ? 18 : 24,
+        compact ? 18 : 24,
+        8,
+      ),
+      contentPadding: EdgeInsets.fromLTRB(
+        compact ? 18 : 24,
+        8,
+        compact ? 18 : 24,
+        8,
+      ),
+      actionsPadding: EdgeInsets.fromLTRB(
+        compact ? 18 : 24,
+        8,
+        compact ? 18 : 24,
+        compact ? 14 : 18,
+      ),
       title: Text(_editing ? 'Editar tarea' : 'Nueva tarea'),
       content: SizedBox(
-        width: 640,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _titleController,
-                  autofocus: true,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Título',
-                    prefixIcon: Icon(Icons.task_alt_rounded),
+        width: compact ? double.maxFinite : 640,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: size.height * (compact ? 0.68 : 0.74),
+          ),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              keyboardDismissBehavior:
+                  ScrollViewKeyboardDismissBehavior.onDrag,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextFormField(
+                    controller: _titleController,
+                    autofocus: !compact,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      labelText: 'Título',
+                      prefixIcon: const Icon(Icons.task_alt_rounded),
+                      isDense: compact,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Escribe un título para la tarea.';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Escribe un título para la tarea.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _descriptionController,
-                  minLines: 2,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: 'Descripción',
-                    prefixIcon: Icon(Icons.notes_rounded),
+                  SizedBox(height: fieldGap),
+                  TextFormField(
+                    controller: _descriptionController,
+                    minLines: compact ? 1 : 2,
+                    maxLines: compact ? 3 : 4,
+                    decoration: InputDecoration(
+                      labelText: 'Descripción',
+                      prefixIcon: const Icon(Icons.notes_rounded),
+                      isDense: compact,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  initialValue: _listId,
-                  decoration: const InputDecoration(
-                    labelText: 'Lista',
-                    prefixIcon: Icon(Icons.folder_outlined),
-                  ),
-                  items: widget.lists
-                      .map(
-                        (list) => DropdownMenuItem(
-                          value: list.id,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(listIconData(list.icon), size: 19),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  list.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                  SizedBox(height: fieldGap),
+                  DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    initialValue: _listId,
+                    decoration: InputDecoration(
+                      labelText: 'Lista',
+                      prefixIcon: const Icon(Icons.folder_outlined),
+                      isDense: compact,
+                    ),
+                    items: widget.lists
+                        .map(
+                          (list) => DropdownMenuItem(
+                            value: list.id,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(listIconData(list.icon), size: 19),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    list.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      )
-                      .toList(growable: false),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _listId = value);
-                    }
-                  },
-                ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<TaskPriority>(
-                  isExpanded: true,
-                  initialValue: _priority,
-                  decoration: const InputDecoration(
-                    labelText: 'Prioridad',
-                    prefixIcon: Icon(Icons.flag_outlined),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _listId = value);
+                      }
+                    },
                   ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: TaskPriority.none,
-                      child: Text('Sin prioridad'),
+                  SizedBox(height: fieldGap),
+                  DropdownButtonFormField<TaskPriority>(
+                    isExpanded: true,
+                    initialValue: _priority,
+                    decoration: InputDecoration(
+                      labelText: 'Prioridad',
+                      prefixIcon: const Icon(Icons.flag_outlined),
+                      isDense: compact,
                     ),
-                    DropdownMenuItem(
-                      value: TaskPriority.low,
-                      child: Text('Baja'),
-                    ),
-                    DropdownMenuItem(
-                      value: TaskPriority.medium,
-                      child: Text('Media'),
-                    ),
-                    DropdownMenuItem(
-                      value: TaskPriority.high,
-                      child: Text('Alta'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _priority = value);
-                    }
-                  },
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Fecha límite',
-                        style: theme.textTheme.labelLarge,
+                    items: const [
+                      DropdownMenuItem(
+                        value: TaskPriority.none,
+                        child: Text('Sin prioridad'),
                       ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
+                      DropdownMenuItem(
+                        value: TaskPriority.low,
+                        child: Text('Baja'),
+                      ),
+                      DropdownMenuItem(
+                        value: TaskPriority.medium,
+                        child: Text('Media'),
+                      ),
+                      DropdownMenuItem(
+                        value: TaskPriority.high,
+                        child: Text('Alta'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _priority = value);
+                      }
+                    },
+                  ),
+                  SizedBox(height: fieldGap),
+                  Container(
+                    padding: EdgeInsets.all(compact ? 12 : 14),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Fecha límite',
+                          style: theme.textTheme.labelLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        if (compact) ...[
                           OutlinedButton.icon(
                             onPressed: _pickDate,
                             icon: const Icon(Icons.calendar_month_rounded),
                             label: Text(_dateLabel()),
                           ),
+                          const SizedBox(height: 8),
                           OutlinedButton.icon(
                             onPressed: _dueDate == null ? null : _pickTime,
                             icon: const Icon(Icons.schedule_rounded),
                             label: Text(_timeLabel()),
                           ),
-                          if (_dueDate != null)
+                          if (_dueDate != null) ...[
+                            const SizedBox(height: 4),
                             TextButton.icon(
-                              onPressed: () => setState(() => _dueDate = null),
+                              onPressed: () =>
+                                  setState(() => _dueDate = null),
                               icon: const Icon(Icons.close_rounded),
                               label: const Text('Quitar fecha'),
                             ),
-                        ],
+                          ],
+                        ] else
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: _pickDate,
+                                icon:
+                                    const Icon(Icons.calendar_month_rounded),
+                                label: Text(_dateLabel()),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed:
+                                    _dueDate == null ? null : _pickTime,
+                                icon: const Icon(Icons.schedule_rounded),
+                                label: Text(_timeLabel()),
+                              ),
+                              if (_dueDate != null)
+                                TextButton.icon(
+                                  onPressed: () =>
+                                      setState(() => _dueDate = null),
+                                  icon: const Icon(Icons.close_rounded),
+                                  label: const Text('Quitar fecha'),
+                                ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: compact ? 14 : 18),
+                  _buildRemindersSection(theme),
+                  SizedBox(height: compact ? 14 : 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Subtareas',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: _addSubtask,
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Agregar'),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 18),
-                _buildRemindersSection(theme),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
+                  const SizedBox(height: 6),
+                  if (_subtaskEditors.isEmpty)
+                    Container(
+                      padding: EdgeInsets.all(compact ? 12 : 14),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       child: Text(
-                        'Subtareas',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                        'Divide una tarea grande en pasos pequeños. Puedes agregar subtareas y marcarlas conforme avances.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                    ),
-                    TextButton.icon(
-                      onPressed: _addSubtask,
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text('Agregar'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                if (_subtaskEditors.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      'Divide una tarea grande en pasos pequeños. Puedes agregar subtareas y marcarlas conforme avances.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                    )
+                  else
+                    ...List.generate(
+                      _subtaskEditors.length,
+                      (index) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _buildSubtaskEditor(index),
                       ),
                     ),
-                  )
-                else
-                  ...List.generate(
-                    _subtaskEditors.length,
-                    (index) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _buildSubtaskEditor(index),
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton.icon(
-          onPressed: _save,
-          icon: Icon(_editing ? Icons.save_rounded : Icons.add_rounded),
-          label: Text(_editing ? 'Guardar cambios' : 'Crear tarea'),
-        ),
-      ],
+      actions: compact
+          ? [
+              SizedBox(
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: _save,
+                      icon: Icon(
+                        _editing ? Icons.save_rounded : Icons.add_rounded,
+                      ),
+                      label: Text(
+                        _editing ? 'Guardar cambios' : 'Crear tarea',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancelar'),
+                    ),
+                  ],
+                ),
+              ),
+            ]
+          : [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton.icon(
+                onPressed: _save,
+                icon: Icon(
+                  _editing ? Icons.save_rounded : Icons.add_rounded,
+                ),
+                label:
+                    Text(_editing ? 'Guardar cambios' : 'Crear tarea'),
+              ),
+            ],
     );
   }
 

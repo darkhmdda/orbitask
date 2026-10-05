@@ -51,3 +51,9 @@ app.*.map.json
 *.sqlite
 *.sqlite3
 *.db
+Orbitask-v*.apk
+Orbitask-v*.deb
+Orbitask-v*.exe
+Orbitask-v*.zip
+Orbitask-v*.tar.gz
+SHA256SUMS.txt

@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/list_icons.dart';
+import '../../models/orbitask_profile.dart';
 import '../../models/reminder.dart';
 import '../../models/subtask.dart';
 import '../../models/task.dart';
@@ -12,11 +14,16 @@ import '../../repositories/todo_repository.dart';
 import '../../services/auth_service.dart';
 import '../../services/cloud_sync_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/profile_service.dart';
 import '../../widgets/orbitask_brand.dart';
 import '../../widgets/task_card.dart';
 import '../../widgets/theme_picker.dart';
 import '../list_manager/list_manager_dialog.dart';
 import '../task_form/task_form_dialog.dart';
+
+enum _TaskPriorityFilter { all, high, medium, low, none }
+
+enum _TaskSort { smart, dueDate, priority, newest, oldest, alphabetical }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -25,6 +32,7 @@ class HomeScreen extends StatefulWidget {
     required this.notificationService,
     required this.authService,
     required this.cloudSyncService,
+    required this.profileService,
     required this.themeId,
     required this.onThemeChanged,
     required this.onCloudThemeChanged,
@@ -34,6 +42,7 @@ class HomeScreen extends StatefulWidget {
   final NotificationService notificationService;
   final AuthService authService;
   final CloudSyncService cloudSyncService;
+  final ProfileService profileService;
   final String themeId;
   final ValueChanged<String> onThemeChanged;
   final ValueChanged<String> onCloudThemeChanged;
@@ -47,6 +56,12 @@ class _HomeScreenState extends State<HomeScreen>
   int _filterIndex = 0;
   String? _selectedListId;
   final TextEditingController _quickAddController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  bool _searchVisible = false;
+  String _searchQuery = '';
+  String? _filterListId;
+  _TaskPriorityFilter _priorityFilter = _TaskPriorityFilter.all;
+  _TaskSort _taskSort = _TaskSort.smart;
 
   List<Task> _tasks = const [];
   List<TaskList> _lists = const [];
@@ -55,7 +70,10 @@ class _HomeScreenState extends State<HomeScreen>
   bool _notificationsReconciled = false;
   bool _loading = true;
   bool _cloudSyncing = false;
+  bool _cloudSyncQueued = false;
   bool _cloudSyncFailed = false;
+  String? _cloudSyncError;
+  DateTime? _lastCloudSyncAt;
   String? _loadError;
   Timer? _cloudSyncDebounce;
   Timer? _cloudSyncTimer;
@@ -81,6 +99,10 @@ class _HomeScreenState extends State<HomeScreen>
     await _loadData();
     if (!mounted) return;
 
+    setState(() {
+      _lastCloudSyncAt = widget.cloudSyncService.lastSuccessfulSyncAt;
+    });
+
     _startRealtimeSubscription();
     _scheduleCloudSync(immediate: true);
     _cloudSyncTimer = Timer.periodic(
@@ -101,6 +123,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     _quickAddController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -135,9 +158,13 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _runAutomaticCloudSync() async {
-    if (_cloudSyncing ||
-        !widget.cloudSyncService.isConfigured ||
+    if (!widget.cloudSyncService.isConfigured ||
         widget.authService.currentUser == null) {
+      return;
+    }
+
+    if (_cloudSyncing) {
+      _cloudSyncQueued = true;
       return;
     }
 
@@ -155,21 +182,33 @@ class _HomeScreenState extends State<HomeScreen>
 
       widget.onCloudThemeChanged(result.themeId);
 
-      if (_cloudSyncFailed) {
-        setState(() => _cloudSyncFailed = false);
-      }
+      setState(() {
+        _cloudSyncFailed = false;
+        _cloudSyncError = null;
+        _lastCloudSyncAt = widget.cloudSyncService.lastSuccessfulSyncAt;
+      });
 
       _notificationsReconciled = false;
       await _loadData();
-    } catch (_) {
-      if (mounted && !_cloudSyncFailed) {
-        setState(() => _cloudSyncFailed = true);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _cloudSyncFailed = true;
+          _cloudSyncError = error.toString();
+        });
       }
       // SQLite sigue siendo usable y el siguiente cambio, reanudación
       // o ciclo periódico vuelve a intentar la sincronización.
     } finally {
+      final shouldRetry = _cloudSyncQueued;
+      _cloudSyncQueued = false;
+
       if (mounted) {
         setState(() => _cloudSyncing = false);
+      }
+
+      if (shouldRetry) {
+        _scheduleCloudSync(immediate: true);
       }
     }
   }
@@ -255,7 +294,9 @@ class _HomeScreenState extends State<HomeScreen>
           bottomNavigationBar: useSidebar
               ? null
               : NavigationBar(
-                  selectedIndex: _selectedListId == null ? _filterIndex : 0,
+                  selectedIndex: _selectedListId == null && _filterIndex < 4
+                      ? _filterIndex
+                      : 0,
                   onDestinationSelected: _selectFilter,
                   destinations: const [
                     NavigationDestination(
@@ -280,9 +321,10 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ],
                 ),
-          floatingActionButton: _loading || _loadError != null
-              ? null
-              : FloatingActionButton.extended(
+          floatingActionButton:
+              _loading || _loadError != null || _filterIndex == 4
+                  ? null
+                  : FloatingActionButton.extended(
                   onPressed: () => _openTaskForm(),
                   icon: const Icon(Icons.add_rounded),
                   label: const Text('Nueva tarea'),
@@ -335,6 +377,13 @@ class _HomeScreenState extends State<HomeScreen>
               selected: _selectedListId == null && _filterIndex == 3,
               onTap: () => _selectFilter(3),
             ),
+            _SidebarItem(
+              icon: Icons.delete_outline_rounded,
+              selectedIcon: Icons.delete_rounded,
+              label: 'Papelera',
+              selected: _selectedListId == null && _filterIndex == 4,
+              onTap: () => _selectFilter(4),
+            ),
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
               child: Divider(height: 1),
@@ -373,7 +422,9 @@ class _HomeScreenState extends State<HomeScreen>
                         count: _tasks
                             .where(
                               (task) =>
-                                  task.listId == list.id && !task.completed,
+                                  task.listId == list.id &&
+                                  !task.completed &&
+                                  task.trashedAt == null,
                             )
                             .length,
                         selected: _selectedListId == list.id,
@@ -452,7 +503,18 @@ class _HomeScreenState extends State<HomeScreen>
                               widget.authService.currentUser != null,
                           cloudSyncing: _cloudSyncing,
                           cloudSyncFailed: _cloudSyncFailed,
+                          lastCloudSyncAt: _lastCloudSyncAt,
+                          onTap: _showSyncStatus,
                         ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Papelera',
+                      onPressed: () => _selectFilter(4),
+                      icon: Icon(
+                        _filterIndex == 4
+                            ? Icons.delete_rounded
+                            : Icons.delete_outline_rounded,
                       ),
                     ),
                     if (showMobileListButton)
@@ -462,9 +524,13 @@ class _HomeScreenState extends State<HomeScreen>
                         icon: const Icon(Icons.folder_outlined),
                       ),
                     IconButton(
-                      tooltip: 'Buscar',
-                      onPressed: _showSearchInfo,
-                      icon: const Icon(Icons.search_rounded),
+                      tooltip: _searchVisible ? 'Cerrar búsqueda' : 'Buscar y filtrar',
+                      onPressed: _toggleSearch,
+                      icon: Icon(
+                        _searchVisible
+                            ? Icons.search_off_rounded
+                            : Icons.search_rounded,
+                      ),
                     ),
                     IconButton(
                       tooltip: 'Ajustes',
@@ -502,9 +568,20 @@ class _HomeScreenState extends State<HomeScreen>
                           widget.authService.currentUser != null,
                       cloudSyncing: _cloudSyncing,
                       cloudSyncFailed: _cloudSyncFailed,
+                      lastCloudSyncAt: _lastCloudSyncAt,
+                      onTap: _showSyncStatus,
                     ),
                     if (showMobileListButton) ...[
                       const SizedBox(width: 4),
+                      IconButton(
+                        tooltip: 'Papelera',
+                        onPressed: () => _selectFilter(4),
+                        icon: Icon(
+                          _filterIndex == 4
+                              ? Icons.delete_rounded
+                              : Icons.delete_outline_rounded,
+                        ),
+                      ),
                       IconButton(
                         tooltip: 'Listas',
                         onPressed: _showListsPicker,
@@ -512,9 +589,13 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ],
                     IconButton(
-                      tooltip: 'Buscar',
-                      onPressed: _showSearchInfo,
-                      icon: const Icon(Icons.search_rounded),
+                      tooltip: _searchVisible ? 'Cerrar búsqueda' : 'Buscar y filtrar',
+                      onPressed: _toggleSearch,
+                      icon: Icon(
+                        _searchVisible
+                            ? Icons.search_off_rounded
+                            : Icons.search_rounded,
+                      ),
                     ),
                     IconButton(
                       tooltip: 'Ajustes',
@@ -537,9 +618,14 @@ class _HomeScreenState extends State<HomeScreen>
                   },
                 )
               else ...[
-                if (_filterIndex != 3 || _selectedListId != null) ...[
+                if ((_filterIndex != 3 && _filterIndex != 4) ||
+                    _selectedListId != null) ...[
                   _buildQuickAdd(context),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 20),
+                ],
+                if (_searchVisible || _hasTaskFilters) ...[
+                  _buildSearchAndFilters(context),
+                  const SizedBox(height: 22),
                 ],
                 Row(
                   children: [
@@ -550,6 +636,14 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ),
                     const Spacer(),
+                    if (_filterIndex == 4 && visibleTasks.isNotEmpty) ...[
+                      TextButton.icon(
+                        onPressed: _emptyTrash,
+                        icon: const Icon(Icons.delete_sweep_outlined),
+                        label: const Text('Vaciar papelera'),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     Text(
                       '${visibleTasks.length} ${visibleTasks.length == 1 ? 'tarea' : 'tareas'}',
                       style: theme.textTheme.bodyMedium?.copyWith(
@@ -565,17 +659,27 @@ class _HomeScreenState extends State<HomeScreen>
                   ...visibleTasks.map(
                     (task) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: TaskCard(
-                        task: task,
-                        list: _listForId(task.listId),
-                        subtasks: _subtasksByTask[task.id] ?? const [],
-                        reminders: _remindersByTask[task.id] ?? const [],
-                        onChanged: (value) =>
-                            _toggleCompleted(task, value ?? false),
-                        onEdit: () => _openTaskForm(task: task),
-                        onDelete: () => _deleteTask(task),
-                        onSubtaskChanged: _toggleSubtask,
-                      ),
+                      child: _filterIndex == 4
+                          ? _TrashTaskCard(
+                              task: task,
+                              list: _listForId(task.listId),
+                              onRestore: () => _restoreTaskFromTrash(task),
+                              onDeletePermanently: () =>
+                                  _deleteTaskPermanently(task),
+                            )
+                          : TaskCard(
+                              task: task,
+                              list: _listForId(task.listId),
+                              subtasks:
+                                  _subtasksByTask[task.id] ?? const [],
+                              reminders:
+                                  _remindersByTask[task.id] ?? const [],
+                              onChanged: (value) =>
+                                  _toggleCompleted(task, value ?? false),
+                              onEdit: () => _openTaskForm(task: task),
+                              onDelete: () => _deleteTask(task),
+                              onSubtaskChanged: _toggleSubtask,
+                            ),
                     ),
                   ),
               ],
@@ -617,8 +721,215 @@ class _HomeScreenState extends State<HomeScreen>
   void _selectList(String id) {
     setState(() {
       _selectedListId = id;
+      _filterListId = null;
       _filterIndex = 0;
     });
+  }
+
+  bool get _hasTaskFilters =>
+      _searchQuery.isNotEmpty ||
+      _filterListId != null ||
+      _priorityFilter != _TaskPriorityFilter.all ||
+      _taskSort != _TaskSort.smart;
+
+  void _toggleSearch() {
+    setState(() {
+      _searchVisible = !_searchVisible;
+      if (!_searchVisible && !_hasTaskFilters) {
+        _searchQuery = '';
+        _searchController.clear();
+      }
+    });
+  }
+
+  void _clearTaskFilters() {
+    setState(() {
+      _searchQuery = '';
+      _searchController.clear();
+      _filterListId = null;
+      _priorityFilter = _TaskPriorityFilter.all;
+      _taskSort = _TaskSort.smart;
+    });
+  }
+
+  Widget _buildSearchAndFilters(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectedFilterList = _filterListId == null
+        ? null
+        : _listForId(_filterListId!);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _searchController,
+              autofocus: _searchVisible,
+              onChanged: (value) {
+                setState(() => _searchQuery = value.trim().toLowerCase());
+              },
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search_rounded),
+                hintText: 'Buscar por título, descripción o subtarea…',
+                suffixIcon: _searchQuery.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Limpiar búsqueda',
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _searchQuery = '';
+                          });
+                        },
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                PopupMenuButton<_TaskPriorityFilter>(
+                  initialValue: _priorityFilter,
+                  onSelected: (value) {
+                    setState(() => _priorityFilter = value);
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: _TaskPriorityFilter.all,
+                      child: Text('Todas las prioridades'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskPriorityFilter.high,
+                      child: Text('Prioridad alta'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskPriorityFilter.medium,
+                      child: Text('Prioridad media'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskPriorityFilter.low,
+                      child: Text('Prioridad baja'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskPriorityFilter.none,
+                      child: Text('Sin prioridad'),
+                    ),
+                  ],
+                  child: _FilterButton(
+                    icon: Icons.flag_outlined,
+                    label: _priorityFilterLabel(),
+                    active: _priorityFilter != _TaskPriorityFilter.all,
+                  ),
+                ),
+                if (_selectedListId == null)
+                  PopupMenuButton<String>(
+                    initialValue: _filterListId ?? '__all__',
+                    onSelected: (value) {
+                      setState(
+                        () => _filterListId =
+                            value == '__all__' ? null : value,
+                      );
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem<String>(
+                        value: '__all__',
+                        child: Text('Todas las listas'),
+                      ),
+                      ..._lists.map(
+                        (list) => PopupMenuItem<String>(
+                          value: list.id,
+                          child: Text(list.name),
+                        ),
+                      ),
+                    ],
+                    child: _FilterButton(
+                      icon: Icons.folder_outlined,
+                      label: selectedFilterList?.name ?? 'Todas las listas',
+                      active: _filterListId != null,
+                    ),
+                  ),
+                PopupMenuButton<_TaskSort>(
+                  initialValue: _taskSort,
+                  onSelected: (value) {
+                    setState(() => _taskSort = value);
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: _TaskSort.smart,
+                      child: Text('Orden inteligente'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskSort.dueDate,
+                      child: Text('Fecha límite'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskSort.priority,
+                      child: Text('Prioridad'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskSort.newest,
+                      child: Text('Más recientes'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskSort.oldest,
+                      child: Text('Más antiguas'),
+                    ),
+                    PopupMenuItem(
+                      value: _TaskSort.alphabetical,
+                      child: Text('A–Z'),
+                    ),
+                  ],
+                  child: _FilterButton(
+                    icon: Icons.sort_rounded,
+                    label: _taskSortLabel(),
+                    active: _taskSort != _TaskSort.smart,
+                  ),
+                ),
+                if (_hasTaskFilters)
+                  TextButton.icon(
+                    onPressed: _clearTaskFilters,
+                    icon: const Icon(Icons.filter_alt_off_outlined),
+                    label: const Text('Limpiar'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _priorityFilterLabel() {
+    return switch (_priorityFilter) {
+      _TaskPriorityFilter.all => 'Prioridad',
+      _TaskPriorityFilter.high => 'Alta',
+      _TaskPriorityFilter.medium => 'Media',
+      _TaskPriorityFilter.low => 'Baja',
+      _TaskPriorityFilter.none => 'Sin prioridad',
+    };
+  }
+
+  String _taskSortLabel() {
+    return switch (_taskSort) {
+      _TaskSort.smart => 'Orden',
+      _TaskSort.dueDate => 'Fecha límite',
+      _TaskSort.priority => 'Prioridad',
+      _TaskSort.newest => 'Recientes',
+      _TaskSort.oldest => 'Antiguas',
+      _TaskSort.alphabetical => 'A–Z',
+    };
   }
 
   List<Task> _visibleTasks() {
@@ -626,35 +937,126 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (_selectedListId != null) {
       tasks = _tasks.where(
-        (task) => !task.completed && task.listId == _selectedListId,
+        (task) =>
+            task.trashedAt == null &&
+            !task.completed &&
+            task.listId == _selectedListId,
       );
     } else {
       tasks = switch (_filterIndex) {
-        0 => _tasks.where((task) => !task.completed),
+        0 => _tasks.where(
+            (task) => task.trashedAt == null && !task.completed,
+          ),
         1 => _tasks.where(
-            (task) => !task.completed && _isToday(task.dueDate),
+            (task) =>
+                task.trashedAt == null &&
+                !task.completed &&
+                _isToday(task.dueDate),
           ),
         2 => _tasks.where(
             (task) =>
-                !task.completed && task.priority == TaskPriority.high,
+                task.trashedAt == null &&
+                !task.completed &&
+                task.priority == TaskPriority.high,
           ),
-        3 => _tasks.where((task) => task.completed),
-        _ => _tasks.where((task) => !task.completed),
+        3 => _tasks.where(
+            (task) => task.trashedAt == null && task.completed,
+          ),
+        4 => _tasks.where((task) => task.trashedAt != null),
+        _ => _tasks.where(
+            (task) => task.trashedAt == null && !task.completed,
+          ),
       };
+    }
+
+    if (_filterListId != null && _selectedListId == null) {
+      tasks = tasks.where((task) => task.listId == _filterListId);
+    }
+
+    tasks = switch (_priorityFilter) {
+      _TaskPriorityFilter.all => tasks,
+      _TaskPriorityFilter.high =>
+        tasks.where((task) => task.priority == TaskPriority.high),
+      _TaskPriorityFilter.medium =>
+        tasks.where((task) => task.priority == TaskPriority.medium),
+      _TaskPriorityFilter.low =>
+        tasks.where((task) => task.priority == TaskPriority.low),
+      _TaskPriorityFilter.none =>
+        tasks.where((task) => task.priority == TaskPriority.none),
+    };
+
+    final query = _searchQuery;
+    if (query.isNotEmpty) {
+      tasks = tasks.where((task) {
+        if (task.title.toLowerCase().contains(query) ||
+            task.description.toLowerCase().contains(query)) {
+          return true;
+        }
+
+        final subtasks = _subtasksByTask[task.id] ?? const <Subtask>[];
+        return subtasks.any(
+          (subtask) => subtask.title.toLowerCase().contains(query),
+        );
+      });
     }
 
     final result = tasks.toList();
     result.sort((a, b) {
-      final aDate = a.dueDate;
-      final bDate = b.dueDate;
-      if (aDate == null && bDate == null) {
-        return b.createdAt.compareTo(a.createdAt);
-      }
-      if (aDate == null) return 1;
-      if (bDate == null) return -1;
-      return aDate.compareTo(bDate);
+      return switch (_taskSort) {
+        _TaskSort.smart => _compareSmart(a, b),
+        _TaskSort.dueDate => _compareDueDate(a, b),
+        _TaskSort.priority => _comparePriority(a, b),
+        _TaskSort.newest => b.createdAt.compareTo(a.createdAt),
+        _TaskSort.oldest => a.createdAt.compareTo(b.createdAt),
+        _TaskSort.alphabetical =>
+          a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      };
     });
     return result;
+  }
+
+  int _compareSmart(Task a, Task b) {
+    final aDate = a.dueDate;
+    final bDate = b.dueDate;
+    if (aDate == null && bDate == null) {
+      final priority = _comparePriority(a, b);
+      if (priority != 0) return priority;
+      return b.createdAt.compareTo(a.createdAt);
+    }
+    if (aDate == null) return 1;
+    if (bDate == null) return -1;
+
+    final date = aDate.compareTo(bDate);
+    if (date != 0) return date;
+    return _comparePriority(a, b);
+  }
+
+  int _compareDueDate(Task a, Task b) {
+    final aDate = a.dueDate;
+    final bDate = b.dueDate;
+    if (aDate == null && bDate == null) {
+      return b.createdAt.compareTo(a.createdAt);
+    }
+    if (aDate == null) return 1;
+    if (bDate == null) return -1;
+    return aDate.compareTo(bDate);
+  }
+
+  int _comparePriority(Task a, Task b) {
+    final priority = _priorityRank(b.priority).compareTo(
+      _priorityRank(a.priority),
+    );
+    if (priority != 0) return priority;
+    return _compareDueDate(a, b);
+  }
+
+  int _priorityRank(TaskPriority priority) {
+    return switch (priority) {
+      TaskPriority.high => 3,
+      TaskPriority.medium => 2,
+      TaskPriority.low => 1,
+      TaskPriority.none => 0,
+    };
   }
 
   bool _isToday(DateTime? date) {
@@ -676,16 +1078,23 @@ class _HomeScreenState extends State<HomeScreen>
       1 => 'Hoy',
       2 => 'Importantes',
       3 => 'Completadas',
+      4 => 'Papelera',
       _ => 'Orbitask',
     };
   }
 
   String _listLabel() {
     if (_selectedListId != null) return 'Pendientes de la lista';
-    return _filterIndex == 3 ? 'Tareas completadas' : 'Pendientes';
+    if (_filterIndex == 3) return 'Tareas completadas';
+    if (_filterIndex == 4) return 'Tareas en papelera';
+    return 'Pendientes';
   }
 
   String _emptyMessage() {
+    if (_hasTaskFilters) {
+      return 'No hay tareas que coincidan con la búsqueda o los filtros.';
+    }
+
     if (_selectedListId != null) {
       return 'Esta lista no tiene tareas pendientes.';
     }
@@ -694,6 +1103,7 @@ class _HomeScreenState extends State<HomeScreen>
       1 => 'No tienes tareas pendientes para hoy.',
       2 => 'No tienes tareas importantes pendientes.',
       3 => 'Todavía no has completado tareas.',
+      4 => 'La papelera está vacía.',
       _ => 'No tienes tareas pendientes.',
     };
   }
@@ -944,26 +1354,25 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _deleteTask(Task task) async {
-    final index = _tasks.indexWhere((item) => item.id == task.id);
-    if (index == -1) return;
-
-    final deletedSubtasks = _subtasksByTask[task.id] ?? const <Subtask>[];
-    final deletedReminders = _remindersByTask[task.id] ?? const <Reminder>[];
+    final reminders = _remindersByTask[task.id] ?? const <Reminder>[];
 
     try {
-      await widget.repository.deleteTask(task.id);
-      await widget.notificationService.cancelReminders(deletedReminders);
+      await widget.repository.trashTask(task.id);
+      await widget.notificationService.cancelReminders(reminders);
       if (!mounted) return;
 
-      final newSubtaskMap = Map<String, List<Subtask>>.from(_subtasksByTask)
-        ..remove(task.id);
-      final newReminderMap = Map<String, List<Reminder>>.from(_remindersByTask)
-        ..remove(task.id);
-
+      final trashedAt = DateTime.now();
       setState(() {
-        _tasks = _tasks.where((item) => item.id != task.id).toList();
-        _subtasksByTask = newSubtaskMap;
-        _remindersByTask = newReminderMap;
+        _tasks = _tasks
+            .map(
+              (item) => item.id == task.id
+                  ? item.copyWith(
+                      trashedAt: trashedAt,
+                      updatedAt: trashedAt,
+                    )
+                  : item,
+            )
+            .toList(growable: false);
       });
 
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -971,15 +1380,10 @@ class _HomeScreenState extends State<HomeScreen>
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Se eliminó “${task.title}”.'),
+          content: Text('“${task.title}” se movió a la papelera.'),
           action: SnackBarAction(
             label: 'Deshacer',
-            onPressed: () => _restoreDeletedTask(
-              task,
-              deletedSubtasks,
-              deletedReminders,
-              index,
-            ),
+            onPressed: () => _restoreTaskFromTrash(task),
           ),
         ),
       );
@@ -989,51 +1393,146 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  Future<void> _restoreDeletedTask(
-    Task task,
-    List<Subtask> subtasks,
-    List<Reminder> reminders,
-    int index,
-  ) async {
+  Future<void> _restoreTaskFromTrash(Task task) async {
     try {
-      final restoredAt = DateTime.now();
-      final restoredTask = task.copyWith(updatedAt: restoredAt);
+      await widget.repository.restoreTask(task.id);
+      if (!mounted) return;
 
-      await widget.repository.createTask(
-        restoredTask,
-        subtasks,
-        reminders,
+      final restoredAt = DateTime.now();
+      final restoredTask = task.copyWith(
+        clearTrashedAt: true,
+        updatedAt: restoredAt,
       );
 
+      setState(() {
+        _tasks = _tasks
+            .map((item) => item.id == task.id ? restoredTask : item)
+            .toList(growable: false);
+      });
+
+      final reminders = _remindersByTask[task.id] ?? const <Reminder>[];
       String? reminderWarning;
       if (!restoredTask.completed) {
-        reminderWarning = await widget.notificationService
-            .scheduleTaskReminders(
-              task: restoredTask,
-              reminders: reminders,
-            );
+        reminderWarning =
+            await widget.notificationService.scheduleTaskReminders(
+          task: restoredTask,
+          reminders: reminders,
+        );
       }
 
       if (!mounted) return;
-
-      setState(() {
-        final restored = [..._tasks];
-        final safeIndex = index > restored.length ? restored.length : index;
-        restored.insert(safeIndex, restoredTask);
-        _tasks = restored;
-        _subtasksByTask = {
-          ..._subtasksByTask,
-          task.id: subtasks,
-        };
-        _remindersByTask = {
-          ..._remindersByTask,
-          task.id: reminders,
-        };
-      });
-
       if (reminderWarning != null) {
         _showMessage(reminderWarning);
+      } else {
+        _showMessage('Tarea restaurada.');
       }
+      _scheduleCloudSync();
+    } catch (error) {
+      if (!mounted) return;
+      _showDatabaseError(error);
+    }
+  }
+
+  Future<void> _deleteTaskPermanently(Task task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar definitivamente'),
+        content: Text(
+          '“${task.title}” se eliminará de forma permanente. '
+          'Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final reminders = _remindersByTask[task.id] ?? const <Reminder>[];
+      await widget.repository.deleteTask(task.id);
+      await widget.notificationService.cancelReminders(reminders);
+      if (!mounted) return;
+
+      setState(() {
+        _tasks = _tasks.where((item) => item.id != task.id).toList();
+        _subtasksByTask = Map<String, List<Subtask>>.from(_subtasksByTask)
+          ..remove(task.id);
+        _remindersByTask =
+            Map<String, List<Reminder>>.from(_remindersByTask)
+              ..remove(task.id);
+      });
+
+      _showMessage('Tarea eliminada definitivamente.');
+      _scheduleCloudSync();
+    } catch (error) {
+      if (!mounted) return;
+      _showDatabaseError(error);
+    }
+  }
+
+  Future<void> _emptyTrash() async {
+    final trashedTasks =
+        _tasks.where((task) => task.trashedAt != null).toList(growable: false);
+    if (trashedTasks.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Vaciar papelera'),
+        content: Text(
+          'Se eliminarán definitivamente ${trashedTasks.length} '
+          '${trashedTasks.length == 1 ? 'tarea' : 'tareas'}. '
+          'Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Vaciar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      for (final task in trashedTasks) {
+        final reminders = _remindersByTask[task.id] ?? const <Reminder>[];
+        await widget.repository.deleteTask(task.id);
+        await widget.notificationService.cancelReminders(reminders);
+      }
+
+      if (!mounted) return;
+      final trashedIds = trashedTasks.map((task) => task.id).toSet();
+      final newSubtasks =
+          Map<String, List<Subtask>>.from(_subtasksByTask)
+            ..removeWhere((id, _) => trashedIds.contains(id));
+      final newReminders =
+          Map<String, List<Reminder>>.from(_remindersByTask)
+            ..removeWhere((id, _) => trashedIds.contains(id));
+
+      setState(() {
+        _tasks =
+            _tasks.where((task) => !trashedIds.contains(task.id)).toList();
+        _subtasksByTask = newSubtasks;
+        _remindersByTask = newReminders;
+      });
+
+      _showMessage('Papelera vaciada.');
       _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
@@ -1047,7 +1546,7 @@ class _HomeScreenState extends State<HomeScreen>
   ) async {
     for (final task in tasks) {
       final reminders = remindersByTask[task.id] ?? const <Reminder>[];
-      if (task.completed) {
+      if (task.trashedAt != null || task.completed) {
         await widget.notificationService.cancelReminders(reminders);
         continue;
       }
@@ -1145,224 +1644,1285 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  void _showSearchInfo() {
-    _showMessage('La búsqueda se añadirá en una versión posterior.');
+  String _formatSyncTime(DateTime? value) {
+    if (value == null) return 'Todavía no se ha sincronizado';
+
+    final now = DateTime.now();
+    final difference = now.difference(value);
+
+    if (difference.inSeconds < 60) return 'Hace unos segundos';
+    if (difference.inMinutes < 60) {
+      return 'Hace ${difference.inMinutes} min';
+    }
+    if (difference.inHours < 24) {
+      return 'Hace ${difference.inHours} h';
+    }
+
+    final day = value.day.toString().padLeft(2, '0');
+    final month = value.month.toString().padLeft(2, '0');
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
+    return '$day/$month/${value.year} $hour:$minute';
+  }
+
+  Future<void> _showSyncStatus() async {
+    final connected = widget.authService.currentUser != null;
+    final theme = Theme.of(context);
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Estado de sincronización'),
+        content: SizedBox(
+          width: 460,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  _cloudSyncFailed
+                      ? Icons.cloud_off_outlined
+                      : (_cloudSyncing
+                          ? Icons.sync_rounded
+                          : (connected
+                              ? Icons.cloud_done_outlined
+                              : Icons.storage_rounded)),
+                ),
+                title: Text(
+                  _cloudSyncing
+                      ? 'Sincronizando…'
+                      : (_cloudSyncFailed
+                          ? 'Hay cambios pendientes de sincronizar'
+                          : (connected
+                              ? 'Sincronización activa'
+                              : 'Solo almacenamiento local')),
+                ),
+                subtitle: Text(
+                  connected
+                      ? 'Última sincronización: ${_formatSyncTime(_lastCloudSyncAt)}'
+                      : 'Inicia sesión para sincronizar este dispositivo con la nube.',
+                ),
+              ),
+              if (_cloudSyncFailed && _cloudSyncError != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _cloudSyncError!,
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+              ],
+              if (connected) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Orbitask reintenta automáticamente cuando vuelves a abrir la app, recuperas conexión o llega un cambio por Realtime.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+          if (connected)
+            FilledButton.icon(
+              onPressed: _cloudSyncing
+                  ? null
+                  : () {
+                      Navigator.of(context).pop();
+                      _scheduleCloudSync(immediate: true);
+                    },
+              icon: const Icon(Icons.sync_rounded),
+              label: const Text('Sincronizar ahora'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showChangePasswordDialog() async {
+    final formKey = GlobalKey<FormState>();
+    final currentController = TextEditingController();
+    final newController = TextEditingController();
+    final confirmController = TextEditingController();
+    var hideCurrent = true;
+    var hideNew = true;
+    var loading = false;
+    String? errorMessage;
+
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: !loading,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            final theme = Theme.of(dialogContext);
+
+            return AlertDialog(
+              title: const Text('Cambiar contraseña'),
+              content: SizedBox(
+                width: 460,
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Por seguridad, confirma tu contraseña actual antes de establecer una nueva.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: currentController,
+                          obscureText: hideCurrent,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText: 'Contraseña actual',
+                            prefixIcon:
+                                const Icon(Icons.lock_outline_rounded),
+                            suffixIcon: IconButton(
+                              tooltip: hideCurrent
+                                  ? 'Mostrar contraseña'
+                                  : 'Ocultar contraseña',
+                              onPressed: loading
+                                  ? null
+                                  : () => setDialogState(
+                                        () => hideCurrent = !hideCurrent,
+                                      ),
+                              icon: Icon(
+                                hideCurrent
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
+                            ),
+                          ),
+                          validator: (value) {
+                            if ((value ?? '').isEmpty) {
+                              return 'Escribe tu contraseña actual.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: newController,
+                          obscureText: hideNew,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.newPassword],
+                          decoration: InputDecoration(
+                            labelText: 'Nueva contraseña',
+                            prefixIcon:
+                                const Icon(Icons.password_rounded),
+                            suffixIcon: IconButton(
+                              tooltip: hideNew
+                                  ? 'Mostrar contraseña'
+                                  : 'Ocultar contraseña',
+                              onPressed: loading
+                                  ? null
+                                  : () => setDialogState(
+                                        () => hideNew = !hideNew,
+                                      ),
+                              icon: Icon(
+                                hideNew
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
+                            ),
+                          ),
+                          validator: (value) {
+                            final password = value ?? '';
+                            if (password.length < 6) {
+                              return 'Usa al menos 6 caracteres.';
+                            }
+                            if (password == currentController.text) {
+                              return 'La nueva contraseña debe ser diferente.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: confirmController,
+                          obscureText: hideNew,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: loading
+                              ? null
+                              : (_) async {
+                                  if (!(formKey.currentState?.validate() ??
+                                      false)) {
+                                    return;
+                                  }
+
+                                  setDialogState(() {
+                                    loading = true;
+                                    errorMessage = null;
+                                  });
+
+                                  try {
+                                    await widget.authService.changePassword(
+                                      currentPassword:
+                                          currentController.text,
+                                      newPassword: newController.text,
+                                    );
+
+                                    if (!dialogContext.mounted) return;
+                                    Navigator.of(dialogContext).pop();
+
+                                    if (mounted) {
+                                      _showMessage(
+                                        'Contraseña actualizada correctamente.',
+                                      );
+                                    }
+                                  } on AuthException catch (error) {
+                                    if (dialogContext.mounted) {
+                                      setDialogState(() {
+                                        errorMessage = error.message;
+                                        loading = false;
+                                      });
+                                    }
+                                  } catch (error) {
+                                    if (dialogContext.mounted) {
+                                      setDialogState(() {
+                                        errorMessage =
+                                            'No se pudo cambiar la contraseña: $error';
+                                        loading = false;
+                                      });
+                                    }
+                                  }
+                                },
+                          decoration: const InputDecoration(
+                            labelText: 'Confirmar nueva contraseña',
+                            prefixIcon: Icon(Icons.lock_reset_rounded),
+                          ),
+                          validator: (value) {
+                            if (value != newController.text) {
+                              return 'Las contraseñas no coinciden.';
+                            }
+                            return null;
+                          },
+                        ),
+                        if (errorMessage != null) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.errorContainer,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              errorMessage!,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onErrorContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: loading
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton.icon(
+                  onPressed: loading
+                      ? null
+                      : () async {
+                          if (!(formKey.currentState?.validate() ?? false)) {
+                            return;
+                          }
+
+                          setDialogState(() {
+                            loading = true;
+                            errorMessage = null;
+                          });
+
+                          try {
+                            await widget.authService.changePassword(
+                              currentPassword: currentController.text,
+                              newPassword: newController.text,
+                            );
+
+                            if (!dialogContext.mounted) return;
+                            Navigator.of(dialogContext).pop();
+
+                            if (mounted) {
+                              _showMessage(
+                                'Contraseña actualizada correctamente.',
+                              );
+                            }
+                          } on AuthException catch (error) {
+                            if (dialogContext.mounted) {
+                              setDialogState(() {
+                                errorMessage = error.message;
+                                loading = false;
+                              });
+                            }
+                          } catch (error) {
+                            if (dialogContext.mounted) {
+                              setDialogState(() {
+                                errorMessage =
+                                    'No se pudo cambiar la contraseña: $error';
+                                loading = false;
+                              });
+                            }
+                          }
+                        },
+                  icon: loading
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.password_rounded),
+                  label: Text(
+                    loading ? 'Actualizando…' : 'Guardar contraseña',
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    } finally {
+      currentController.dispose();
+      newController.dispose();
+      confirmController.dispose();
+    }
   }
 
   Future<void> _showSettingsInfo() async {
     var selectedThemeId = widget.themeId;
     var uploadingCloud = false;
+    var profileBusy = false;
+    String? profileError;
+    OrbitaskProfile? profile;
 
-    await showDialog<void>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          final theme = Theme.of(context);
+    if (widget.authService.currentUser != null &&
+        widget.profileService.isConfigured) {
+      try {
+        profile = await widget.profileService.loadCurrentProfile();
+      } catch (error) {
+        profileError = 'No se pudo cargar el perfil: $error';
+      }
+    }
 
-          return AlertDialog(
-            title: const Text('Ajustes'),
-            content: SizedBox(
-              width: 590,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+    if (!mounted) return;
+
+    final usernameController = TextEditingController(
+      text: profile?.username ?? '',
+    );
+
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => DefaultTabController(
+          length: 3,
+          child: StatefulBuilder(
+            builder: (dialogContext, setDialogState) {
+              final theme = Theme.of(dialogContext);
+              final email = widget.authService.currentUser?.email;
+              final dialogSize = MediaQuery.sizeOf(dialogContext);
+              final compactDialog = dialogSize.width < 600;
+
+              return AlertDialog(
+                insetPadding: EdgeInsets.symmetric(
+                  horizontal: compactDialog ? 12 : 40,
+                  vertical: compactDialog ? 12 : 24,
+                ),
+                titlePadding: EdgeInsets.fromLTRB(
+                  compactDialog ? 16 : 24,
+                  compactDialog ? 16 : 20,
+                  compactDialog ? 16 : 24,
+                  0,
+                ),
+                contentPadding: EdgeInsets.fromLTRB(
+                  compactDialog ? 16 : 24,
+                  12,
+                  compactDialog ? 16 : 24,
+                  8,
+                ),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Tema de Orbitask',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.authService.currentUser == null
-                          ? 'Elige la apariencia que prefieras. La selección se guarda localmente.'
-                          : 'Elige la apariencia que prefieras. La selección se sincroniza con tu cuenta.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
+                    const Text('Ajustes'),
                     const SizedBox(height: 14),
-                    ThemePicker(
-                      currentThemeId: selectedThemeId,
-                      onSelected: (themeId) {
-                        setDialogState(() => selectedThemeId = themeId);
-                        widget.onThemeChanged(themeId);
-                        _scheduleCloudSync();
-                      },
+                    TabBar(
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      labelPadding: EdgeInsets.symmetric(
+                        horizontal: compactDialog ? 12 : 16,
+                      ),
+                      tabs: [
+                        const Tab(
+                          icon: Icon(Icons.palette_outlined),
+                          text: 'Apariencia',
+                        ),
+                        Tab(
+                          icon: const Icon(Icons.person_outline_rounded),
+                          text: compactDialog ? 'Cuenta' : 'Cuenta y nube',
+                        ),
+                        Tab(
+                          icon: const Icon(Icons.notifications_outlined),
+                          text: compactDialog ? 'Avisos' : 'Notificaciones',
+                        ),
+                      ],
                     ),
-                    if (widget.authService.isConfigured) ...[
-                      const SizedBox(height: 22),
-                      const Divider(),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Cuenta',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.authService.currentUser?.email ??
-                            'Sesión de Supabase activa.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'La cuenta está conectada. Orbitask combina la nube con SQLite usando la versión más reciente de cada elemento.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          FilledButton.icon(
-                            onPressed: uploadingCloud || _cloudSyncing
-                                ? null
-                                : () async {
-                                    setDialogState(
-                                      () => uploadingCloud = true,
-                                    );
-                                    setState(() => _cloudSyncing = true);
-                                    try {
-                                      final result = await widget
-                                          .cloudSyncService
-                                          .syncNow();
-                                      if (!mounted) return;
-
-                                      widget.onCloudThemeChanged(
-                                        result.themeId,
-                                      );
-                                      setDialogState(
-                                        () => selectedThemeId = result.themeId,
-                                      );
-
-                                      if (_cloudSyncFailed) {
-                                        setState(
-                                          () => _cloudSyncFailed = false,
-                                        );
-                                      }
-
-                                      _notificationsReconciled = false;
-                                      await _loadData();
-
-                                      if (!mounted) return;
-                                      _showMessage(
-                                        'Sincronización completada. '
-                                        'Nube revisada: '
-                                        '${result.remoteLists} listas, '
-                                        '${result.remoteTasks} tareas, '
-                                        '${result.remoteSubtasks} subtareas, '
-                                        '${result.remoteReminders} recordatorios y '
-                                        '${result.remoteDeletions} eliminaciones.',
-                                      );
-                                    } catch (error) {
-                                      if (mounted) {
-                                        setState(
-                                          () => _cloudSyncFailed = true,
-                                        );
-                                        _showMessage(
-                                          'No se pudo sincronizar con Supabase: $error',
-                                        );
-                                      }
-                                    } finally {
-                                      if (context.mounted) {
-                                        setDialogState(
-                                          () => uploadingCloud = false,
-                                        );
-                                      }
-                                      if (mounted) {
-                                        setState(() => _cloudSyncing = false);
-                                      }
-                                    }
-                                  },
-                            icon: uploadingCloud
-                                ? const SizedBox.square(
-                                    dimension: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.cloud_upload_outlined),
-                            label: Text(
-                              uploadingCloud
-                                  ? 'Sincronizando…'
-                                  : 'Sincronizar ahora',
+                  ],
+                ),
+                content: SizedBox(
+                  width: compactDialog ? dialogSize.width : 720,
+                  height: compactDialog ? dialogSize.height * 0.68 : 570,
+                  child: TabBarView(
+                    children: [
+                      SingleChildScrollView(
+                        padding: const EdgeInsets.only(top: 8, bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Tema de Orbitask',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                            try {
-                              await widget.authService.signOut();
-                              if (context.mounted) {
-                                Navigator.of(context).pop();
-                              }
-                            } catch (error) {
-                              if (mounted) {
-                                _showMessage(
-                                  'No se pudo cerrar la sesión: $error',
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.authService.currentUser == null
+                                  ? 'Elige la apariencia que prefieras. La selección se guarda localmente.'
+                                  : 'Elige la apariencia que prefieras. La selección se sincroniza con tu cuenta.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ThemePicker(
+                              currentThemeId: selectedThemeId,
+                              onSelected: (themeId) {
+                                setDialogState(
+                                  () => selectedThemeId = themeId,
                                 );
-                              }
-                            }
-                          },
-                            icon: const Icon(Icons.logout_rounded),
-                            label: const Text('Cerrar sesión'),
-                          ),
-                        ],
+                                widget.onThemeChanged(themeId);
+                                _scheduleCloudSync();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      SingleChildScrollView(
+                        padding: const EdgeInsets.only(top: 8, bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Perfil',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: EdgeInsets.all(compactDialog ? 12 : 16),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  CircleAvatar(
+                                    radius: compactDialog ? 30 : 38,
+                                    backgroundColor:
+                                        theme.colorScheme.surfaceContainerHigh,
+                                    backgroundImage:
+                                        profile?.avatarUrl == null
+                                            ? null
+                                            : NetworkImage(
+                                                profile!.avatarUrl!,
+                                              ),
+                                    child: profile?.avatarUrl == null
+                                        ? Icon(
+                                            Icons.person_rounded,
+                                            size: compactDialog ? 30 : 38,
+                                            color: theme.colorScheme
+                                                .onSurfaceVariant,
+                                          )
+                                        : null,
+                                  ),
+                                  SizedBox(width: compactDialog ? 12 : 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          profile?.username == null
+                                              ? 'Configura tu username'
+                                              : '@${profile!.username}',
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          email ?? 'Cuenta local',
+                                          maxLines: compactDialog ? 2 : 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                            color: theme.colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 8,
+                                          children: [
+                                            OutlinedButton.icon(
+                                              onPressed: profileBusy ||
+                                                      email == null
+                                                  ? null
+                                                  : () async {
+                                                      final picked =
+                                                          await FilePicker
+                                                              .platform
+                                                              .pickFiles(
+                                                        type: FileType.custom,
+                                                        allowedExtensions: const [
+                                                          'jpg',
+                                                          'jpeg',
+                                                          'png',
+                                                          'webp',
+                                                        ],
+                                                        withData: true,
+                                                        allowMultiple: false,
+                                                      );
+
+                                                      if (picked == null ||
+                                                          picked.files
+                                                              .isEmpty) {
+                                                        return;
+                                                      }
+
+                                                      final file =
+                                                          picked.files.single;
+                                                      final bytes = file.bytes;
+                                                      if (bytes == null) {
+                                                        setDialogState(() {
+                                                          profileError =
+                                                              'No se pudo leer la imagen seleccionada.';
+                                                        });
+                                                        return;
+                                                      }
+
+                                                      final extension = file
+                                                          .extension
+                                                          ?.toLowerCase();
+                                                      final mimeType =
+                                                          extension == 'png'
+                                                              ? 'image/png'
+                                                              : extension ==
+                                                                      'webp'
+                                                                  ? 'image/webp'
+                                                                  : 'image/jpeg';
+
+                                                      setDialogState(() {
+                                                        profileBusy = true;
+                                                        profileError = null;
+                                                      });
+
+                                                      try {
+                                                        final updated =
+                                                            await widget
+                                                                .profileService
+                                                                .uploadAvatar(
+                                                          bytes: bytes,
+                                                          mimeType: mimeType,
+                                                        );
+                                                        if (!dialogContext
+                                                            .mounted) {
+                                                          return;
+                                                        }
+                                                        setDialogState(() {
+                                                          profile = updated;
+                                                          profileBusy = false;
+                                                        });
+                                                      } catch (error) {
+                                                        if (dialogContext
+                                                            .mounted) {
+                                                          setDialogState(() {
+                                                            profileBusy =
+                                                                false;
+                                                            profileError =
+                                                                'No se pudo actualizar la foto: $error';
+                                                          });
+                                                        }
+                                                      }
+                                                    },
+                                              icon: const Icon(
+                                                Icons.photo_camera_outlined,
+                                              ),
+                                              label: Text(
+                                                profileBusy
+                                                    ? 'Subiendo…'
+                                                    : (compactDialog
+                                                        ? 'Foto'
+                                                        : 'Cambiar foto'),
+                                              ),
+                                            ),
+                                            if (profile?.avatarPath != null)
+                                              TextButton.icon(
+                                                onPressed: profileBusy
+                                                    ? null
+                                                    : () async {
+                                                        setDialogState(() {
+                                                          profileBusy = true;
+                                                          profileError = null;
+                                                        });
+                                                        try {
+                                                          final updated =
+                                                              await widget
+                                                                  .profileService
+                                                                  .removeAvatar();
+                                                          if (!dialogContext
+                                                              .mounted) {
+                                                            return;
+                                                          }
+                                                          setDialogState(() {
+                                                            profile = updated;
+                                                            profileBusy =
+                                                                false;
+                                                          });
+                                                        } catch (error) {
+                                                          if (dialogContext
+                                                              .mounted) {
+                                                            setDialogState(() {
+                                                              profileBusy =
+                                                                  false;
+                                                              profileError =
+                                                                  'No se pudo quitar la foto: $error';
+                                                            });
+                                                          }
+                                                        }
+                                                      },
+                                                icon: const Icon(
+                                                  Icons.delete_outline_rounded,
+                                                ),
+                                                label: Text(
+                                                  compactDialog
+                                                      ? 'Quitar'
+                                                      : 'Quitar foto',
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            TextField(
+                              controller: usernameController,
+                              enabled: !profileBusy && email != null,
+                              maxLength: 24,
+                              textInputAction: TextInputAction.done,
+                              decoration: const InputDecoration(
+                                labelText: 'Username',
+                                prefixText: '@',
+                                helperText:
+                                    '3–24 caracteres: letras, números y guion bajo.',
+                                prefixIcon:
+                                    Icon(Icons.alternate_email_rounded),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: FilledButton.icon(
+                                onPressed: profileBusy || email == null
+                                    ? null
+                                    : () async {
+                                        setDialogState(() {
+                                          profileBusy = true;
+                                          profileError = null;
+                                        });
+
+                                        try {
+                                          final updated = await widget
+                                              .profileService
+                                              .updateUsername(
+                                                usernameController.text,
+                                              );
+                                          if (!dialogContext.mounted) return;
+                                          usernameController.text =
+                                              updated.username ?? '';
+                                          setDialogState(() {
+                                            profile = updated;
+                                            profileBusy = false;
+                                          });
+                                          if (mounted) {
+                                            _showMessage(
+                                              'Perfil actualizado.',
+                                            );
+                                          }
+                                        } on PostgrestException catch (error) {
+                                          if (dialogContext.mounted) {
+                                            setDialogState(() {
+                                              profileBusy = false;
+                                              profileError =
+                                                  error.code == '23505'
+                                                      ? 'Ese username ya está en uso.'
+                                                      : error.message;
+                                            });
+                                          }
+                                        } catch (error) {
+                                          if (dialogContext.mounted) {
+                                            setDialogState(() {
+                                              profileBusy = false;
+                                              profileError =
+                                                  error is FormatException
+                                                      ? error.message
+                                                      : 'No se pudo guardar el username: $error';
+                                            });
+                                          }
+                                        }
+                                      },
+                                icon: const Icon(Icons.save_outlined),
+                                label: Text(
+                                  profileBusy
+                                      ? 'Guardando…'
+                                      : 'Guardar username',
+                                ),
+                              ),
+                            ),
+                            if (profileError != null) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.errorContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  profileError!,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color:
+                                        theme.colorScheme.onErrorContainer,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                            Text(
+                              'Sincronización',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        _cloudSyncFailed
+                                            ? Icons.cloud_off_outlined
+                                            : (_cloudSyncing
+                                                ? Icons.sync_rounded
+                                                : Icons.cloud_done_outlined),
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _cloudSyncing
+                                              ? 'Sincronizando…'
+                                              : (_cloudSyncFailed
+                                                  ? 'Pendiente de sincronizar'
+                                                  : 'Sincronización activa'),
+                                          style: theme.textTheme.titleSmall
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Última sincronización: '
+                                    '${_formatSyncTime(widget.cloudSyncService.lastSuccessfulSyncAt)}',
+                                    style:
+                                        theme.textTheme.bodySmall?.copyWith(
+                                      color: theme
+                                          .colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Última subida local: '
+                                    '${_formatSyncTime(widget.cloudSyncService.lastSuccessfulUploadAt)}',
+                                    style:
+                                        theme.textTheme.bodySmall?.copyWith(
+                                      color: theme
+                                          .colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      Navigator.of(dialogContext).pop();
+                                      _showSyncStatus();
+                                    },
+                                    icon: const Icon(
+                                      Icons.info_outline_rounded,
+                                    ),
+                                    label: const Text('Ver detalles'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                FilledButton.icon(
+                                  onPressed: uploadingCloud || _cloudSyncing
+                                      ? null
+                                      : () async {
+                                          setDialogState(
+                                            () => uploadingCloud = true,
+                                          );
+                                          setState(
+                                            () => _cloudSyncing = true,
+                                          );
+                                          try {
+                                            final result = await widget
+                                                .cloudSyncService
+                                                .syncNow();
+                                            if (!mounted) return;
+
+                                            widget.onCloudThemeChanged(
+                                              result.themeId,
+                                            );
+                                            setDialogState(() {
+                                              selectedThemeId =
+                                                  result.themeId;
+                                            });
+
+                                            setState(() {
+                                              _cloudSyncFailed = false;
+                                              _cloudSyncError = null;
+                                              _lastCloudSyncAt = widget
+                                                  .cloudSyncService
+                                                  .lastSuccessfulSyncAt;
+                                            });
+
+                                            _notificationsReconciled = false;
+                                            await _loadData();
+
+                                            if (mounted) {
+                                              _showMessage(
+                                                'Sincronización completada.',
+                                              );
+                                            }
+                                          } catch (error) {
+                                            if (mounted) {
+                                              setState(() {
+                                                _cloudSyncFailed = true;
+                                                _cloudSyncError =
+                                                    error.toString();
+                                              });
+                                              _showMessage(
+                                                'No se pudo sincronizar con Supabase: $error',
+                                              );
+                                            }
+                                          } finally {
+                                            if (dialogContext.mounted) {
+                                              setDialogState(
+                                                () => uploadingCloud = false,
+                                              );
+                                            }
+                                            if (mounted) {
+                                              setState(
+                                                () => _cloudSyncing = false,
+                                              );
+                                            }
+                                          }
+                                        },
+                                  icon: uploadingCloud
+                                      ? const SizedBox.square(
+                                          dimension: 18,
+                                          child:
+                                              CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.sync_rounded),
+                                  label: Text(
+                                    uploadingCloud
+                                        ? 'Sincronizando…'
+                                        : 'Sincronizar ahora',
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: email == null
+                                      ? null
+                                      : () async {
+                                          Navigator.of(dialogContext).pop();
+                                          await _showChangePasswordDialog();
+                                        },
+                                  icon:
+                                      const Icon(Icons.password_rounded),
+                                  label:
+                                      const Text('Cambiar contraseña'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: email == null
+                                      ? null
+                                      : () async {
+                                          try {
+                                            await widget.authService
+                                                .signOut();
+                                            if (dialogContext.mounted) {
+                                              Navigator.of(dialogContext)
+                                                  .pop();
+                                            }
+                                          } catch (error) {
+                                            if (mounted) {
+                                              _showMessage(
+                                                'No se pudo cerrar la sesión: $error',
+                                              );
+                                            }
+                                          }
+                                        },
+                                  icon: const Icon(Icons.logout_rounded),
+                                  label: const Text('Cerrar sesión'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      SingleChildScrollView(
+                        padding: const EdgeInsets.only(top: 8, bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Notificaciones',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Comprueba que Orbitask puede mostrar avisos en este dispositivo.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                              child: compactDialog
+                                  ? Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Icon(
+                                            Icons
+                                                .notifications_active_outlined,
+                                            size: 30,
+                                            color:
+                                                theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        const Text(
+                                          'Envía una notificación de prueba para verificar permisos y funcionamiento.',
+                                        ),
+                                        const SizedBox(height: 14),
+                                        FilledButton.icon(
+                                          onPressed: () async {
+                                            await widget.notificationService
+                                                .requestPermissions();
+                                            final shown = await widget
+                                                .notificationService
+                                                .showNow(
+                                              title: 'Orbitask',
+                                              body:
+                                                  'Las notificaciones están funcionando.',
+                                            );
+                                            if (mounted) {
+                                              _showMessage(
+                                                shown
+                                                    ? 'Notificación de prueba enviada.'
+                                                    : 'El sistema de notificaciones no está disponible en este dispositivo.',
+                                              );
+                                            }
+                                          },
+                                          icon: const Icon(
+                                            Icons
+                                                .notifications_active_rounded,
+                                          ),
+                                          label: const Text('Probar'),
+                                        ),
+                                      ],
+                                    )
+                                  : Row(
+                                      children: [
+                                        Icon(
+                                          Icons
+                                              .notifications_active_outlined,
+                                          size: 30,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 14),
+                                        const Expanded(
+                                          child: Text(
+                                            'Envía una notificación de prueba para verificar permisos y funcionamiento.',
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        FilledButton.icon(
+                                          onPressed: () async {
+                                            await widget.notificationService
+                                                .requestPermissions();
+                                            final shown = await widget
+                                                .notificationService
+                                                .showNow(
+                                              title: 'Orbitask',
+                                              body:
+                                                  'Las notificaciones están funcionando.',
+                                            );
+                                            if (mounted) {
+                                              _showMessage(
+                                                shown
+                                                    ? 'Notificación de prueba enviada.'
+                                                    : 'El sistema de notificaciones no está disponible en este dispositivo.',
+                                              );
+                                            }
+                                          },
+                                          icon: const Icon(
+                                            Icons
+                                                .notifications_active_rounded,
+                                          ),
+                                          label: const Text('Probar'),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                    const SizedBox(height: 22),
-                    const Divider(),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Notificaciones',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () =>
+                        Navigator.of(dialogContext).pop(),
+                    child: const Text('Cerrar'),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      );
+    } finally {
+      usernameController.dispose();
+    }
+  }
+}
+
+class _TrashTaskCard extends StatelessWidget {
+  const _TrashTaskCard({
+    required this.task,
+    required this.onRestore,
+    required this.onDeletePermanently,
+    this.list,
+  });
+
+  final Task task;
+  final TaskList? list;
+  final VoidCallback onRestore;
+  final VoidCallback onDeletePermanently;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final trashedAt = task.trashedAt;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.delete_outline_rounded,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
+                  ),
+                  if (task.description.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      'Envía un aviso de prueba para comprobar el acceso al sistema de notificaciones.',
+                      task.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
-                ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      if (list != null)
+                        Text(
+                          list!.name,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      if (trashedAt != null)
+                        Text(
+                          'En papelera desde ${trashedAt.day}/${trashedAt.month}/${trashedAt.year}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cerrar'),
-              ),
-              FilledButton.icon(
-                onPressed: () async {
-                  await widget.notificationService.requestPermissions();
-                  final shown = await widget.notificationService.showNow(
-                    title: 'Orbitask',
-                    body: 'Las notificaciones están funcionando.',
-                  );
-                  if (mounted) {
-                    _showMessage(
-                      shown
-                          ? 'Notificación de prueba enviada.'
-                          : 'El sistema de notificaciones de Linux no está disponible.',
-                    );
-                  }
-                },
-                icon: const Icon(Icons.notifications_active_rounded),
-                label: const Text('Probar notificación'),
-              ),
-            ],
-          );
-        },
+            const SizedBox(width: 8),
+            IconButton(
+              tooltip: 'Restaurar',
+              onPressed: onRestore,
+              icon: const Icon(Icons.restore_rounded),
+            ),
+            IconButton(
+              tooltip: 'Eliminar definitivamente',
+              onPressed: onDeletePermanently,
+              icon: const Icon(Icons.delete_forever_outlined),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterButton extends StatelessWidget {
+  const _FilterButton({
+    required this.icon,
+    required this.label,
+    required this.active,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: active
+            ? theme.colorScheme.secondaryContainer
+            : theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: active
+              ? theme.colorScheme.secondary.withValues(alpha: 0.6)
+              : theme.colorScheme.outlineVariant,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 7),
+          Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.arrow_drop_down_rounded, size: 19),
+        ],
       ),
     );
   }
@@ -1454,50 +3014,68 @@ class _LocalStatusChip extends StatelessWidget {
     required this.cloudConnected,
     required this.cloudSyncing,
     required this.cloudSyncFailed,
+    required this.lastCloudSyncAt,
+    required this.onTap,
   });
 
   final bool loading;
   final bool cloudConnected;
   final bool cloudSyncing;
   final bool cloudSyncFailed;
+  final DateTime? lastCloudSyncAt;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final label = loading
+        ? 'Cargando…'
+        : (cloudSyncing
+            ? 'Sincronizando…'
+            : (cloudSyncFailed
+                ? 'Pendiente de sincronizar'
+                : (cloudConnected
+                    ? (lastCloudSyncAt == null
+                        ? 'Nube conectada'
+                        : 'Sincronizado')
+                    : 'Guardado local')));
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
+    return Tooltip(
+      message: 'Ver estado de sincronización',
+      child: Material(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            loading || cloudSyncing
-                ? Icons.sync_rounded
-                : (cloudSyncFailed
-                    ? Icons.cloud_off_outlined
-                    : (cloudConnected
-                        ? Icons.cloud_done_outlined
-                        : Icons.storage_rounded)),
-            size: 16,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  loading || cloudSyncing
+                      ? Icons.sync_rounded
+                      : (cloudSyncFailed
+                          ? Icons.cloud_off_outlined
+                          : (cloudConnected
+                              ? Icons.cloud_done_outlined
+                              : Icons.storage_rounded)),
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelMedium,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: 6),
-          Text(
-            loading
-                ? 'Cargando…'
-                : (cloudSyncing
-                    ? 'Sincronizando…'
-                    : (cloudSyncFailed
-                        ? 'Sin conexión'
-                        : (cloudConnected
-                            ? 'Nube conectada'
-                            : 'Guardado local'))),
-            style: theme.textTheme.labelMedium,
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -41,7 +41,7 @@ class ThemePicker extends StatelessWidget {
   }
 }
 
-class _ThemePreviewCard extends StatelessWidget {
+class _ThemePreviewCard extends StatefulWidget {
   const _ThemePreviewCard({
     required this.preset,
     required this.selected,
@@ -53,90 +53,179 @@ class _ThemePreviewCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_ThemePreviewCard> createState() => _ThemePreviewCardState();
+}
+
+class _ThemePreviewCardState extends State<_ThemePreviewCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: preset.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected ? preset.accent : preset.border,
-              width: selected ? 2 : 1,
-            ),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: preset.accent.withValues(alpha: 0.16),
-                      blurRadius: 14,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: preset.surface2,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: preset.border.withValues(alpha: 0.6),
-                  ),
+    final preset = widget.preset;
+    final selected = widget.selected;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 150),
+        scale: _hovered && !selected ? 1.012 : 1,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: widget.onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.all(13),
+              decoration: BoxDecoration(
+                color: selected
+                    ? Color.alphaBlend(
+                        preset.accent.withValues(alpha: 0.10),
+                        preset.surface,
+                      )
+                    : (_hovered ? preset.hover : preset.surface),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: selected
+                      ? preset.accent
+                      : (_hovered
+                          ? preset.accent.withValues(alpha: 0.60)
+                          : preset.border),
+                  width: selected ? 2 : 1,
                 ),
-                child: Text(
-                  preset.icon,
-                  style: const TextStyle(fontSize: 20),
-                ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: preset.accent.withValues(alpha: 0.18),
+                          blurRadius: 16,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      preset.name,
-                      style: TextStyle(
-                        color: preset.text,
-                        fontWeight: FontWeight.w800,
+              child: Row(
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? preset.accent.withValues(alpha: 0.16)
+                          : preset.surface2,
+                      borderRadius: BorderRadius.circular(13),
+                      border: Border.all(
+                        color: selected
+                            ? preset.accent.withValues(alpha: 0.75)
+                            : preset.border.withValues(alpha: 0.6),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      preset.light ? 'Tema claro' : 'Tema oscuro',
-                      style: TextStyle(
-                        color: preset.muted,
-                        fontSize: 12,
-                      ),
+                    child: Text(
+                      preset.icon,
+                      style: const TextStyle(fontSize: 21),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _ColorDot(color: preset.accent),
-                        const SizedBox(width: 5),
-                        _ColorDot(color: preset.accent2),
-                        const SizedBox(width: 5),
-                        _ColorDot(color: preset.hover),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                preset.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: preset.text,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            if (selected) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: preset.accent,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'En uso',
+                                  style: TextStyle(
+                                    color: preset.chipSelectedText,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Icon(
+                              preset.light
+                                  ? Icons.light_mode_outlined
+                                  : Icons.dark_mode_outlined,
+                              color: preset.muted,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              preset.light ? 'Tema claro' : 'Tema oscuro',
+                              style: TextStyle(
+                                color: preset.muted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 9),
+                        Row(
+                          children: [
+                            _ColorDot(color: preset.accent),
+                            const SizedBox(width: 5),
+                            _ColorDot(color: preset.accent2),
+                            const SizedBox(width: 5),
+                            _ColorDot(color: preset.hover),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 9),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected ? preset.accent : Colors.transparent,
+                      border: Border.all(
+                        color: selected ? preset.accent : preset.muted,
+                        width: 1.6,
+                      ),
+                    ),
+                    child: selected
+                        ? Icon(
+                            Icons.check_rounded,
+                            color: preset.chipSelectedText,
+                            size: 16,
+                          )
+                        : null,
+                  ),
+                ],
               ),
-              if (selected)
-                Icon(
-                  Icons.check_circle_rounded,
-                  color: preset.accent,
-                  size: 22,
-                ),
-            ],
+            ),
           ),
         ),
       ),

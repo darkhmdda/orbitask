@@ -26,6 +26,7 @@ class CloudSyncResult {
     required this.remoteSubtasks,
     required this.remoteReminders,
     required this.remoteDeletions,
+    required this.cleanedDeletions,
     required this.themeId,
     required this.uploaded,
   });
@@ -35,6 +36,7 @@ class CloudSyncResult {
   final int remoteSubtasks;
   final int remoteReminders;
   final int remoteDeletions;
+  final int cleanedDeletions;
   final String themeId;
   final CloudUploadResult uploaded;
 
@@ -47,6 +49,9 @@ class CloudSyncResult {
 }
 
 class CloudSyncService {
+  static const Duration deletionRetention = Duration(days: 365);
+  static const Duration deletionCleanupInterval = Duration(days: 1);
+
   CloudSyncService({
     required this._client,
     required this._repository,
@@ -58,6 +63,18 @@ class CloudSyncService {
   final LocalDatabase _database;
 
   bool get isConfigured => _client != null;
+
+  DateTime? get lastSuccessfulSyncAt {
+    final raw = _database.getSetting('last_cloud_sync_at');
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw)?.toLocal();
+  }
+
+  DateTime? get lastSuccessfulUploadAt {
+    final raw = _database.getSetting('last_cloud_upload_at');
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw)?.toLocal();
+  }
 
   RealtimeChannel? subscribeToRemoteChanges(void Function() onChange) {
     final client = _client;
@@ -114,6 +131,11 @@ class CloudSyncService {
     await _uploadDeletionJournal(client, user.id);
     await _applyDeletionJournalToCloud(client, user.id);
 
+    final cleanedDeletions = await _cleanupOldDeletionJournal(
+      client,
+      user.id,
+    );
+
     _database.setSetting(
       'last_cloud_sync_at',
       DateTime.now().toUtc().toIso8601String(),
@@ -125,6 +147,7 @@ class CloudSyncService {
       remoteSubtasks: remoteSubtasks.length,
       remoteReminders: remoteReminders.length,
       remoteDeletions: remoteDeletions.length,
+      cleanedDeletions: cleanedDeletions,
       themeId: themeId,
       uploaded: uploaded,
     );
@@ -174,6 +197,8 @@ class CloudSyncService {
                     task.dueDate == null ? null : _iso(task.dueDate!),
                 'completed': task.completed,
                 'list_id': task.listId,
+                'trashed_at':
+                    task.trashedAt == null ? null : _iso(task.trashedAt!),
                 'created_at': _iso(task.createdAt),
                 'updated_at': _iso(task.updatedAt),
               },
@@ -321,8 +346,8 @@ class CloudSyncService {
       final taskStatement = database.prepare('''
         INSERT INTO tasks (
           id, title, description, priority, due_date, completed,
-          list_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          list_id, trashed_at, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           title = excluded.title,
           description = excluded.description,
@@ -330,6 +355,7 @@ class CloudSyncService {
           due_date = excluded.due_date,
           completed = excluded.completed,
           list_id = excluded.list_id,
+          trashed_at = excluded.trashed_at,
           updated_at = excluded.updated_at
         WHERE excluded.updated_at > tasks.updated_at;
       ''');
@@ -382,6 +408,7 @@ class CloudSyncService {
             _nullableMillis(row['due_date']),
             ((row['completed'] as bool?) ?? false) ? 1 : 0,
             (row['list_id'] as String?) ?? 'inbox',
+            _nullableMillis(row['trashed_at']),
             _millis(row['created_at']),
             _millis(row['updated_at']),
           ]);
@@ -614,6 +641,62 @@ class CloudSyncService {
           break;
       }
     }
+  }
+
+  Future<int> _cleanupOldDeletionJournal(
+    SupabaseClient client,
+    String userId,
+  ) async {
+    final now = DateTime.now().toUtc();
+    final lastCleanupRaw =
+        _database.getSetting('last_tombstone_cleanup_at');
+    final lastCleanup = lastCleanupRaw == null
+        ? null
+        : DateTime.tryParse(lastCleanupRaw)?.toUtc();
+
+    if (lastCleanup != null &&
+        now.difference(lastCleanup) < deletionCleanupInterval) {
+      return 0;
+    }
+
+    final cutoff = now.subtract(deletionRetention);
+    final cutoffMillis = cutoff.millisecondsSinceEpoch;
+    final cutoffIso = cutoff.toIso8601String();
+
+    final localCountRows = _database.raw.select(
+      '''
+      SELECT COUNT(*) AS total
+      FROM sync_deletions
+      WHERE deleted_at < ?;
+      ''',
+      [cutoffMillis],
+    );
+    final localCount =
+        (localCountRows.first['total'] as int?) ?? 0;
+
+    // La limpieza solo ocurre al final de una sincronización exitosa,
+    // después de aplicar los tombstones tanto localmente como en la nube.
+    await client
+        .from('sync_deletions')
+        .delete()
+        .eq('user_id', userId)
+        .lt('deleted_at', cutoffIso);
+
+    final statement = _database.raw.prepare(
+      'DELETE FROM sync_deletions WHERE deleted_at < ?;',
+    );
+    try {
+      statement.execute([cutoffMillis]);
+    } finally {
+      statement.close();
+    }
+
+    _database.setSetting(
+      'last_tombstone_cleanup_at',
+      now.toIso8601String(),
+    );
+
+    return localCount;
   }
 
   Future<void> _deleteCloudIfNotNewer(

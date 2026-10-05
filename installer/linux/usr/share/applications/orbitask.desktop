@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Orbitask
+Comment=Tus tareas, siempre en orbita.
+Exec=/opt/orbitask/orbitask
+Icon=orbitask
+Terminal=false
+Type=Application
+Categories=Utility;Office;
+StartupNotify=true

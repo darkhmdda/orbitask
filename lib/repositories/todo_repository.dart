@@ -19,6 +19,7 @@ class TodoRepository {
         due_date,
         completed,
         list_id,
+        trashed_at,
         created_at,
         updated_at
       FROM tasks
@@ -118,6 +119,7 @@ class TodoRepository {
           due_date = ?,
           completed = ?,
           list_id = ?,
+          trashed_at = ?,
           updated_at = ?
         WHERE id = ?;
       ''');
@@ -130,6 +132,7 @@ class TodoRepository {
           task.dueDate?.millisecondsSinceEpoch,
           task.completed ? 1 : 0,
           task.listId,
+          task.trashedAt?.millisecondsSinceEpoch,
           task.updatedAt.millisecondsSinceEpoch,
           task.id,
         ]);
@@ -156,6 +159,7 @@ class TodoRepository {
         due_date = ?,
         completed = ?,
         list_id = ?,
+        trashed_at = ?,
         updated_at = ?
       WHERE id = ?;
     ''');
@@ -168,9 +172,38 @@ class TodoRepository {
         task.dueDate?.millisecondsSinceEpoch,
         task.completed ? 1 : 0,
         task.listId,
+        task.trashedAt?.millisecondsSinceEpoch,
         task.updatedAt.millisecondsSinceEpoch,
         task.id,
       ]);
+    } finally {
+      statement.close();
+    }
+  }
+
+  Future<void> trashTask(String id) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final statement = _database.raw.prepare('''
+      UPDATE tasks
+      SET trashed_at = ?, updated_at = ?
+      WHERE id = ?;
+    ''');
+    try {
+      statement.execute([now, now, id]);
+    } finally {
+      statement.close();
+    }
+  }
+
+  Future<void> restoreTask(String id) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final statement = _database.raw.prepare('''
+      UPDATE tasks
+      SET trashed_at = NULL, updated_at = ?
+      WHERE id = ?;
+    ''');
+    try {
+      statement.execute([now, id]);
     } finally {
       statement.close();
     }
@@ -317,9 +350,10 @@ class TodoRepository {
         due_date,
         completed,
         list_id,
+        trashed_at,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     ''');
 
     try {
@@ -331,6 +365,7 @@ class TodoRepository {
         task.dueDate?.millisecondsSinceEpoch,
         task.completed ? 1 : 0,
         task.listId,
+        task.trashedAt?.millisecondsSinceEpoch,
         task.createdAt.millisecondsSinceEpoch,
         task.updatedAt.millisecondsSinceEpoch,
       ]);
@@ -503,6 +538,9 @@ class TodoRepository {
           : DateTime.fromMillisecondsSinceEpoch(dueDateValue),
       completed: ((row['completed'] as int?) ?? 0) == 1,
       listId: (row['list_id'] as String?) ?? 'inbox',
+      trashedAt: row['trashed_at'] == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(row['trashed_at']! as int),
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         row['created_at']! as int,
       ),

@@ -144,6 +144,16 @@ class _AuthScreenState extends State<AuthScreen> {
                             return null;
                           },
                         ),
+                        if (!_creatingAccount) ...[
+                          const SizedBox(height: 4),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _loading ? null : _sendPasswordReset,
+                              child: const Text('Olvidé mi contraseña'),
+                            ),
+                          ),
+                        ],
                         if (_creatingAccount) ...[
                           const SizedBox(height: 12),
                           TextFormField(
@@ -227,6 +237,43 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _sendPasswordReset() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() {
+        _message = 'Escribe primero el correo de tu cuenta.';
+      });
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _message = null;
+    });
+
+    try {
+      await widget.authService.sendPasswordReset(email);
+      if (!mounted) return;
+      setState(() {
+        _message =
+            'Te enviamos un enlace para restablecer tu contraseña. Ábrelo en este dispositivo para volver a Orbitask.';
+      });
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      setState(() => _message = error.message);
+    } catch (error) {
+      if (!mounted) return;
+      setState(
+        () => _message =
+            'No se pudo enviar el correo de recuperación: $error',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
   Future<void> _submit() async {

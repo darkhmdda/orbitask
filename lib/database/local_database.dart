@@ -96,6 +96,7 @@ class LocalDatabase {
           due_date INTEGER,
           completed INTEGER NOT NULL DEFAULT 0,
           list_id TEXT NOT NULL DEFAULT 'inbox',
+          trashed_at INTEGER,
           created_at INTEGER NOT NULL,
           updated_at INTEGER NOT NULL
         );
@@ -109,6 +110,12 @@ class LocalDatabase {
       if (!taskColumns.contains('list_id')) {
         database.execute(
           "ALTER TABLE tasks ADD COLUMN list_id TEXT NOT NULL DEFAULT 'inbox';",
+        );
+      }
+
+      if (!taskColumns.contains('trashed_at')) {
+        database.execute(
+          'ALTER TABLE tasks ADD COLUMN trashed_at INTEGER;',
         );
       }
 
@@ -228,6 +235,11 @@ class LocalDatabase {
       database.execute('''
         CREATE INDEX IF NOT EXISTS idx_tasks_list_id
         ON tasks(list_id);
+      ''');
+
+      database.execute('''
+        CREATE INDEX IF NOT EXISTS idx_tasks_trashed_at
+        ON tasks(trashed_at);
       ''');
 
       database.execute('''
