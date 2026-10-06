@@ -15,13 +15,15 @@ class AttachmentOpener {
       );
     }
 
-    if (!Platform.isLinux) {
+    if (!Platform.isLinux && !Platform.isWindows) {
       throw UnsupportedError(
-        'Descargar adjuntos todavía está habilitado solo en Android y Linux.',
+        'Descargar adjuntos todavía está habilitado solo en Android, Linux y Windows.',
       );
     }
 
-    final dir = await _linuxDownloadDirectory();
+    final dir = Platform.isWindows
+        ? await _windowsDownloadDirectory()
+        : await _linuxDownloadDirectory();
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
@@ -30,18 +32,37 @@ class AttachmentOpener {
       RegExp(r'[^A-Za-z0-9._-]+'),
       '_',
     );
-    var file = File('${dir.path}/$safeName');
+    var file = File('${dir.path}${Platform.pathSeparator}$safeName');
     if (await file.exists()) {
       final dot = safeName.lastIndexOf('.');
       final base = dot > 0 ? safeName.substring(0, dot) : safeName;
       final ext = dot > 0 ? safeName.substring(dot) : '';
       file = File(
-        '${dir.path}/${base}_${DateTime.now().millisecondsSinceEpoch}$ext',
+        '${dir.path}${Platform.pathSeparator}${base}_${DateTime.now().millisecondsSinceEpoch}$ext',
       );
     }
 
     await file.writeAsBytes(attachment.data, flush: true);
     return file.path;
+  }
+
+  static Future<Directory> _windowsDownloadDirectory() async {
+    final downloads = await getDownloadsDirectory();
+    if (downloads != null) {
+      return Directory('${downloads.path}${Platform.pathSeparator}Orbitask');
+    }
+
+    final userProfile = Platform.environment['USERPROFILE'];
+    if (userProfile != null && userProfile.isNotEmpty) {
+      return Directory(
+        '$userProfile${Platform.pathSeparator}Downloads${Platform.pathSeparator}Orbitask',
+      );
+    }
+
+    final temp = await getTemporaryDirectory();
+    return Directory(
+      '${temp.path}${Platform.pathSeparator}orbitask_downloads',
+    );
   }
 
   static Future<Directory> _linuxDownloadDirectory() async {
