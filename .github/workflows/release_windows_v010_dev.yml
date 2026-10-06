@@ -1,4 +1,4 @@
-name: Release Orbitask Windows v0.10-dev
+name: Release Orbitask Windows v0.10.0
 
 on:
   push:
@@ -44,7 +44,7 @@ jobs:
         run: |
           Compress-Archive `
             -Path "build/windows/x64/runner/Release/*" `
-            -DestinationPath "Orbitask-v0.10-dev-windows-x64-portable.zip" `
+            -DestinationPath "Orbitask-v0.10.0-windows-x64-portable.zip" `
             -Force
 
       - name: Install Inno Setup
@@ -70,40 +70,40 @@ jobs:
 
           Copy-Item `
             "installer/output/Orbitask-v0.10.0-windows-setup.exe" `
-            "Orbitask-v0.10-dev-windows-setup.exe" `
+            "Orbitask-v0.10.0-windows-setup.exe" `
             -Force
 
       - name: Generate SHA-256
         shell: powershell
         run: |
           $files = @(
-            "Orbitask-v0.10-dev-windows-setup.exe",
-            "Orbitask-v0.10-dev-windows-x64-portable.zip"
+            "Orbitask-v0.10.0-windows-setup.exe",
+            "Orbitask-v0.10.0-windows-x64-portable.zip"
           )
           $lines = foreach ($file in $files) {
             $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
             "$hash  $file"
           }
-          $lines | Set-Content "SHA256SUMS-windows-v0.10-dev.txt"
+          $lines | Set-Content "SHA256SUMS-windows-v0.10.0.txt"
 
-      - name: Publish v0.10-dev prerelease
+      - name: Publish v0.10.0 release
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view v0.10-dev --repo "${{ github.repository }}" 2>$null
+          gh release view v0.10.0 --repo "${{ github.repository }}" 2>$null
           if ($LASTEXITCODE -ne 0) {
-            gh release create v0.10-dev `
+            gh release create v0.10.0 `
               --repo "${{ github.repository }}" `
               --target "${{ github.sha }}" `
-              --title "Orbitask v0.10-dev" `
+              --title "Orbitask v0.10.0" `
               --prerelease `
-              --notes "Versión de desarrollo v0.10. Esta publicación incluye las builds actualizadas de Windows x64: instalador Setup y versión portable. Incluye adjuntos, atajos de teclado de Windows y opciones de perfil actualizadas."
+              --notes "Versión oficial Orbitask v0.10.0. Esta publicación incluye las builds actualizadas de Windows x64: instalador Setup y versión portable. Incluye adjuntos, atajos de teclado de Windows y opciones de perfil actualizadas."
           }
 
-          gh release upload v0.10-dev `
-            "Orbitask-v0.10-dev-windows-setup.exe" `
-            "Orbitask-v0.10-dev-windows-x64-portable.zip" `
-            "SHA256SUMS-windows-v0.10-dev.txt" `
+          gh release upload v0.10.0 `
+            "Orbitask-v0.10.0-windows-setup.exe" `
+            "Orbitask-v0.10.0-windows-x64-portable.zip" `
+            "SHA256SUMS-windows-v0.10.0.txt" `
             --repo "${{ github.repository }}" `
             --clobber
