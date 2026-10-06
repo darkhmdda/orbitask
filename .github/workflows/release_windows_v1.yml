@@ -1,0 +1,109 @@
+name: Release Orbitask Windows v1.0.0
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows v1.0.0
+    runs-on: windows-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows release
+        shell: powershell
+        run: |
+          flutter build windows --release `
+            --dart-define=SUPABASE_URL=https://sscfamlzjxyusvybajrt.supabase.co `
+            --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_12El4MU7eURPm6as1XhRBg_5j02cxU0 `
+            --dart-define=SUPABASE_AUTH_REDIRECT_URL=com.darkhmdda.orbitask://login-callback
+
+      - name: Create portable ZIP
+        shell: powershell
+        run: |
+          Compress-Archive `
+            -Path "build/windows/x64/runner/Release/*" `
+            -DestinationPath "Orbitask-v1.0.0-windows-x64-portable.zip" `
+            -Force
+
+      - name: Install Inno Setup
+        shell: powershell
+        run: choco install innosetup -y --no-progress
+
+      - name: Build Setup
+        shell: powershell
+        run: |
+          $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup*" -Filter ISCC.exe -Recurse -ErrorAction SilentlyContinue |
+            Select-Object -First 1 -ExpandProperty FullName
+
+          if (-not $iscc) {
+            $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue |
+              Select-Object -ExpandProperty Source
+          }
+
+          if (-not $iscc) {
+            throw "No se encontro ISCC.exe"
+          }
+
+          & $iscc "/DMyAppVersion=1.0.0" "installer/orbitask.iss"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup fallo con codigo $LASTEXITCODE"
+          }
+
+          Copy-Item `
+            "installer/output/Orbitask-v1.0.0-windows-setup.exe" `
+            "Orbitask-v1.0.0-windows-setup.exe" `
+            -Force
+
+      - name: Generate SHA-256
+        shell: powershell
+        run: |
+          $files = @(
+            "Orbitask-v1.0.0-windows-setup.exe",
+            "Orbitask-v1.0.0-windows-x64-portable.zip"
+          )
+
+          $lines = foreach ($file in $files) {
+            $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+            "$hash  $file"
+          }
+
+          $lines | Set-Content "SHA256SUMS-windows-v1.0.0.txt"
+
+      - name: Publish official v1.0.0 release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view v1.0.0 --repo "${{ github.repository }}" 2>$null
+
+          if ($LASTEXITCODE -ne 0) {
+            gh release create v1.0.0 `
+              --repo "${{ github.repository }}" `
+              --target "${{ github.sha }}" `
+              --title "Orbitask v1.0.0" `
+              --notes "Orbitask v1.0.0 oficial. Por ahora esta release incluye las builds actualizadas de Windows x64: Setup, portable y sus hashes SHA-256."
+          }
+
+          gh release upload v1.0.0 `
+            "Orbitask-v1.0.0-windows-setup.exe" `
+            "Orbitask-v1.0.0-windows-x64-portable.zip" `
+            "SHA256SUMS-windows-v1.0.0.txt" `
+            --repo "${{ github.repository }}" `
+            --clobber
