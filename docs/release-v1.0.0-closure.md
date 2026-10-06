@@ -1,6 +1,6 @@
 # Cierre temporal — Orbitask v1.0.0
 
-Fecha de cierre técnico: 2026-10-05
+Fecha de cierre técnico: 2026-10-06
 
 Orbitask v1.0.0 representa la primera versión estable completa del proyecto y su punto de cierre temporal. El proyecto no se considera abandonado ni discontinuado: queda en un estado estable que permite retomarlo posteriormente si se decide iniciar un nuevo ciclo.
 
@@ -102,7 +102,7 @@ bd54e94f3c5a3b536b9f174337ac6bae62a52d2f035abb47802b4d8dcdfec93a  Orbitask-v1.0.
 
 ## Plataformas no oficiales
 
-iOS y macOS permanecen en el árbol Flutter del repositorio, pero no fueron parte de la validación ni distribución oficial de v1.0.0.
+iOS y macOS permanecen en el árbol Flutter del repositorio con la identidad de Orbitask normalizada, pero no fueron parte de la validación ni distribución oficial de v1.0.0.
 
 No debe interpretarse su presencia en el repositorio como soporte oficial.
 
