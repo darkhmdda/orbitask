@@ -41,10 +41,20 @@ class ProfileService {
     );
   }
 
-  Future<OrbitaskProfile> updateUsername(String rawUsername) async {
+  Future<OrbitaskProfile> updateProfile({
+    required String rawDisplayName,
+    required String rawUsername,
+  }) async {
     final client = _requireClient();
     final user = _requireUser(client);
+    final displayName = rawDisplayName.trim();
     final username = rawUsername.trim().toLowerCase();
+
+    if (displayName.length > 40) {
+      throw const FormatException(
+        'El nombre visible no puede superar los 40 caracteres.',
+      );
+    }
 
     if (!RegExp(r'^[a-z0-9_]{3,24}$').hasMatch(username)) {
       throw const FormatException(
@@ -55,15 +65,28 @@ class ProfileService {
     await client
         .from('profiles')
         .update({
+          'display_name': displayName.isEmpty ? null : displayName,
           'username': username,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', user.id);
 
     final profile = await loadCurrentProfile();
-    return profile ?? OrbitaskProfile(id: user.id, username: username);
+    return profile ??
+        OrbitaskProfile(
+          id: user.id,
+          displayName: displayName.isEmpty ? null : displayName,
+          username: username,
+        );
   }
 
+  Future<OrbitaskProfile> updateUsername(String rawUsername) async {
+    final current = await loadCurrentProfile();
+    return updateProfile(
+      rawDisplayName: current?.displayName ?? '',
+      rawUsername: rawUsername,
+    );
+  }
   Future<OrbitaskProfile> uploadAvatar({
     required Uint8List bytes,
     required String mimeType,
