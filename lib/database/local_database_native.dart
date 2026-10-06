@@ -153,6 +153,21 @@ class LocalDatabase {
       ''');
 
       database.execute('''
+        CREATE TABLE IF NOT EXISTS task_attachments (
+          id TEXT PRIMARY KEY NOT NULL,
+          task_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          mime_type TEXT NOT NULL,
+          size_bytes INTEGER NOT NULL,
+          data BLOB NOT NULL,
+          remote_path TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+        );
+      ''');
+
+      database.execute('''
         CREATE TABLE IF NOT EXISTS app_settings (
           key TEXT PRIMARY KEY NOT NULL,
           value TEXT NOT NULL
@@ -268,6 +283,12 @@ class LocalDatabase {
         CREATE INDEX IF NOT EXISTS idx_reminders_scheduled_at
         ON reminders(scheduled_at);
       ''');
+
+      database.execute('''
+        CREATE INDEX IF NOT EXISTS idx_task_attachments_task_id
+        ON task_attachments(task_id);
+      ''');
+
 
       database.execute('''
         CREATE INDEX IF NOT EXISTS idx_sync_deletions_deleted_at
