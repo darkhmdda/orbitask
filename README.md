@@ -182,7 +182,7 @@ Los datos del perfil se almacenan y sincronizan mediante Supabase.
 
 ## Atajos de teclado
 
-Windows, Linux y Web incluyen:
+Windows y Linux incluyen:
 
 | Atajo | Acción |
 | --- | --- |
@@ -191,6 +191,16 @@ Windows, Linux y Web incluyen:
 | `Ctrl + K` | Captura rápida |
 | `Ctrl + L` | Administrar listas |
 | `Ctrl + ,` | Ajustes |
+
+En Web se utilizan combinaciones `Alt` para evitar conflictos con los atajos habituales del navegador:
+
+| Atajo Web | Acción |
+| --- | --- |
+| `Alt + N` | Nueva tarea |
+| `Alt + B` | Buscar |
+| `Alt + Q` | Captura rápida |
+| `Alt + L` | Administrar listas |
+| `Alt + A` | Ajustes |
 
 Android utiliza la interfaz táctil y no depende de estos atajos.
 
