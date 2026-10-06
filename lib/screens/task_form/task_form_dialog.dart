@@ -477,7 +477,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                 child: InkWell(
                   onTap: () => attachment.isImage
                       ? _previewImage(attachment)
-                      : _openAttachment(attachment),
+                      : _downloadAttachment(attachment),
                   child: Padding(
                     padding: const EdgeInsets.all(10),
                     child: Row(
@@ -521,7 +521,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                               Text(
                                 attachment.isImage
                                     ? '${_formatBytes(attachment.sizeBytes)} · Toca para ver'
-                                    : '${_formatBytes(attachment.sizeBytes)} · Toca para abrir',
+                                    : '${_formatBytes(attachment.sizeBytes)} · Toca para descargar',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
@@ -532,14 +532,14 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                         IconButton(
                           tooltip: attachment.isImage
                               ? 'Ver imagen'
-                              : 'Abrir archivo',
+                              : 'Descargar archivo',
                           onPressed: () => attachment.isImage
                               ? _previewImage(attachment)
-                              : _openAttachment(attachment),
+                              : _downloadAttachment(attachment),
                           icon: Icon(
                             attachment.isImage
                                 ? Icons.visibility_outlined
-                                : Icons.open_in_new_rounded,
+                                : Icons.download_rounded,
                           ),
                         ),
                         IconButton(
@@ -587,11 +587,6 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Abrir con otra aplicación',
-                      onPressed: () => _openAttachment(attachment),
-                      icon: const Icon(Icons.open_in_new_rounded),
-                    ),
-                    IconButton(
                       tooltip: 'Cerrar',
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close_rounded),
@@ -620,15 +615,23 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     );
   }
 
-  Future<void> _openAttachment(TaskAttachment attachment) async {
+  Future<void> _downloadAttachment(TaskAttachment attachment) async {
     try {
-      await AttachmentOpener.open(attachment);
+      final path = await AttachmentOpener.download(attachment);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Archivo descargado en $path',
+          ),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'No se pudo abrir “${attachment.name}”: $error',
+            'No se pudo descargar “${attachment.name}”: $error',
           ),
         ),
       );
