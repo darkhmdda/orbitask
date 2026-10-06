@@ -35,6 +35,14 @@ class OrbitaskTaskListService : RemoteViewsService() {
 
             views.setTextViewText(R.id.widget_row_title, title)
             views.setTextViewText(R.id.widget_row_date, formatDate(dueMillis))
+
+            val text = OrbitaskWidgetData.themeColor(context, "themeText", 0xFFF3F5F7.toInt())
+            val muted = OrbitaskWidgetData.themeColor(context, "themeMuted", 0xFFAAB2BC.toInt())
+            val accent = OrbitaskWidgetData.themeColor(context, "themeAccent", 0xFFA8BD86.toInt())
+            views.setTextColor(R.id.widget_row_title, text)
+            views.setTextColor(R.id.widget_row_date, muted)
+            views.setTextColor(R.id.widget_row_check, accent)
+            views.setTextColor(R.id.widget_row_priority, accent)
             views.setViewVisibility(
                 R.id.widget_row_priority,
                 if (priority == 3) View.VISIBLE else View.GONE,
