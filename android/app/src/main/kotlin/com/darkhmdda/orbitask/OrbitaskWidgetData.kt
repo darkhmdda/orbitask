@@ -117,7 +117,7 @@ object OrbitaskWidgetData {
         )
         db.execSQL(
             "UPDATE tasks SET completed = 1, updated_at = ? WHERE id = ?",
-            arrayOf(System.currentTimeMillis(), taskId),
+            arrayOf<Any?>(System.currentTimeMillis(), taskId),
         )
         db.close()
         refreshFromDatabase(context)
