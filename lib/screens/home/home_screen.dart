@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/list_icons.dart';
+import '../../core/theme/app_theme.dart';
 import '../../models/orbitask_profile.dart';
 import '../../models/reminder.dart';
 import '../../models/subtask.dart';
@@ -94,6 +95,18 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     unawaited(_initializeHome());
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.themeId != widget.themeId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_updateAndroidHomeWidgets(_tasks));
+        }
+      });
+    }
   }
 
   @override
@@ -670,49 +683,19 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _updateAndroidHomeWidgets(List<Task> tasks) async {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
 
-    final active = tasks
-        .where((task) => task.trashedAt == null && !task.completed)
-        .toList()
-      ..sort(_compareSmart);
-
-    final completedCount = tasks
-        .where((task) => task.trashedAt == null && task.completed)
-        .length;
-
-    final now = DateTime.now();
-    final calendarCounts = <String, int>{};
-    for (final task in active) {
-      final date = task.dueDate;
-      if (date == null || date.year != now.year || date.month != now.month) {
-        continue;
-      }
-      final key = date.day.toString();
-      calendarCounts[key] = (calendarCounts[key] ?? 0) + 1;
-    }
-
+    final preset = AppTheme.presetFor(widget.themeId);
     const channel = MethodChannel('com.darkhmdda.orbitask/widgets');
+
     try {
       await channel.invokeMethod<void>('updateWidgets', {
-        'todayCount': active.where((task) => _isToday(task.dueDate)).length,
-        'nextSevenDaysCount':
-            active.where((task) => _isWithinNextSevenDays(task.dueDate)).length,
-        'overdueCount':
-            active.where((task) => _isOverdue(task.dueDate)).length,
-        'importantCount':
-            active.where((task) => task.priority == TaskPriority.high).length,
-        'completedCount': completedCount,
-        'pendingCount': active.length,
-        'allTasks': active
-            .take(6)
-            .map((task) {
-              final date = task.dueDate;
-              if (date == null) return task.title;
-              return '${task.title} · ${date.day}/${date.month}';
-            })
-            .toList(growable: false),
-        'calendarYear': now.year,
-        'calendarMonth': now.month,
-        'calendarCounts': calendarCounts,
+        'themeSurface': preset.surface.toARGB32(),
+        'themeSurface2': preset.surface2.toARGB32(),
+        'themeText': preset.text.toARGB32(),
+        'themeMuted': preset.muted.toARGB32(),
+        'themeAccent': preset.accent.toARGB32(),
+        'themeAccent2': preset.accent2.toARGB32(),
+        'themeBorder': preset.border.toARGB32(),
+        'themeOnAccent': preset.chipSelectedText.toARGB32(),
       });
     } catch (_) {
       // Home-screen widgets are an Android-only enhancement.
