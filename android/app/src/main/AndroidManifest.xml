@@ -42,6 +42,7 @@
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         <receiver
             android:name=".OrbitaskTodayWidget"
+            android:label="Todas las tareas"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
@@ -53,6 +54,7 @@
 
         <receiver
             android:name=".OrbitaskCalendarWidget"
+            android:label="Calendario"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
@@ -63,7 +65,17 @@
         </receiver>
 
         <receiver
+            android:name=".OrbitaskWidgetActionReceiver"
+            android:exported="false"/>
+
+        <service
+            android:name=".OrbitaskTaskListService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false"/>
+
+        <receiver
             android:name=".OrbitaskSummaryWidget"
+            android:label="Próximas entregas"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
