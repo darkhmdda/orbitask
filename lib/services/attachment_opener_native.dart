@@ -5,14 +5,14 @@ import 'package:path_provider/path_provider.dart';
 import '../models/task_attachment.dart';
 
 class AttachmentOpener {
-  static Future<void> open(TaskAttachment attachment) async {
+  static Future<String> download(TaskAttachment attachment) async {
     if (!Platform.isLinux) {
       throw UnsupportedError(
-        'Abrir adjuntos externamente todavía está habilitado solo en Linux.',
+        'Descargar adjuntos todavía está habilitado solo en Linux.',
       );
     }
 
-    final dir = await _linuxExportDirectory();
+    final dir = await _linuxDownloadDirectory();
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
@@ -21,19 +21,21 @@ class AttachmentOpener {
       RegExp(r'[^A-Za-z0-9._-]+'),
       '_',
     );
-    final file = File('${dir.path}/${attachment.id}_$safeName');
-    await file.writeAsBytes(attachment.data, flush: true);
-
-    final result = await Process.run('xdg-open', [file.path]);
-    if (result.exitCode != 0) {
-      throw FileSystemException(
-        'Linux no pudo abrir el archivo con la aplicación predeterminada.',
-        file.path,
+    var file = File('${dir.path}/$safeName');
+    if (await file.exists()) {
+      final dot = safeName.lastIndexOf('.');
+      final base = dot > 0 ? safeName.substring(0, dot) : safeName;
+      final ext = dot > 0 ? safeName.substring(dot) : '';
+      file = File(
+        '${dir.path}/${base}_${DateTime.now().millisecondsSinceEpoch}$ext',
       );
     }
+
+    await file.writeAsBytes(attachment.data, flush: true);
+    return file.path;
   }
 
-  static Future<Directory> _linuxExportDirectory() async {
+  static Future<Directory> _linuxDownloadDirectory() async {
     final chromeOsDownloads = Directory(
       '/mnt/chromeos/MyFiles/Downloads/Orbitask',
     );
@@ -46,7 +48,12 @@ class AttachmentOpener {
       return Directory('${downloads.path}/Orbitask');
     }
 
+    final home = Platform.environment['HOME'];
+    if (home != null && home.isNotEmpty) {
+      return Directory('$home/Downloads/Orbitask');
+    }
+
     final temp = await getTemporaryDirectory();
-    return Directory('${temp.path}/orbitask_attachments');
+    return Directory('${temp.path}/orbitask_downloads');
   }
 }
