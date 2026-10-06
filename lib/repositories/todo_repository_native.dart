@@ -295,12 +295,19 @@ class TodoRepository {
     _database.raw.execute('BEGIN IMMEDIATE;');
 
     try {
-      final attachmentRows = _database.raw.select(
-        'SELECT id FROM task_attachments WHERE task_id = ?;',
-        [id],
-      );
-      for (final row in attachmentRows) {
-        _recordDeletion('attachment', row['id']! as String);
+      final childTables = <String, String>{
+        'subtasks': 'subtask',
+        'reminders': 'reminder',
+        'task_attachments': 'attachment',
+      };
+      for (final entry in childTables.entries) {
+        final rows = _database.raw.select(
+          'SELECT id FROM ${entry.key} WHERE task_id = ?;',
+          [id],
+        );
+        for (final row in rows) {
+          _recordDeletion(entry.value, row['id']! as String);
+        }
       }
       _recordDeletion('task', id);
 
