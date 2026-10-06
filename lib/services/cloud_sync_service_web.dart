@@ -571,6 +571,9 @@ class CloudSyncService {
         case 'reminder':
           _deleteLocalIfNotNewer('reminders', id, deletedAt);
           break;
+        case 'attachment':
+          _deleteLocalIfNotNewer('task_attachments', id, deletedAt);
+          break;
         case 'task_list':
           if (id == 'inbox') break;
           final lists = _database.readCollection('task_lists');
@@ -647,6 +650,16 @@ class CloudSyncService {
         isUtc: true,
       ).toIso8601String();
 
+      if (type == 'attachment') {
+        await _deleteAttachmentCloudIfNotNewer(
+          client,
+          userId,
+          id,
+          deletedAt,
+        );
+        continue;
+      }
+
       final table = switch (type) {
         'reminder' => 'reminders',
         'subtask' => 'subtasks',
@@ -712,6 +725,39 @@ class CloudSyncService {
     );
 
     return localCount;
+  }
+
+  Future<void> _deleteAttachmentCloudIfNotNewer(
+    SupabaseClient client,
+    String userId,
+    String id,
+    String deletedAt,
+  ) async {
+    final rows = await client
+        .from('task_attachments')
+        .select('storage_path, updated_at')
+        .eq('user_id', userId)
+        .eq('id', id)
+        .limit(1);
+
+    if (rows.isEmpty) return;
+
+    final row = rows.first;
+    final remoteUpdatedAt = _millis(row['updated_at']);
+    final deletionMillis = _millis(deletedAt);
+    if (remoteUpdatedAt > deletionMillis) return;
+
+    final path = row['storage_path'] as String?;
+    await client
+        .from('task_attachments')
+        .delete()
+        .eq('user_id', userId)
+        .eq('id', id)
+        .lte('updated_at', deletedAt);
+
+    if (path != null && path.isNotEmpty) {
+      await client.storage.from('task-attachments').remove([path]);
+    }
   }
 
   Future<void> _deleteCloudIfNotNewer(
