@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
@@ -123,18 +124,7 @@ class _ThemePreviewCardState extends State<_ThemePreviewCard> {
                             : preset.border.withValues(alpha: 0.6),
                       ),
                     ),
-                    child: Text(
-                      preset.icon,
-                      style: const TextStyle(
-                        fontSize: 21,
-                        fontFamilyFallback: [
-                          'Noto Color Emoji',
-                          'Noto Emoji',
-                          'Segoe UI Emoji',
-                          'Apple Color Emoji',
-                        ],
-                      ),
-                    ),
+                    child: _ThemePresetIcon(preset: preset),
                   ),
                   const SizedBox(width: 11),
                   Expanded(
@@ -238,6 +228,47 @@ class _ThemePreviewCardState extends State<_ThemePreviewCard> {
         ),
       ),
     );
+  }
+}
+
+
+class _ThemePresetIcon extends StatelessWidget {
+  const _ThemePresetIcon({required this.preset});
+
+  final OrbitaskThemePreset preset;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+      return Icon(
+        _linuxIconFor(preset.id),
+        size: 22,
+        color: preset.accent,
+      );
+    }
+
+    return Text(
+      preset.icon,
+      style: const TextStyle(fontSize: 21),
+    );
+  }
+
+  IconData _linuxIconFor(String id) {
+    return switch (id) {
+      'rimuru' => Icons.water_drop_rounded,
+      'emilia' => Icons.favorite_rounded,
+      'itsuki' => Icons.local_florist_rounded,
+      'rem' => Icons.ac_unit_rounded,
+      'veldora' => Icons.circle_rounded,
+      'luffy' => Icons.light_mode_rounded,
+      'senku' => Icons.science_rounded,
+      'marin' => Icons.favorite_rounded,
+      'gojo' => Icons.circle_rounded,
+      'deku' => Icons.bolt_rounded,
+      'eren' => Icons.air_rounded,
+      'zoro' => Icons.circle_rounded,
+      _ => Icons.palette_rounded,
+    };
   }
 }
 
