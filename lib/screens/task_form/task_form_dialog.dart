@@ -618,11 +618,11 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   Future<void> _downloadAttachment(TaskAttachment attachment) async {
     try {
       final path = await AttachmentOpener.download(attachment);
-      if (!mounted) return;
+      if (!mounted || path == null || path.isEmpty) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Archivo descargado en $path',
+            'Archivo guardado en $path',
           ),
         ),
       );

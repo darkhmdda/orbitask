@@ -1,14 +1,23 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/task_attachment.dart';
 
 class AttachmentOpener {
-  static Future<String> download(TaskAttachment attachment) async {
+  static Future<String?> download(TaskAttachment attachment) async {
+    if (Platform.isAndroid) {
+      return FilePicker.platform.saveFile(
+        dialogTitle: 'Guardar adjunto',
+        fileName: attachment.name,
+        bytes: attachment.data,
+      );
+    }
+
     if (!Platform.isLinux) {
       throw UnsupportedError(
-        'Descargar adjuntos todavía está habilitado solo en Linux.',
+        'Descargar adjuntos todavía está habilitado solo en Android y Linux.',
       );
     }
 
