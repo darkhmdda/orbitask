@@ -1,0 +1,98 @@
+name: Release Orbitask Linux v1.0.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/release_linux_v1.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build and publish Linux v1.0.0
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Load existing Supabase build defines
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import re
+          from pathlib import Path
+
+          source = Path(".github/workflows/release_windows_v1.yml").read_text()
+
+          patterns = {
+              "SUPABASE_URL": r"--dart-define=SUPABASE_URL=([^\s`]+)",
+              "SUPABASE_PUBLISHABLE_KEY": r"--dart-define=SUPABASE_PUBLISHABLE_KEY=([^\s`]+)",
+              "SUPABASE_AUTH_REDIRECT_URL": r"--dart-define=SUPABASE_AUTH_REDIRECT_URL=([^\s`]+)",
+          }
+
+          for name, pattern in patterns.items():
+              match = re.search(pattern, source)
+              if not match:
+                  raise SystemExit(f"No se pudo cargar {name}.")
+              print(f"{name}={match.group(1)}")
+          PY
+
+      - name: Build Linux release
+        run: |
+          flutter build linux --release \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
+            --dart-define=SUPABASE_AUTH_REDIRECT_URL="$SUPABASE_AUTH_REDIRECT_URL"
+
+      - name: Build Debian package
+        run: bash installer/linux/build_deb.sh
+
+      - name: Create portable archive
+        run: |
+          tar -C build/linux/x64/release/bundle \
+            -czf Orbitask-v1.0.0-linux-x64-portable.tar.gz .
+
+          cp installer/linux/output/Orbitask-v1.0.0-linux-amd64.deb \
+            Orbitask-v1.0.0-linux-amd64.deb
+
+      - name: Generate SHA-256
+        run: |
+          sha256sum \
+            Orbitask-v1.0.0-linux-amd64.deb \
+            Orbitask-v1.0.0-linux-x64-portable.tar.gz \
+            > SHA256SUMS-linux-v1.0.0.txt
+
+      - name: Publish Linux assets to official v1.0.0 release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view v1.0.0 --repo "${{ github.repository }}"
+
+          gh release upload v1.0.0 \
+            Orbitask-v1.0.0-linux-amd64.deb \
+            Orbitask-v1.0.0-linux-x64-portable.tar.gz \
+            SHA256SUMS-linux-v1.0.0.txt \
+            --repo "${{ github.repository }}" \
+            --clobber
