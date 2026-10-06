@@ -27,6 +27,7 @@ extension _HomeScreenTaskActions on _HomeScreenState {
       });
 
       _showMessage('Tarea guardada localmente.');
+      unawaited(_updateAndroidHomeWidgets(_tasks));
       _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
@@ -107,6 +108,7 @@ extension _HomeScreenTaskActions on _HomeScreenState {
         _showMessage(
           reminderWarning ?? 'Tarea creada y guardada.',
         );
+        unawaited(_updateAndroidHomeWidgets(_tasks));
         _scheduleCloudSync();
       } else {
         final updatedTask = task.copyWith(
@@ -158,6 +160,7 @@ extension _HomeScreenTaskActions on _HomeScreenState {
         _showMessage(
           reminderWarning ?? 'Tarea actualizada y guardada.',
         );
+        unawaited(_updateAndroidHomeWidgets(_tasks));
         _scheduleCloudSync();
       }
     } catch (error) {
@@ -198,6 +201,7 @@ extension _HomeScreenTaskActions on _HomeScreenState {
       if (reminderWarning != null) {
         _showMessage(reminderWarning);
       }
+      unawaited(_updateAndroidHomeWidgets(_tasks));
       _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
@@ -256,6 +260,7 @@ extension _HomeScreenTaskActions on _HomeScreenState {
       });
 
       ScaffoldMessenger.of(context).clearSnackBars();
+      unawaited(_updateAndroidHomeWidgets(_tasks));
       _scheduleCloudSync();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -306,6 +311,7 @@ extension _HomeScreenTaskActions on _HomeScreenState {
       } else {
         _showMessage('Tarea restaurada.');
       }
+      unawaited(_updateAndroidHomeWidgets(_tasks));
       _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
@@ -353,6 +359,7 @@ extension _HomeScreenTaskActions on _HomeScreenState {
       });
 
       _showMessage('Tarea eliminada definitivamente.');
+      unawaited(_updateAndroidHomeWidgets(_tasks));
       _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;
@@ -413,6 +420,7 @@ extension _HomeScreenTaskActions on _HomeScreenState {
       });
 
       _showMessage('Papelera vaciada.');
+      unawaited(_updateAndroidHomeWidgets(_tasks));
       _scheduleCloudSync();
     } catch (error) {
       if (!mounted) return;

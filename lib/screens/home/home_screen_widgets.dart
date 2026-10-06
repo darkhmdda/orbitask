@@ -2,16 +2,16 @@ part of 'home_screen.dart';
 
 class _MobileSummarySheet extends StatelessWidget {
   const _MobileSummarySheet({
-    required this.todayCount,
     required this.nextSevenDaysCount,
     required this.overdueCount,
-    required this.importantCount,
+    required this.withoutDateCount,
+    required this.totalPendingCount,
   });
 
-  final int todayCount;
   final int nextSevenDaysCount;
   final int overdueCount;
-  final int importantCount;
+  final int withoutDateCount;
+  final int totalPendingCount;
 
   @override
   Widget build(BuildContext context) {
@@ -47,12 +47,6 @@ class _MobileSummarySheet extends StatelessWidget {
               childAspectRatio: 1.8,
               children: [
                 _SummaryCard(
-                  icon: Icons.today_rounded,
-                  label: 'Hoy',
-                  count: todayCount,
-                  onTap: () => Navigator.of(context).pop(1),
-                ),
-                _SummaryCard(
                   icon: Icons.date_range_rounded,
                   label: 'Próximos 7 días',
                   count: nextSevenDaysCount,
@@ -65,10 +59,16 @@ class _MobileSummarySheet extends StatelessWidget {
                   onTap: () => Navigator.of(context).pop(6),
                 ),
                 _SummaryCard(
-                  icon: Icons.star_rounded,
-                  label: 'Importantes',
-                  count: importantCount,
-                  onTap: () => Navigator.of(context).pop(2),
+                  icon: Icons.event_busy_rounded,
+                  label: 'Sin fecha',
+                  count: withoutDateCount,
+                  onTap: () => Navigator.of(context).pop(7),
+                ),
+                _SummaryCard(
+                  icon: Icons.list_alt_rounded,
+                  label: 'Todas',
+                  count: totalPendingCount,
+                  onTap: () => Navigator.of(context).pop(0),
                 ),
               ],
             ),

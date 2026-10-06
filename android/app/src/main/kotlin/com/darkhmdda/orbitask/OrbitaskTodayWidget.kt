@@ -32,17 +32,18 @@ class OrbitaskTodayWidget : AppWidgetProvider() {
             appWidgetId: Int,
         ) {
             val prefs = context.getSharedPreferences("orbitask_widget", Context.MODE_PRIVATE)
-            val tasks = prefs.getString("todayTasks", "")
+            val tasks = prefs.getString("allTasks", "")
                 .orEmpty()
                 .split("\n")
                 .filter { it.isNotBlank() }
-                .take(4)
-            val count = prefs.getInt("todayCount", 0)
+                .take(6)
+            val count = prefs.getInt("pendingCount", 0)
 
             val views = RemoteViews(context.packageName, R.layout.orbitask_widget_today)
             views.setTextViewText(
                 R.id.widget_today_title,
-                if (count == 1) "Hoy · 1 tarea" else "Hoy · $count tareas",
+                if (count == 1) "Todas las tareas · 1 pendiente"
+                else "Todas las tareas · $count pendientes",
             )
 
             val rowIds = intArrayOf(
@@ -50,6 +51,8 @@ class OrbitaskTodayWidget : AppWidgetProvider() {
                 R.id.widget_today_task_2,
                 R.id.widget_today_task_3,
                 R.id.widget_today_task_4,
+                R.id.widget_today_task_5,
+                R.id.widget_today_task_6,
             )
             rowIds.forEachIndexed { index, id ->
                 if (index < tasks.size) {
