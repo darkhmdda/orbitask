@@ -1,0 +1,138 @@
+name: Release Orbitask Windows v1.0.0 Fixed
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/release_windows_v1_publish_fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build and publish Windows v1.0.0
+    runs-on: windows-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Load existing Supabase build defines
+        shell: powershell
+        run: |
+          $source = Get-Content ".github/workflows/release_windows_v1.yml" -Raw
+
+          $url = [regex]::Match($source, '--dart-define=SUPABASE_URL=([^\s`]+)').Groups[1].Value
+          $key = [regex]::Match($source, '--dart-define=SUPABASE_PUBLISHABLE_KEY=([^\s`]+)').Groups[1].Value
+          $redirect = [regex]::Match($source, '--dart-define=SUPABASE_AUTH_REDIRECT_URL=([^\s`]+)').Groups[1].Value
+
+          if (-not $url -or -not $key -or -not $redirect) {
+            throw "No se pudieron cargar los dart-define existentes de Supabase."
+          }
+
+          "SUPABASE_URL=$url" >> $env:GITHUB_ENV
+          "SUPABASE_PUBLISHABLE_KEY=$key" >> $env:GITHUB_ENV
+          "SUPABASE_AUTH_REDIRECT_URL=$redirect" >> $env:GITHUB_ENV
+
+      - name: Build Windows release
+        shell: powershell
+        run: |
+          flutter build windows --release `
+            "--dart-define=SUPABASE_URL=$env:SUPABASE_URL" `
+            "--dart-define=SUPABASE_PUBLISHABLE_KEY=$env:SUPABASE_PUBLISHABLE_KEY" `
+            "--dart-define=SUPABASE_AUTH_REDIRECT_URL=$env:SUPABASE_AUTH_REDIRECT_URL"
+
+      - name: Create portable ZIP
+        shell: powershell
+        run: |
+          Compress-Archive `
+            -Path "build/windows/x64/runner/Release/*" `
+            -DestinationPath "Orbitask-v1.0.0-windows-x64-portable.zip" `
+            -Force
+
+      - name: Install Inno Setup
+        shell: powershell
+        run: choco install innosetup -y --no-progress
+
+      - name: Build Setup
+        shell: powershell
+        run: |
+          $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup*" -Filter ISCC.exe -Recurse -ErrorAction SilentlyContinue |
+            Select-Object -First 1 -ExpandProperty FullName
+
+          if (-not $iscc) {
+            $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue |
+              Select-Object -ExpandProperty Source
+          }
+
+          if (-not $iscc) {
+            throw "No se encontro ISCC.exe"
+          }
+
+          & $iscc "/DMyAppVersion=1.0.0" "installer/orbitask.iss"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup fallo con codigo $LASTEXITCODE"
+          }
+
+          Copy-Item `
+            "installer/output/Orbitask-v1.0.0-windows-setup.exe" `
+            "Orbitask-v1.0.0-windows-setup.exe" `
+            -Force
+
+      - name: Generate SHA-256
+        shell: powershell
+        run: |
+          $files = @(
+            "Orbitask-v1.0.0-windows-setup.exe",
+            "Orbitask-v1.0.0-windows-x64-portable.zip"
+          )
+
+          $lines = foreach ($file in $files) {
+            $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+            "$hash  $file"
+          }
+
+          $lines | Set-Content "SHA256SUMS-windows-v1.0.0.txt"
+
+      - name: Publish official v1.0.0 release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $releaseExists = $false
+          $previousErrorActionPreference = $ErrorActionPreference
+          $ErrorActionPreference = "SilentlyContinue"
+          gh release view v1.0.0 --repo "${{ github.repository }}" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            $releaseExists = $true
+          }
+          $ErrorActionPreference = $previousErrorActionPreference
+
+          if (-not $releaseExists) {
+            gh release create v1.0.0 `
+              --repo "${{ github.repository }}" `
+              --target "${{ github.sha }}" `
+              --title "Orbitask v1.0.0" `
+              --notes "Orbitask v1.0.0 oficial. Por ahora esta release incluye las builds actualizadas de Windows x64: Setup, portable y sus hashes SHA-256."
+          }
+
+          gh release upload v1.0.0 `
+            "Orbitask-v1.0.0-windows-setup.exe" `
+            "Orbitask-v1.0.0-windows-x64-portable.zip" `
+            "SHA256SUMS-windows-v1.0.0.txt" `
+            --repo "${{ github.repository }}" `
+            --clobber
