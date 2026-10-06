@@ -56,7 +56,37 @@ class ProfileService {
       );
     }
 
-    if (!RegExp(r'^[a-z0-9_]{3,24}
+    if (!RegExp(r'^[a-z0-9_]{3,24}$').hasMatch(username)) {
+      throw const FormatException(
+        'El username debe tener entre 3 y 24 caracteres y usar solo letras minúsculas, números o guion bajo.',
+      );
+    }
+
+    await client
+        .from('profiles')
+        .update({
+          'display_name': displayName.isEmpty ? null : displayName,
+          'username': username,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', user.id);
+
+    final profile = await loadCurrentProfile();
+    return profile ??
+        OrbitaskProfile(
+          id: user.id,
+          displayName: displayName.isEmpty ? null : displayName,
+          username: username,
+        );
+  }
+
+  Future<OrbitaskProfile> updateUsername(String rawUsername) async {
+    final current = await loadCurrentProfile();
+    return updateProfile(
+      rawDisplayName: current?.displayName ?? '',
+      rawUsername: rawUsername,
+    );
+  }
 
   Future<OrbitaskProfile> uploadAvatar({
     required Uint8List bytes,
