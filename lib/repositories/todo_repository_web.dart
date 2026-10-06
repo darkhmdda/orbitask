@@ -160,12 +160,18 @@ class TodoRepository {
   }
 
   Future<void> deleteTask(String id) async {
-    final existingAttachments = _database
-        .readCollection('task_attachments')
-        .where((item) => item['task_id'] == id)
-        .toList(growable: false);
-    for (final item in existingAttachments) {
-      _recordDeletion('attachment', item['id'] as String);
+    const childCollections = <String, String>{
+      'subtasks': 'subtask',
+      'reminders': 'reminder',
+      'task_attachments': 'attachment',
+    };
+    for (final entry in childCollections.entries) {
+      final children = _database
+          .readCollection(entry.key)
+          .where((item) => item['task_id'] == id);
+      for (final item in children) {
+        _recordDeletion(entry.value, item['id'] as String);
+      }
     }
     _recordDeletion('task', id);
 
