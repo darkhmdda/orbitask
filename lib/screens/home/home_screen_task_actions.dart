@@ -42,6 +42,9 @@ extension _HomeScreenTaskActions on _HomeScreenState {
         task == null ? const <Subtask>[] : (_subtasksByTask[task.id] ?? const []);
     final existingReminders =
         task == null ? const <Reminder>[] : (_remindersByTask[task.id] ?? const []);
+    final existingAttachments = task == null
+        ? const <TaskAttachment>[]
+        : (_attachmentsByTask[task.id] ?? const <TaskAttachment>[]);
 
     final result = await showDialog<TaskFormResult>(
       context: context,
@@ -51,6 +54,7 @@ extension _HomeScreenTaskActions on _HomeScreenState {
         lists: _lists,
         subtasks: existingSubtasks,
         reminders: existingReminders,
+        attachments: existingAttachments,
         initialListId: _selectedListId ?? 'inbox',
       ),
     );
@@ -74,6 +78,10 @@ extension _HomeScreenTaskActions on _HomeScreenState {
           newTask,
           result.subtasks,
           result.reminders,
+        );
+        await widget.repository.replaceAttachmentsForTask(
+          newTask.id,
+          result.attachments,
         );
 
         String? reminderWarning;
@@ -100,6 +108,10 @@ extension _HomeScreenTaskActions on _HomeScreenState {
             ..._remindersByTask,
             newTask.id: result.reminders,
           };
+          _attachmentsByTask = {
+            ..._attachmentsByTask,
+            newTask.id: result.attachments,
+          };
           if (_selectedListId == null) {
             _filterIndex = 0;
           }
@@ -125,6 +137,10 @@ extension _HomeScreenTaskActions on _HomeScreenState {
           updatedTask,
           result.subtasks,
           result.reminders,
+        );
+        await widget.repository.replaceAttachmentsForTask(
+          updatedTask.id,
+          result.attachments,
         );
 
         await widget.notificationService.cancelReminders(existingReminders);
@@ -154,6 +170,10 @@ extension _HomeScreenTaskActions on _HomeScreenState {
           _remindersByTask = {
             ..._remindersByTask,
             updatedTask.id: result.reminders,
+          };
+          _attachmentsByTask = {
+            ..._attachmentsByTask,
+            updatedTask.id: result.attachments,
           };
         });
 
@@ -356,6 +376,9 @@ extension _HomeScreenTaskActions on _HomeScreenState {
         _remindersByTask =
             Map<String, List<Reminder>>.from(_remindersByTask)
               ..remove(task.id);
+        _attachmentsByTask =
+            Map<String, List<TaskAttachment>>.from(_attachmentsByTask)
+              ..remove(task.id);
       });
 
       _showMessage('Tarea eliminada definitivamente.');
@@ -411,12 +434,16 @@ extension _HomeScreenTaskActions on _HomeScreenState {
       final newReminders =
           Map<String, List<Reminder>>.from(_remindersByTask)
             ..removeWhere((id, _) => trashedIds.contains(id));
+      final newAttachments =
+          Map<String, List<TaskAttachment>>.from(_attachmentsByTask)
+            ..removeWhere((id, _) => trashedIds.contains(id));
 
       _applyState(() {
         _tasks =
             _tasks.where((task) => !trashedIds.contains(task.id)).toList();
         _subtasksByTask = newSubtasks;
         _remindersByTask = newReminders;
+        _attachmentsByTask = newAttachments;
       });
 
       _showMessage('Papelera vaciada.');
