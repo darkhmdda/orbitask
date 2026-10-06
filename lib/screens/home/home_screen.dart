@@ -306,7 +306,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ? null
                   : FloatingActionButton.extended(
                       onPressed: () => _openTaskForm(),
-                      tooltip: _windowsShortcutsEnabled
+                      tooltip: _desktopShortcutsEnabled
                           ? 'Nueva tarea (Ctrl+N)'
                           : 'Nueva tarea',
                       icon: const Icon(Icons.add_rounded),
@@ -316,14 +316,16 @@ class _HomeScreenState extends State<HomeScreen>
       },
     );
 
-    if (!_windowsShortcutsEnabled) return content;
-    return _buildWindowsShortcuts(content);
+    if (!_desktopShortcutsEnabled) return content;
+    return _buildDesktopShortcuts(content);
   }
 
-  bool get _windowsShortcutsEnabled =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+  bool get _desktopShortcutsEnabled =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux);
 
-  Widget _buildWindowsShortcuts(Widget child) {
+  Widget _buildDesktopShortcuts(Widget child) {
     return Shortcuts(
       shortcuts: const <ShortcutActivator, Intent>{
         SingleActivator(LogicalKeyboardKey.keyN, control: true):
@@ -341,19 +343,19 @@ class _HomeScreenState extends State<HomeScreen>
         actions: <Type, Action<Intent>>{
           _NewTaskIntent: CallbackAction<_NewTaskIntent>(
             onInvoke: (_) {
-              _runWindowsShortcut(() => _openTaskForm());
+              _runDesktopShortcut(() => _openTaskForm());
               return null;
             },
           ),
           _SearchTasksIntent: CallbackAction<_SearchTasksIntent>(
             onInvoke: (_) {
-              _runWindowsShortcut(_focusSearch);
+              _runDesktopShortcut(_focusSearch);
               return null;
             },
           ),
           _QuickAddIntent: CallbackAction<_QuickAddIntent>(
             onInvoke: (_) {
-              _runWindowsShortcut(() async {
+              _runDesktopShortcut(() async {
                 _quickAddFocusNode.requestFocus();
               });
               return null;
@@ -361,13 +363,13 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           _ManageListsIntent: CallbackAction<_ManageListsIntent>(
             onInvoke: (_) {
-              _runWindowsShortcut(_openListManager);
+              _runDesktopShortcut(_openListManager);
               return null;
             },
           ),
           _OpenSettingsIntent: CallbackAction<_OpenSettingsIntent>(
             onInvoke: (_) {
-              _runWindowsShortcut(_showSettingsInfo);
+              _runDesktopShortcut(_showSettingsInfo);
               return null;
             },
           ),
@@ -377,8 +379,8 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  void _runWindowsShortcut(Future<void> Function() action) {
-    if (!_windowsShortcutsEnabled || Navigator.of(context).canPop()) return;
+  void _runDesktopShortcut(Future<void> Function() action) {
+    if (!_desktopShortcutsEnabled || Navigator.of(context).canPop()) return;
     unawaited(action());
   }
 
@@ -459,7 +461,7 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   IconButton(
-                    tooltip: _windowsShortcutsEnabled
+                    tooltip: _desktopShortcutsEnabled
                         ? 'Administrar listas (Ctrl+L)'
                         : 'Administrar listas',
                     visualDensity: VisualDensity.compact,
@@ -602,7 +604,7 @@ class _HomeScreenState extends State<HomeScreen>
                     IconButton(
                       tooltip: _searchVisible
                           ? 'Cerrar búsqueda'
-                          : (_windowsShortcutsEnabled
+                          : (_desktopShortcutsEnabled
                               ? 'Buscar y filtrar (Ctrl+F)'
                               : 'Buscar y filtrar'),
                       onPressed: _toggleSearch,
@@ -613,7 +615,7 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ),
                     IconButton(
-                      tooltip: _windowsShortcutsEnabled
+                      tooltip: _desktopShortcutsEnabled
                           ? 'Ajustes (Ctrl+,)'
                           : 'Ajustes',
                       onPressed: _showSettingsInfo,
