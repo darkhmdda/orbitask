@@ -201,6 +201,17 @@ class CloudSyncService {
     final reminders = await _repository.getAllReminders();
     final attachments = await _repository.getAllAttachments();
 
+    // Never upload child rows whose parent task no longer exists locally.
+    // A stale child can survive on another device/browser after a task
+    // deletion tombstone is merged and would otherwise violate Supabase FKs.
+    final taskIds = tasks.map((task) => task.id).toSet();
+    final validSubtasks =
+        subtasks.where((item) => taskIds.contains(item.taskId)).toList();
+    final validReminders =
+        reminders.where((item) => taskIds.contains(item.taskId)).toList();
+    final validAttachments =
+        attachments.where((item) => taskIds.contains(item.taskId)).toList();
+
     if (lists.isNotEmpty) {
       await client.from('task_lists').upsert(
         lists
@@ -245,9 +256,9 @@ class CloudSyncService {
       );
     }
 
-    if (subtasks.isNotEmpty) {
+    if (validSubtasks.isNotEmpty) {
       await client.from('subtasks').upsert(
-        subtasks
+        validSubtasks
             .map(
               (subtask) => <String, dynamic>{
                 'user_id': userId,
@@ -265,9 +276,9 @@ class CloudSyncService {
       );
     }
 
-    if (reminders.isNotEmpty) {
+    if (validReminders.isNotEmpty) {
       await client.from('reminders').upsert(
-        reminders
+        validReminders
             .map(
               (reminder) => <String, dynamic>{
                 'user_id': userId,
@@ -285,7 +296,7 @@ class CloudSyncService {
       );
     }
 
-    if (attachments.isNotEmpty) {
+    if (validAttachments.isNotEmpty) {
       final remoteAttachmentRows = await client
           .from('task_attachments')
           .select('id, updated_at')
@@ -296,7 +307,7 @@ class CloudSyncService {
       };
 
       final rows = <Map<String, dynamic>>[];
-      for (final attachment in attachments) {
+      for (final attachment in validAttachments) {
         final remoteUpdated = remoteUpdatedById[attachment.id];
         if (remoteUpdated != null &&
             remoteUpdated >= attachment.updatedAt.millisecondsSinceEpoch) {
@@ -348,9 +359,9 @@ class CloudSyncService {
     return CloudUploadResult(
       lists: lists.length,
       tasks: tasks.length,
-      subtasks: subtasks.length,
-      reminders: reminders.length,
-      attachments: attachments.length,
+      subtasks: validSubtasks.length,
+      reminders: validReminders.length,
+      attachments: validAttachments.length,
     );
   }
 
