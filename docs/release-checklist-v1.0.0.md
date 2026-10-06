@@ -1,6 +1,6 @@
 # Checklist de cierre — Orbitask v1.0.0
 
-Fecha de revisión: 2026-10-05
+Fecha de revisión final: 2026-10-06
 
 Este documento registra la validación final de Orbitask v1.0.0 antes de su cierre temporal como versión estable.
 
@@ -113,20 +113,20 @@ bd54e94f3c5a3b536b9f174337ac6bae62a52d2f035abb47802b4d8dcdfec93a  Orbitask-v1.0.
 - [x] Dependabot configurado.
 - [x] Licencia MIT.
 
-## Pendientes de cierre del repositorio
+## Limpieza final del repositorio
 
-Estos puntos no invalidan las builds publicadas, pero forman parte de la limpieza final del repositorio:
+La limpieza final del repositorio quedó completada:
 
-- [ ] Integrar la migración que permite tombstones de tipo `attachment` en Supabase.
-- [ ] Actualizar README a v1.0.0.
-- [ ] Actualizar CHANGELOG a v1.0.0.
-- [ ] Actualizar las notas de la release v1.0.0.
-- [ ] Limpiar workflows históricos que ya no sean necesarios.
-- [ ] Resolver o clasificar PRs de Dependabot pendientes.
-- [ ] Ejecutar y confirmar CI final de `main`.
+- [x] Integrada la migración que permite tombstones de tipo `attachment` en Supabase.
+- [x] README actualizado a v1.0.0.
+- [x] CHANGELOG actualizado a v1.0.0.
+- [x] Notas de la release v1.0.0 actualizadas.
+- [x] Workflows históricos innecesarios limpiados.
+- [x] PRs de Dependabot pendientes revisados y clasificados.
+- [x] CI final de `main` ejecutado y confirmado.
 
 ## Resultado
 
 Orbitask v1.0.0 cuenta con builds oficiales para Android, Linux x64 y Windows x64, además de Web desplegada. La funcionalidad principal fue validada en las cuatro plataformas oficiales.
 
-Este checklist se conserva como registro del cierre temporal de v1.0.0 y puede actualizarse al completar la limpieza final del repositorio.
+Este checklist se conserva como registro del cierre temporal completado de v1.0.0.
