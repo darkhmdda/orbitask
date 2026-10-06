@@ -12,6 +12,7 @@ import '../../models/orbitask_profile.dart';
 import '../../models/reminder.dart';
 import '../../models/subtask.dart';
 import '../../models/task.dart';
+import '../../models/task_attachment.dart';
 import '../../models/task_list.dart';
 import '../../repositories/todo_repository.dart';
 import '../../services/auth_service.dart';
@@ -75,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen>
   List<TaskList> _lists = const [];
   Map<String, List<Subtask>> _subtasksByTask = const {};
   Map<String, List<Reminder>> _remindersByTask = const {};
+  Map<String, List<TaskAttachment>> _attachmentsByTask = const {};
   bool _notificationsReconciled = false;
   bool _loading = true;
   bool _cloudSyncing = false;
@@ -162,6 +164,7 @@ class _HomeScreenState extends State<HomeScreen>
       final tasks = await widget.repository.getAllTasks();
       final subtasks = await widget.repository.getAllSubtasks();
       final reminders = await widget.repository.getAllReminders();
+      final attachments = await widget.repository.getAllAttachments();
 
       final grouped = <String, List<Subtask>>{};
       for (final subtask in subtasks) {
@@ -182,6 +185,13 @@ class _HomeScreenState extends State<HomeScreen>
         entry.value.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
       }
 
+      final groupedAttachments = <String, List<TaskAttachment>>{};
+      for (final attachment in attachments) {
+        groupedAttachments
+            .putIfAbsent(attachment.taskId, () => <TaskAttachment>[])
+            .add(attachment);
+      }
+
       if (!mounted) return;
 
       final selectedStillExists = _selectedListId == null ||
@@ -192,6 +202,7 @@ class _HomeScreenState extends State<HomeScreen>
         _tasks = tasks;
         _subtasksByTask = grouped;
         _remindersByTask = groupedReminders;
+        _attachmentsByTask = groupedAttachments;
         _loading = false;
         _loadError = null;
         if (!selectedStillExists) {
