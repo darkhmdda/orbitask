@@ -2,6 +2,18 @@
 
 Todos los cambios importantes de Orbitask se documentan en este archivo.
 
+## [1.0.1] - 2026-10-06
+
+Hotfix de estabilidad para la sincronización de tareas y sus datos relacionados.
+
+### Corregido
+
+- La sincronización ya no intenta subir subtareas, recordatorios o adjuntos cuyo `task_id` no corresponde a una tarea local existente.
+- La eliminación permanente de una tarea registra también tombstones para sus subtareas, recordatorios y adjuntos antes de eliminar los datos locales.
+- Se evita el error de clave foránea `reminders_task_fk` observado en Web cuando quedaba un recordatorio local antiguo asociado a una tarea ya eliminada.
+- La protección se aplica tanto al servicio de sincronización Web como al nativo.
+
+
 ## [1.0.0] - 2026-10-05
 
 Primera versión estable completa de Orbitask y punto de cierre temporal del proyecto.
