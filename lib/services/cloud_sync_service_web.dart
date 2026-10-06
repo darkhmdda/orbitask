@@ -512,8 +512,14 @@ class CloudSyncService {
       final localUpdated = index == -1
           ? -1
           : ((local[index]['updated_at'] as num?)?.toInt() ?? 0);
+      final localData = index == -1
+          ? ''
+          : ((local[index]['data_base64'] as String?) ?? '');
 
-      if (localUpdated >= updatedAt) continue;
+      // Web intentionally does not persist attachment bytes in localStorage.
+      // After a reload, metadata may be current while bytes are absent, so
+      // fetch the remote object again whenever the local payload is empty.
+      if (localUpdated >= updatedAt && localData.isNotEmpty) continue;
 
       final path = row['storage_path']! as String;
       final data = await client.storage.from('task-attachments').download(path);

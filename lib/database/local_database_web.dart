@@ -139,7 +139,25 @@ class LocalDatabase {
   }
 
   void _persist() {
-    web.window.localStorage.setItem(_storageKey, jsonEncode(_state));
+    final persistedState = <String, dynamic>{
+      ..._state,
+      'task_attachments': readCollection('task_attachments')
+          .map(
+            (item) => <String, dynamic>{
+              ...item,
+              // Attachment bytes can be several megabytes. Keeping them in
+              // localStorage quickly exceeds the browser quota, so Web
+              // persists only metadata and reloads bytes from Supabase.
+              'data_base64': '',
+            },
+          )
+          .toList(growable: false),
+    };
+
+    web.window.localStorage.setItem(
+      _storageKey,
+      jsonEncode(persistedState),
+    );
   }
 
   static Map<String, dynamic> _newState() {
