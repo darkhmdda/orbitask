@@ -1,9 +1,13 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/list_icons.dart';
 import '../../models/reminder.dart';
 import '../../models/subtask.dart';
 import '../../models/task.dart';
+import '../../models/task_attachment.dart';
 import '../../models/task_list.dart';
 
 class TaskFormResult {
@@ -15,6 +19,7 @@ class TaskFormResult {
     required this.listId,
     required this.subtasks,
     required this.reminders,
+    required this.attachments,
   });
 
   final String title;
@@ -24,6 +29,7 @@ class TaskFormResult {
   final String listId;
   final List<Subtask> subtasks;
   final List<Reminder> reminders;
+  final List<TaskAttachment> attachments;
 }
 
 class TaskFormDialog extends StatefulWidget {
@@ -34,6 +40,7 @@ class TaskFormDialog extends StatefulWidget {
     this.task,
     this.subtasks = const [],
     this.reminders = const [],
+    this.attachments = const [],
     this.initialListId,
   });
 
@@ -42,6 +49,7 @@ class TaskFormDialog extends StatefulWidget {
   final Task? task;
   final List<Subtask> subtasks;
   final List<Reminder> reminders;
+  final List<TaskAttachment> attachments;
   final String? initialListId;
 
   @override
@@ -57,6 +65,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   DateTime? _dueDate;
   final List<_SubtaskEditor> _subtaskEditors = [];
   final List<_ReminderEditor> _reminderEditors = [];
+  final List<TaskAttachment> _attachments = [];
 
   bool get _editing => widget.task != null;
 
@@ -85,6 +94,8 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
         ),
       );
     }
+
+    _attachments.addAll(widget.attachments);
 
     for (final reminder in widget.reminders) {
       _reminderEditors.add(
@@ -319,6 +330,8 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                   SizedBox(height: compact ? 14 : 18),
                   _buildRemindersSection(theme),
                   SizedBox(height: compact ? 14 : 18),
+                  _buildAttachmentsSection(theme),
+                  SizedBox(height: compact ? 14 : 18),
                   Row(
                     children: [
                       Expanded(
@@ -405,6 +418,204 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
               ),
             ],
     );
+  }
+
+  Widget _buildAttachmentsSection(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.attach_file_rounded,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Adjuntos',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              TextButton.icon(
+                onPressed: _pickAttachments,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Agregar archivo'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          if (_attachments.isEmpty)
+            Text(
+              'Agrega imágenes, PDFs u otros archivos a esta tarea.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            )
+          else
+            ...List.generate(_attachments.length, (index) {
+              final attachment = _attachments[index];
+              return Card(
+                margin: const EdgeInsets.only(top: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Row(
+                    children: [
+                      if (attachment.isImage)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(
+                            attachment.data,
+                            width: 46,
+                            height: 46,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.image_outlined,
+                              size: 34,
+                            ),
+                          ),
+                        )
+                      else
+                        Icon(
+                          attachment.isPdf
+                              ? Icons.picture_as_pdf_outlined
+                              : Icons.insert_drive_file_outlined,
+                          size: 34,
+                        ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              attachment.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _formatBytes(attachment.sizeBytes),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Eliminar adjunto',
+                        onPressed: () =>
+                            setState(() => _attachments.removeAt(index)),
+                        icon: const Icon(Icons.delete_outline_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickAttachments() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      withData: true,
+    );
+    if (result == null) return;
+
+    final now = DateTime.now();
+    final selected = <TaskAttachment>[];
+
+    for (final file in result.files) {
+      final bytes = file.bytes;
+      if (bytes == null) continue;
+
+      if (bytes.length > 15 * 1024 * 1024) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${file.name} supera el límite de 15 MB.',
+              ),
+            ),
+          );
+        }
+        continue;
+      }
+
+      final extension = (file.extension ?? '').toLowerCase();
+      final mimeType = _mimeTypeFor(extension);
+      final id =
+          '${now.microsecondsSinceEpoch}_${selected.length}_${file.name.hashCode.abs()}';
+
+      selected.add(
+        TaskAttachment(
+          id: id,
+          taskId: widget.taskId,
+          name: file.name,
+          mimeType: mimeType,
+          sizeBytes: bytes.length,
+          data: Uint8List.fromList(bytes),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+    }
+
+    if (selected.isNotEmpty && mounted) {
+      setState(() => _attachments.addAll(selected));
+    }
+  }
+
+  String _mimeTypeFor(String extension) {
+    return switch (extension) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      'gif' => 'image/gif',
+      'pdf' => 'application/pdf',
+      'txt' => 'text/plain',
+      'csv' => 'text/csv',
+      'json' => 'application/json',
+      'doc' => 'application/msword',
+      'docx' =>
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls' => 'application/vnd.ms-excel',
+      'xlsx' =>
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'ppt' => 'application/vnd.ms-powerpoint',
+      'pptx' =>
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'zip' => 'application/zip',
+      _ => 'application/octet-stream',
+    };
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    final kb = bytes / 1024;
+    if (kb < 1024) return '${kb.toStringAsFixed(1)} KB';
+    return '${(kb / 1024).toStringAsFixed(1)} MB';
   }
 
   Widget _buildRemindersSection(ThemeData theme) {
@@ -815,6 +1026,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
         listId: _listId,
         subtasks: subtasks,
         reminders: reminders,
+        attachments: List<TaskAttachment>.unmodifiable(_attachments),
       ),
     );
   }
