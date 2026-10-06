@@ -12,12 +12,18 @@ Primera versión estable completa de Orbitask y punto de cierre temporal del pro
 - Vista previa de imágenes y apertura/descarga de documentos según las capacidades de cada plataforma.
 - Sincronización de adjuntos mediante Supabase.
 - Nombre visible, username y avatar para el perfil de usuario.
-- Atajos de teclado en Windows, Linux y Web:
+- Atajos de teclado en Windows y Linux:
   - `Ctrl + N`: nueva tarea.
   - `Ctrl + F`: buscar.
   - `Ctrl + K`: captura rápida.
   - `Ctrl + L`: administrar listas.
   - `Ctrl + ,`: ajustes.
+- Atajos Web adaptados para evitar conflictos con el navegador:
+  - `Alt + N`: nueva tarea.
+  - `Alt + B`: buscar.
+  - `Alt + Q`: captura rápida.
+  - `Alt + L`: administrar listas.
+  - `Alt + A`: ajustes.
 - Builds oficiales v1.0.0 para Android, Linux x64 y Windows x64.
 - APK firmado para Android.
 - Paquete `.deb` y versión portable `.tar.gz` para Linux x64.
