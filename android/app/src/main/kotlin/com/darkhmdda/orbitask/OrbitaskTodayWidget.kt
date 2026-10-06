@@ -5,7 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
-import android.view.View
+import android.net.Uri
 import android.widget.RemoteViews
 
 class OrbitaskTodayWidget : AppWidgetProvider() {
@@ -24,6 +24,9 @@ class OrbitaskTodayWidget : AppWidgetProvider() {
             ids: IntArray,
         ) {
             ids.forEach { updateWidget(context, manager, it) }
+            if (ids.isNotEmpty()) {
+                manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_all_tasks_list)
+            }
         }
 
         private fun updateWidget(
@@ -32,12 +35,28 @@ class OrbitaskTodayWidget : AppWidgetProvider() {
             appWidgetId: Int,
         ) {
             val prefs = context.getSharedPreferences("orbitask_widget", Context.MODE_PRIVATE)
-            val tasks = prefs.getString("allTasks", "")
-                .orEmpty()
-                .split("\n")
-                .filter { it.isNotBlank() }
-                .take(6)
             val count = prefs.getInt("pendingCount", 0)
+
+            val surface = OrbitaskWidgetData.themeColor(
+                context,
+                "themeSurface",
+                0xFF151A20.toInt(),
+            )
+            val text = OrbitaskWidgetData.themeColor(
+                context,
+                "themeText",
+                0xFFF3F5F7.toInt(),
+            )
+            val muted = OrbitaskWidgetData.themeColor(
+                context,
+                "themeMuted",
+                0xFFAAB2BC.toInt(),
+            )
+            val accent = OrbitaskWidgetData.themeColor(
+                context,
+                "themeAccent",
+                0xFFA8BD86.toInt(),
+            )
 
             val views = RemoteViews(context.packageName, R.layout.orbitask_widget_today)
             views.setTextViewText(
@@ -45,38 +64,35 @@ class OrbitaskTodayWidget : AppWidgetProvider() {
                 if (count == 1) "Todas las tareas · 1 pendiente"
                 else "Todas las tareas · $count pendientes",
             )
+            views.setInt(R.id.widget_today_root, "setBackgroundColor", surface)
+            views.setTextColor(R.id.widget_today_title, text)
+            views.setTextColor(R.id.widget_today_add, accent)
+            views.setTextColor(R.id.widget_today_empty, muted)
 
-            val rowIds = intArrayOf(
-                R.id.widget_today_task_1,
-                R.id.widget_today_task_2,
-                R.id.widget_today_task_3,
-                R.id.widget_today_task_4,
-                R.id.widget_today_task_5,
-                R.id.widget_today_task_6,
-            )
-            rowIds.forEachIndexed { index, id ->
-                if (index < tasks.size) {
-                    views.setViewVisibility(id, View.VISIBLE)
-                    views.setTextViewText(id, "○  ${tasks[index]}")
-                } else {
-                    views.setViewVisibility(id, View.GONE)
-                }
+            val serviceIntent = Intent(context, OrbitaskTaskListService::class.java).apply {
+                putExtra(OrbitaskTaskListService.EXTRA_MODE, OrbitaskTaskListService.MODE_ALL)
+                data = Uri.parse("orbitask://all-tasks/$appWidgetId")
             }
+            views.setRemoteAdapter(R.id.widget_all_tasks_list, serviceIntent)
+            views.setEmptyView(R.id.widget_all_tasks_list, R.id.widget_today_empty)
 
-            views.setViewVisibility(
-                R.id.widget_today_empty,
-                if (tasks.isEmpty()) View.VISIBLE else View.GONE,
+            val templateIntent = Intent(context, OrbitaskWidgetActionReceiver::class.java)
+            val template = PendingIntent.getBroadcast(
+                context,
+                appWidgetId,
+                templateIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
             )
+            views.setPendingIntentTemplate(R.id.widget_all_tasks_list, template)
 
             val openIntent = Intent(context, MainActivity::class.java)
-            val pendingIntent = PendingIntent.getActivity(
+            val addPendingIntent = PendingIntent.getActivity(
                 context,
-                101,
+                1000 + appWidgetId,
                 openIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-            views.setOnClickPendingIntent(R.id.widget_today_root, pendingIntent)
-            views.setOnClickPendingIntent(R.id.widget_today_add, pendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_today_add, addPendingIntent)
 
             manager.updateAppWidget(appWidgetId, views)
         }
