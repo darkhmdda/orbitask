@@ -34,6 +34,26 @@ enum _TaskPriorityFilter { all, high, medium, low, none }
 
 enum _TaskSort { smart, dueDate, priority, newest, oldest, alphabetical }
 
+class _NewTaskIntent extends Intent {
+  const _NewTaskIntent();
+}
+
+class _SearchTasksIntent extends Intent {
+  const _SearchTasksIntent();
+}
+
+class _QuickAddIntent extends Intent {
+  const _QuickAddIntent();
+}
+
+class _ManageListsIntent extends Intent {
+  const _ManageListsIntent();
+}
+
+class _OpenSettingsIntent extends Intent {
+  const _OpenSettingsIntent();
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
@@ -66,6 +86,8 @@ class _HomeScreenState extends State<HomeScreen>
   String? _selectedListId;
   final TextEditingController _quickAddController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _quickAddFocusNode = FocusNode();
+  final FocusNode _searchFocusNode = FocusNode();
   bool _searchVisible = false;
   String _searchQuery = '';
   String? _filterListId;
@@ -155,6 +177,8 @@ class _HomeScreenState extends State<HomeScreen>
 
     _quickAddController.dispose();
     _searchController.dispose();
+    _quickAddFocusNode.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -228,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
+    final content = LayoutBuilder(
       builder: (context, constraints) {
         final useSidebar = constraints.maxWidth >= 920;
 
@@ -281,13 +305,89 @@ class _HomeScreenState extends State<HomeScreen>
               _loading || _loadError != null || _filterIndex == 4
                   ? null
                   : FloatingActionButton.extended(
-                  onPressed: () => _openTaskForm(),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Nueva tarea'),
-                ),
+                      onPressed: () => _openTaskForm(),
+                      tooltip: _windowsShortcutsEnabled
+                          ? 'Nueva tarea (Ctrl+N)'
+                          : 'Nueva tarea',
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Nueva tarea'),
+                    ),
         );
       },
     );
+
+    if (!_windowsShortcutsEnabled) return content;
+    return _buildWindowsShortcuts(content);
+  }
+
+  bool get _windowsShortcutsEnabled =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+
+  Widget _buildWindowsShortcuts(Widget child) {
+    return Shortcuts(
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.keyN, control: true):
+            _NewTaskIntent(),
+        SingleActivator(LogicalKeyboardKey.keyF, control: true):
+            _SearchTasksIntent(),
+        SingleActivator(LogicalKeyboardKey.keyK, control: true):
+            _QuickAddIntent(),
+        SingleActivator(LogicalKeyboardKey.keyL, control: true):
+            _ManageListsIntent(),
+        SingleActivator(LogicalKeyboardKey.comma, control: true):
+            _OpenSettingsIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _NewTaskIntent: CallbackAction<_NewTaskIntent>(
+            onInvoke: (_) {
+              _runWindowsShortcut(() => _openTaskForm());
+              return null;
+            },
+          ),
+          _SearchTasksIntent: CallbackAction<_SearchTasksIntent>(
+            onInvoke: (_) {
+              _runWindowsShortcut(_focusSearch);
+              return null;
+            },
+          ),
+          _QuickAddIntent: CallbackAction<_QuickAddIntent>(
+            onInvoke: (_) {
+              _runWindowsShortcut(() async {
+                _quickAddFocusNode.requestFocus();
+              });
+              return null;
+            },
+          ),
+          _ManageListsIntent: CallbackAction<_ManageListsIntent>(
+            onInvoke: (_) {
+              _runWindowsShortcut(_openListManager);
+              return null;
+            },
+          ),
+          _OpenSettingsIntent: CallbackAction<_OpenSettingsIntent>(
+            onInvoke: (_) {
+              _runWindowsShortcut(_showSettingsInfo);
+              return null;
+            },
+          ),
+        },
+        child: Focus(autofocus: true, child: child),
+      ),
+    );
+  }
+
+  void _runWindowsShortcut(Future<void> Function() action) {
+    if (!_windowsShortcutsEnabled || Navigator.of(context).canPop()) return;
+    unawaited(action());
+  }
+
+  Future<void> _focusSearch() async {
+    if (!_searchVisible) {
+      setState(() => _searchVisible = true);
+      await Future<void>.delayed(Duration.zero);
+    }
+    if (mounted) _searchFocusNode.requestFocus();
   }
 
   Widget _buildSidebar(BuildContext context) {
@@ -359,7 +459,9 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Administrar listas',
+                    tooltip: _windowsShortcutsEnabled
+                        ? 'Administrar listas (Ctrl+L)'
+                        : 'Administrar listas',
                     visualDensity: VisualDensity.compact,
                     onPressed: _openListManager,
                     icon: const Icon(Icons.settings_outlined, size: 19),
@@ -498,7 +600,11 @@ class _HomeScreenState extends State<HomeScreen>
                         icon: const Icon(Icons.folder_outlined),
                       ),
                     IconButton(
-                      tooltip: _searchVisible ? 'Cerrar búsqueda' : 'Buscar y filtrar',
+                      tooltip: _searchVisible
+                          ? 'Cerrar búsqueda'
+                          : (_windowsShortcutsEnabled
+                              ? 'Buscar y filtrar (Ctrl+F)'
+                              : 'Buscar y filtrar'),
                       onPressed: _toggleSearch,
                       icon: Icon(
                         _searchVisible
@@ -507,7 +613,9 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Ajustes',
+                      tooltip: _windowsShortcutsEnabled
+                          ? 'Ajustes (Ctrl+,)'
+                          : 'Ajustes',
                       onPressed: _showSettingsInfo,
                       icon: const Icon(Icons.settings_outlined),
                     ),
@@ -721,6 +829,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     return TextField(
       controller: _quickAddController,
+      focusNode: _quickAddFocusNode,
       textInputAction: TextInputAction.done,
       onSubmitted: (_) => _quickAdd(),
       decoration: InputDecoration(
@@ -797,6 +906,7 @@ class _HomeScreenState extends State<HomeScreen>
           children: [
             TextField(
               controller: _searchController,
+              focusNode: _searchFocusNode,
               autofocus: _searchVisible,
               onChanged: (value) {
                 setState(() => _searchQuery = value.trim().toLowerCase());
