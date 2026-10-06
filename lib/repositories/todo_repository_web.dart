@@ -101,8 +101,15 @@ class TodoRepository {
     String taskId,
     List<TaskAttachment> attachments,
   ) async {
-    final items = _database.readCollection('task_attachments')
-      ..removeWhere((item) => item['task_id'] == taskId);
+    final items = _database.readCollection('task_attachments');
+    final keepIds = attachments.map((item) => item.id).toSet();
+    for (final item in items.where((item) => item['task_id'] == taskId)) {
+      final id = item['id'] as String;
+      if (!keepIds.contains(id)) {
+        _recordDeletion('attachment', id);
+      }
+    }
+    items.removeWhere((item) => item['task_id'] == taskId);
 
     items.addAll(
       attachments.map(
@@ -154,6 +161,13 @@ class TodoRepository {
 
   Future<void> deleteTask(String id) async {
     _recordDeletion('task', id);
+    final existingAttachments = _database
+        .readCollection('task_attachments')
+        .where((item) => item['task_id'] == id)
+        .toList(growable: false);
+    for (final item in existingAttachments) {
+      _recordDeletion('attachment', item['id'] as String);
+    }
 
     final tasks = _database.readCollection('tasks')
       ..removeWhere((item) => item['id'] == id);
