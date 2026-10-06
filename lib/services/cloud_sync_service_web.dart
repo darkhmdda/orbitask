@@ -288,8 +288,23 @@ class CloudSyncService {
     }
 
     if (attachments.isNotEmpty) {
+      final remoteAttachmentRows = await client
+          .from('task_attachments')
+          .select('id, updated_at')
+          .eq('user_id', userId);
+      final remoteUpdatedById = <String, int>{
+        for (final row in remoteAttachmentRows)
+          row['id']! as String: _millis(row['updated_at']),
+      };
+
       final rows = <Map<String, dynamic>>[];
       for (final attachment in attachments) {
+        final remoteUpdated = remoteUpdatedById[attachment.id];
+        if (remoteUpdated != null &&
+            remoteUpdated >= attachment.updatedAt.millisecondsSinceEpoch) {
+          continue;
+        }
+
         final safeName = attachment.name.replaceAll(
           RegExp(r'[^A-Za-z0-9._-]+'),
           '_',
@@ -319,10 +334,12 @@ class CloudSyncService {
         });
       }
 
-      await client.from('task_attachments').upsert(
-        rows,
-        onConflict: 'user_id,id',
-      );
+      if (rows.isNotEmpty) {
+        await client.from('task_attachments').upsert(
+          rows,
+          onConflict: 'user_id,id',
+        );
+      }
     }
 
     _database.setSetting(
