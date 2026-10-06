@@ -82,6 +82,7 @@ class LocalDatabase {
     _state.putIfAbsent('tasks', () => <Map<String, dynamic>>[]);
     _state.putIfAbsent('subtasks', () => <Map<String, dynamic>>[]);
     _state.putIfAbsent('reminders', () => <Map<String, dynamic>>[]);
+    _state.putIfAbsent('task_attachments', () => <Map<String, dynamic>>[]);
     _state.putIfAbsent('sync_deletions', () => <Map<String, dynamic>>[]);
 
     final lists = readCollection('task_lists');
@@ -148,6 +149,7 @@ class LocalDatabase {
       'tasks': <Map<String, dynamic>>[],
       'subtasks': <Map<String, dynamic>>[],
       'reminders': <Map<String, dynamic>>[],
+      'task_attachments': <Map<String, dynamic>>[],
       'sync_deletions': <Map<String, dynamic>>[],
     };
   }
