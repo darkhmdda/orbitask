@@ -1,7 +1,11 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import '../database/local_database.dart';
 import '../models/reminder.dart';
 import '../models/subtask.dart';
 import '../models/task.dart';
+import '../models/task_attachment.dart';
 import '../models/task_list.dart';
 
 class TodoRepository {
@@ -50,6 +54,15 @@ class TodoRepository {
     return rows.map(_subtaskFromRow).toList(growable: false);
   }
 
+  Future<List<TaskAttachment>> getAllAttachments() async {
+    final rows = _database.readCollection('task_attachments');
+    rows.sort(
+      (a, b) => ((a['created_at'] as num?)?.toInt() ?? 0)
+          .compareTo((b['created_at'] as num?)?.toInt() ?? 0),
+    );
+    return rows.map(_attachmentFromRow).toList(growable: false);
+  }
+
   Future<List<Reminder>> getAllReminders() async {
     final rows = _database.readCollection('reminders');
     rows.sort((a, b) {
@@ -84,6 +97,38 @@ class TodoRepository {
     _replaceReminders(task.id, reminders);
   }
 
+  Future<void> replaceAttachmentsForTask(
+    String taskId,
+    List<TaskAttachment> attachments,
+  ) async {
+    final items = _database.readCollection('task_attachments');
+    final keepIds = attachments.map((item) => item.id).toSet();
+    for (final item in items.where((item) => item['task_id'] == taskId)) {
+      final id = item['id'] as String;
+      if (!keepIds.contains(id)) {
+        _recordDeletion('attachment', id);
+      }
+    }
+    items.removeWhere((item) => item['task_id'] == taskId);
+
+    items.addAll(
+      attachments.map(
+        (attachment) => <String, dynamic>{
+          'id': attachment.id,
+          'task_id': taskId,
+          'name': attachment.name,
+          'mime_type': attachment.mimeType,
+          'size_bytes': attachment.sizeBytes,
+          'data_base64': base64Encode(attachment.data),
+          'remote_path': attachment.remotePath,
+          'created_at': attachment.createdAt.millisecondsSinceEpoch,
+          'updated_at': attachment.updatedAt.millisecondsSinceEpoch,
+        },
+      ),
+    );
+    _database.writeCollection('task_attachments', items);
+  }
+
   Future<void> updateTaskOnly(Task task) async {
     final tasks = _database.readCollection('tasks');
     final index = tasks.indexWhere((item) => item['id'] == task.id);
@@ -115,6 +160,13 @@ class TodoRepository {
   }
 
   Future<void> deleteTask(String id) async {
+    final existingAttachments = _database
+        .readCollection('task_attachments')
+        .where((item) => item['task_id'] == id)
+        .toList(growable: false);
+    for (final item in existingAttachments) {
+      _recordDeletion('attachment', item['id'] as String);
+    }
     _recordDeletion('task', id);
 
     final tasks = _database.readCollection('tasks')
@@ -123,10 +175,13 @@ class TodoRepository {
       ..removeWhere((item) => item['task_id'] == id);
     final reminders = _database.readCollection('reminders')
       ..removeWhere((item) => item['task_id'] == id);
+    final attachments = _database.readCollection('task_attachments')
+      ..removeWhere((item) => item['task_id'] == id);
 
     _database.writeCollection('tasks', tasks);
     _database.writeCollection('subtasks', subtasks);
     _database.writeCollection('reminders', reminders);
+    _database.writeCollection('task_attachments', attachments);
   }
 
   Future<void> updateSubtaskCompleted(Subtask subtask) async {
@@ -368,4 +423,24 @@ class TodoRepository {
       ),
     );
   }
+  TaskAttachment _attachmentFromRow(Map<String, dynamic> row) {
+    return TaskAttachment(
+      id: row['id'] as String,
+      taskId: row['task_id'] as String,
+      name: row['name'] as String,
+      mimeType: row['mime_type'] as String,
+      sizeBytes: (row['size_bytes'] as num?)?.toInt() ?? 0,
+      data: Uint8List.fromList(
+        base64Decode((row['data_base64'] as String?) ?? ''),
+      ),
+      remotePath: row['remote_path'] as String?,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        (row['created_at'] as num).toInt(),
+      ),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(
+        (row['updated_at'] as num).toInt(),
+      ),
+    );
+  }
+
 }
