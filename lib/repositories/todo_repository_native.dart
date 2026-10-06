@@ -295,7 +295,6 @@ class TodoRepository {
     _database.raw.execute('BEGIN IMMEDIATE;');
 
     try {
-      _recordDeletion('task', id);
       final attachmentRows = _database.raw.select(
         'SELECT id FROM task_attachments WHERE task_id = ?;',
         [id],
@@ -303,6 +302,7 @@ class TodoRepository {
       for (final row in attachmentRows) {
         _recordDeletion('attachment', row['id']! as String);
       }
+      _recordDeletion('task', id);
 
       final subtaskStatement =
           _database.raw.prepare('DELETE FROM subtasks WHERE task_id = ?;');
