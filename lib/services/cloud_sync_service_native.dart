@@ -9,14 +9,16 @@ class CloudUploadResult {
     required this.tasks,
     required this.subtasks,
     required this.reminders,
+    required this.attachments,
   });
 
   final int lists;
   final int tasks;
   final int subtasks;
   final int reminders;
+  final int attachments;
 
-  int get total => lists + tasks + subtasks + reminders;
+  int get total => lists + tasks + subtasks + reminders + attachments;
 }
 
 class CloudSyncResult {
@@ -25,6 +27,7 @@ class CloudSyncResult {
     required this.remoteTasks,
     required this.remoteSubtasks,
     required this.remoteReminders,
+    required this.remoteAttachments,
     required this.remoteDeletions,
     required this.cleanedDeletions,
     required this.themeId,
@@ -35,6 +38,7 @@ class CloudSyncResult {
   final int remoteTasks;
   final int remoteSubtasks;
   final int remoteReminders;
+  final int remoteAttachments;
   final int remoteDeletions;
   final int cleanedDeletions;
   final String themeId;
@@ -45,6 +49,7 @@ class CloudSyncResult {
       remoteTasks +
       remoteSubtasks +
       remoteReminders +
+      remoteAttachments +
       remoteDeletions;
 }
 
@@ -98,6 +103,7 @@ class CloudSyncService {
       'tasks',
       'subtasks',
       'reminders',
+      'task_attachments',
       'sync_deletions',
     ];
 
@@ -143,6 +149,8 @@ class CloudSyncService {
         await client.from('subtasks').select().eq('user_id', user.id);
     final remoteReminders =
         await client.from('reminders').select().eq('user_id', user.id);
+    final remoteAttachments =
+        await client.from('task_attachments').select().eq('user_id', user.id);
 
     _mergeRemoteSnapshot(
       lists: remoteLists,
@@ -150,6 +158,7 @@ class CloudSyncService {
       subtasks: remoteSubtasks,
       reminders: remoteReminders,
     );
+    await _mergeRemoteAttachments(client, remoteAttachments);
 
     _applyLocalDeletionJournal();
 
@@ -172,6 +181,7 @@ class CloudSyncService {
       remoteTasks: remoteTasks.length,
       remoteSubtasks: remoteSubtasks.length,
       remoteReminders: remoteReminders.length,
+      remoteAttachments: remoteAttachments.length,
       remoteDeletions: remoteDeletions.length,
       cleanedDeletions: cleanedDeletions,
       themeId: themeId,
@@ -189,6 +199,7 @@ class CloudSyncService {
     final tasks = await _repository.getAllTasks();
     final subtasks = await _repository.getAllSubtasks();
     final reminders = await _repository.getAllReminders();
+    final attachments = await _repository.getAllAttachments();
 
     if (lists.isNotEmpty) {
       await client.from('task_lists').upsert(
@@ -274,6 +285,44 @@ class CloudSyncService {
       );
     }
 
+    if (attachments.isNotEmpty) {
+      final rows = <Map<String, dynamic>>[];
+      for (final attachment in attachments) {
+        final safeName = attachment.name.replaceAll(
+          RegExp(r'[^A-Za-z0-9._-]+'),
+          '_',
+        );
+        final path =
+            '$userId/${attachment.taskId}/${attachment.id}_$safeName';
+
+        await client.storage.from('task-attachments').uploadBinary(
+          path,
+          attachment.data,
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: attachment.mimeType,
+          ),
+        );
+
+        rows.add(<String, dynamic>{
+          'user_id': userId,
+          'id': attachment.id,
+          'task_id': attachment.taskId,
+          'name': attachment.name,
+          'mime_type': attachment.mimeType,
+          'size_bytes': attachment.sizeBytes,
+          'storage_path': path,
+          'created_at': _iso(attachment.createdAt),
+          'updated_at': _iso(attachment.updatedAt),
+        });
+      }
+
+      await client.from('task_attachments').upsert(
+        rows,
+        onConflict: 'user_id,id',
+      );
+    }
+
     _database.setSetting(
       'last_cloud_upload_at',
       DateTime.now().toUtc().toIso8601String(),
@@ -284,6 +333,7 @@ class CloudSyncService {
       tasks: tasks.length,
       subtasks: subtasks.length,
       reminders: reminders.length,
+      attachments: attachments.length,
     );
   }
 
@@ -474,6 +524,61 @@ class CloudSyncService {
     } catch (_) {
       database.execute('ROLLBACK;');
       rethrow;
+    }
+  }
+
+  Future<void> _mergeRemoteAttachments(
+    SupabaseClient client,
+    List<Map<String, dynamic>> remote,
+  ) async {
+    final database = _database.raw;
+
+    for (final row in remote) {
+      final id = row['id']! as String;
+      final updatedAt = _millis(row['updated_at']);
+      final existing = database.select(
+        'SELECT updated_at FROM task_attachments WHERE id = ? LIMIT 1;',
+        [id],
+      );
+
+      if (existing.isNotEmpty &&
+          (existing.first['updated_at']! as int) >= updatedAt) {
+        continue;
+      }
+
+      final path = row['storage_path']! as String;
+      final data = await client.storage.from('task-attachments').download(path);
+
+      final statement = database.prepare('''
+        INSERT INTO task_attachments (
+          id, task_id, name, mime_type, size_bytes, data, remote_path,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          task_id = excluded.task_id,
+          name = excluded.name,
+          mime_type = excluded.mime_type,
+          size_bytes = excluded.size_bytes,
+          data = excluded.data,
+          remote_path = excluded.remote_path,
+          updated_at = excluded.updated_at
+        WHERE excluded.updated_at > task_attachments.updated_at;
+      ''');
+      try {
+        statement.execute([
+          id,
+          row['task_id']! as String,
+          row['name']! as String,
+          row['mime_type']! as String,
+          (row['size_bytes'] as num).toInt(),
+          data,
+          path,
+          _millis(row['created_at']),
+          updatedAt,
+        ]);
+      } finally {
+        statement.close();
+      }
     }
   }
 
