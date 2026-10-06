@@ -160,7 +160,6 @@ class TodoRepository {
   }
 
   Future<void> deleteTask(String id) async {
-    _recordDeletion('task', id);
     final existingAttachments = _database
         .readCollection('task_attachments')
         .where((item) => item['task_id'] == id)
@@ -168,6 +167,7 @@ class TodoRepository {
     for (final item in existingAttachments) {
       _recordDeletion('attachment', item['id'] as String);
     }
+    _recordDeletion('task', id);
 
     final tasks = _database.readCollection('tasks')
       ..removeWhere((item) => item['id'] == id);
