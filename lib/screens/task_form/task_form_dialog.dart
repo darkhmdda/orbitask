@@ -9,6 +9,7 @@ import '../../models/subtask.dart';
 import '../../models/task.dart';
 import '../../models/task_attachment.dart';
 import '../../models/task_list.dart';
+import '../../services/attachment_opener.dart';
 
 class TaskFormResult {
   const TaskFormResult({
@@ -472,61 +473,83 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
               final attachment = _attachments[index];
               return Card(
                 margin: const EdgeInsets.only(top: 8),
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Row(
-                    children: [
-                      if (attachment.isImage)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(
-                            attachment.data,
-                            width: 46,
-                            height: 46,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const Icon(
-                              Icons.image_outlined,
-                              size: 34,
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => attachment.isImage
+                      ? _previewImage(attachment)
+                      : _openAttachment(attachment),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Row(
+                      children: [
+                        if (attachment.isImage)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(
+                              attachment.data,
+                              width: 46,
+                              height: 46,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(
+                                    Icons.image_outlined,
+                                    size: 34,
+                                  ),
                             ),
+                          )
+                        else
+                          Icon(
+                            attachment.isPdf
+                                ? Icons.picture_as_pdf_outlined
+                                : Icons.insert_drive_file_outlined,
+                            size: 34,
                           ),
-                        )
-                      else
-                        Icon(
-                          attachment.isPdf
-                              ? Icons.picture_as_pdf_outlined
-                              : Icons.insert_drive_file_outlined,
-                          size: 34,
-                        ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              attachment.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                attachment.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _formatBytes(attachment.sizeBytes),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                              const SizedBox(height: 2),
+                              Text(
+                                attachment.isImage
+                                    ? '${_formatBytes(attachment.sizeBytes)} · Toca para ver'
+                                    : '${_formatBytes(attachment.sizeBytes)} · Toca para abrir',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        tooltip: 'Eliminar adjunto',
-                        onPressed: () =>
-                            setState(() => _attachments.removeAt(index)),
-                        icon: const Icon(Icons.delete_outline_rounded),
-                      ),
-                    ],
+                        IconButton(
+                          tooltip: attachment.isImage
+                              ? 'Ver imagen'
+                              : 'Abrir archivo',
+                          onPressed: () => attachment.isImage
+                              ? _previewImage(attachment)
+                              : _openAttachment(attachment),
+                          icon: Icon(
+                            attachment.isImage
+                                ? Icons.visibility_outlined
+                                : Icons.open_in_new_rounded,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Eliminar adjunto',
+                          onPressed: () =>
+                              setState(() => _attachments.removeAt(index)),
+                          icon: const Icon(Icons.delete_outline_rounded),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -534,6 +557,82 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
         ],
       ),
     );
+  }
+
+  Future<void> _previewImage(TaskAttachment attachment) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: 1000,
+            maxHeight: 760,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        attachment.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Abrir con otra aplicación',
+                      onPressed: () => _openAttachment(attachment),
+                      icon: const Icon(Icons.open_in_new_rounded),
+                    ),
+                    IconButton(
+                      tooltip: 'Cerrar',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 5,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Image.memory(
+                      attachment.data,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openAttachment(TaskAttachment attachment) async {
+    try {
+      await AttachmentOpener.open(attachment);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se pudo abrir “${attachment.name}”: $error',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _pickAttachments() async {
