@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:orbitask/database/local_database_native.dart';
 import 'package:orbitask/models/reminder.dart';
 import 'package:orbitask/models/subtask.dart';
 import 'package:orbitask/models/task.dart';
+import 'package:orbitask/models/task_attachment.dart';
 import 'package:orbitask/models/task_list.dart';
 import 'package:orbitask/repositories/todo_repository_native.dart';
 
@@ -74,6 +77,44 @@ void main() {
 
     expect(reminders.single.id, 'rem-1');
     expect(reminders.single.offsetMinutes, 30);
+  });
+
+  test('guarda y elimina adjuntos de una tarea', () async {
+    final task = Task(
+      id: 'task-attachment',
+      title: 'Con archivo',
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+    await repository.createTask(task, const [], const []);
+
+    final attachment = TaskAttachment(
+      id: 'att-1',
+      taskId: task.id,
+      name: 'apuntes.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 4,
+      data: Uint8List.fromList([1, 2, 3, 4]),
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+
+    await repository.replaceAttachmentsForTask(task.id, [attachment]);
+
+    var stored = await repository.getAllAttachments();
+    expect(stored.single.id, 'att-1');
+    expect(stored.single.name, 'apuntes.pdf');
+    expect(stored.single.data, [1, 2, 3, 4]);
+
+    await repository.replaceAttachmentsForTask(task.id, const []);
+    stored = await repository.getAllAttachments();
+    expect(stored, isEmpty);
+
+    final tombstones = database.raw.select(
+      "SELECT entity_type, entity_id FROM sync_deletions "
+      "WHERE entity_type = 'attachment' AND entity_id = 'att-1';",
+    );
+    expect(tombstones.length, 1);
   });
 
   test('mueve tarea a papelera y permite restaurarla', () async {
