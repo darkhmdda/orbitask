@@ -176,6 +176,12 @@ class TodoRepository {
     List<TaskAttachment> attachments,
   ) async {
     _database.raw.execute('BEGIN IMMEDIATE;');
+    _recordMissingChildren(
+      table: 'task_attachments',
+      entityType: 'attachment',
+      taskId: taskId,
+      keepIds: attachments.map((item) => item.id).toSet(),
+    );
     try {
       final deleteStatement = _database.raw.prepare(
         'DELETE FROM task_attachments WHERE task_id = ?;',
@@ -290,6 +296,13 @@ class TodoRepository {
 
     try {
       _recordDeletion('task', id);
+      final attachmentRows = _database.raw.select(
+        'SELECT id FROM task_attachments WHERE task_id = ?;',
+        [id],
+      );
+      for (final row in attachmentRows) {
+        _recordDeletion('attachment', row['id']! as String);
+      }
 
       final subtaskStatement =
           _database.raw.prepare('DELETE FROM subtasks WHERE task_id = ?;');
