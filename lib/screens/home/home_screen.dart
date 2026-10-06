@@ -112,6 +112,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      unawaited(_loadData());
       _scheduleCloudSync(immediate: true);
     }
   }
