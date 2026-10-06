@@ -306,8 +306,8 @@ class _HomeScreenState extends State<HomeScreen>
                   ? null
                   : FloatingActionButton.extended(
                       onPressed: () => _openTaskForm(),
-                      tooltip: _desktopShortcutsEnabled
-                          ? 'Nueva tarea (Ctrl+N)'
+                      tooltip: _keyboardShortcutsEnabled
+                          ? 'Nueva tarea (${_shortcutLabel('Ctrl+N', 'Alt+N')})'
                           : 'Nueva tarea',
                       icon: const Icon(Icons.add_rounded),
                       label: const Text('Nueva tarea'),
@@ -316,8 +316,8 @@ class _HomeScreenState extends State<HomeScreen>
       },
     );
 
-    if (!_desktopShortcutsEnabled) return content;
-    return _buildDesktopShortcuts(content);
+    if (!_keyboardShortcutsEnabled) return content;
+    return _buildKeyboardShortcuts(content);
   }
 
   bool get _desktopShortcutsEnabled =>
@@ -325,37 +325,60 @@ class _HomeScreenState extends State<HomeScreen>
       (defaultTargetPlatform == TargetPlatform.windows ||
           defaultTargetPlatform == TargetPlatform.linux);
 
-  Widget _buildDesktopShortcuts(Widget child) {
+  bool get _webShortcutsEnabled => kIsWeb;
+
+  bool get _keyboardShortcutsEnabled =>
+      _desktopShortcutsEnabled || _webShortcutsEnabled;
+
+  String _shortcutLabel(String desktopLabel, String webLabel) =>
+      _webShortcutsEnabled ? webLabel : desktopLabel;
+
+  Widget _buildKeyboardShortcuts(Widget child) {
+    final shortcuts = _webShortcutsEnabled
+        ? const <ShortcutActivator, Intent>{
+            SingleActivator(LogicalKeyboardKey.keyN, alt: true):
+                _NewTaskIntent(),
+            SingleActivator(LogicalKeyboardKey.keyB, alt: true):
+                _SearchTasksIntent(),
+            SingleActivator(LogicalKeyboardKey.keyQ, alt: true):
+                _QuickAddIntent(),
+            SingleActivator(LogicalKeyboardKey.keyL, alt: true):
+                _ManageListsIntent(),
+            SingleActivator(LogicalKeyboardKey.keyA, alt: true):
+                _OpenSettingsIntent(),
+          }
+        : const <ShortcutActivator, Intent>{
+            SingleActivator(LogicalKeyboardKey.keyN, control: true):
+                _NewTaskIntent(),
+            SingleActivator(LogicalKeyboardKey.keyF, control: true):
+                _SearchTasksIntent(),
+            SingleActivator(LogicalKeyboardKey.keyK, control: true):
+                _QuickAddIntent(),
+            SingleActivator(LogicalKeyboardKey.keyL, control: true):
+                _ManageListsIntent(),
+            SingleActivator(LogicalKeyboardKey.comma, control: true):
+                _OpenSettingsIntent(),
+          };
+
     return Shortcuts(
-      shortcuts: const <ShortcutActivator, Intent>{
-        SingleActivator(LogicalKeyboardKey.keyN, control: true):
-            _NewTaskIntent(),
-        SingleActivator(LogicalKeyboardKey.keyF, control: true):
-            _SearchTasksIntent(),
-        SingleActivator(LogicalKeyboardKey.keyK, control: true):
-            _QuickAddIntent(),
-        SingleActivator(LogicalKeyboardKey.keyL, control: true):
-            _ManageListsIntent(),
-        SingleActivator(LogicalKeyboardKey.comma, control: true):
-            _OpenSettingsIntent(),
-      },
+      shortcuts: shortcuts,
       child: Actions(
         actions: <Type, Action<Intent>>{
           _NewTaskIntent: CallbackAction<_NewTaskIntent>(
             onInvoke: (_) {
-              _runDesktopShortcut(() => _openTaskForm());
+              _runKeyboardShortcut(() => _openTaskForm());
               return null;
             },
           ),
           _SearchTasksIntent: CallbackAction<_SearchTasksIntent>(
             onInvoke: (_) {
-              _runDesktopShortcut(_focusSearch);
+              _runKeyboardShortcut(_focusSearch);
               return null;
             },
           ),
           _QuickAddIntent: CallbackAction<_QuickAddIntent>(
             onInvoke: (_) {
-              _runDesktopShortcut(() async {
+              _runKeyboardShortcut(() async {
                 _quickAddFocusNode.requestFocus();
               });
               return null;
@@ -363,13 +386,13 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           _ManageListsIntent: CallbackAction<_ManageListsIntent>(
             onInvoke: (_) {
-              _runDesktopShortcut(_openListManager);
+              _runKeyboardShortcut(_openListManager);
               return null;
             },
           ),
           _OpenSettingsIntent: CallbackAction<_OpenSettingsIntent>(
             onInvoke: (_) {
-              _runDesktopShortcut(_showSettingsInfo);
+              _runKeyboardShortcut(_showSettingsInfo);
               return null;
             },
           ),
@@ -379,8 +402,8 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  void _runDesktopShortcut(Future<void> Function() action) {
-    if (!_desktopShortcutsEnabled || Navigator.of(context).canPop()) return;
+  void _runKeyboardShortcut(Future<void> Function() action) {
+    if (!_keyboardShortcutsEnabled || Navigator.of(context).canPop()) return;
     unawaited(action());
   }
 
@@ -461,8 +484,8 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   IconButton(
-                    tooltip: _desktopShortcutsEnabled
-                        ? 'Administrar listas (Ctrl+L)'
+                    tooltip: _keyboardShortcutsEnabled
+                        ? 'Administrar listas (${_shortcutLabel('Ctrl+L', 'Alt+L')})'
                         : 'Administrar listas',
                     visualDensity: VisualDensity.compact,
                     onPressed: _openListManager,
@@ -604,8 +627,8 @@ class _HomeScreenState extends State<HomeScreen>
                     IconButton(
                       tooltip: _searchVisible
                           ? 'Cerrar búsqueda'
-                          : (_desktopShortcutsEnabled
-                              ? 'Buscar y filtrar (Ctrl+F)'
+                          : (_keyboardShortcutsEnabled
+                              ? 'Buscar y filtrar (${_shortcutLabel('Ctrl+F', 'Alt+B')})'
                               : 'Buscar y filtrar'),
                       onPressed: _toggleSearch,
                       icon: Icon(
@@ -615,8 +638,8 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ),
                     IconButton(
-                      tooltip: _desktopShortcutsEnabled
-                          ? 'Ajustes (Ctrl+,)'
+                      tooltip: _keyboardShortcutsEnabled
+                          ? 'Ajustes (${_shortcutLabel('Ctrl+,', 'Alt+A')})'
                           : 'Ajustes',
                       onPressed: _showSettingsInfo,
                       icon: const Icon(Icons.settings_outlined),
