@@ -20,55 +20,44 @@ class MainActivity : FlutterActivity() {
             }
 
             val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
-            val prefs = getSharedPreferences("orbitask_widget", MODE_PRIVATE)
+            val editor = getSharedPreferences("orbitask_widget", MODE_PRIVATE).edit()
 
-            val allTasks = (args["allTasks"] as? List<*>)
-                ?.mapNotNull { it?.toString() }
-                ?.take(6)
-                ?: emptyList()
-
-            val calendarCounts = args["calendarCounts"] as? Map<*, *> ?: emptyMap<Any, Any>()
-            val editor = prefs.edit()
-                .putInt("todayCount", (args["todayCount"] as? Number)?.toInt() ?: 0)
-                .putInt(
-                    "nextSevenDaysCount",
-                    (args["nextSevenDaysCount"] as? Number)?.toInt() ?: 0,
-                )
-                .putInt("overdueCount", (args["overdueCount"] as? Number)?.toInt() ?: 0)
-                .putInt(
-                    "importantCount",
-                    (args["importantCount"] as? Number)?.toInt() ?: 0,
-                )
-                .putInt(
-                    "completedCount",
-                    (args["completedCount"] as? Number)?.toInt() ?: 0,
-                )
-                .putInt("pendingCount", (args["pendingCount"] as? Number)?.toInt() ?: 0)
-                .putString("allTasks", allTasks.joinToString("\n"))
-                .putInt("calendarYear", (args["calendarYear"] as? Number)?.toInt() ?: 0)
-                .putInt("calendarMonth", (args["calendarMonth"] as? Number)?.toInt() ?: 0)
-
-            for (day in 1..31) {
-                val value = (calendarCounts[day.toString()] as? Number)?.toInt() ?: 0
-                editor.putInt("calendarDay_$day", value)
+            listOf(
+                "themeSurface",
+                "themeSurface2",
+                "themeText",
+                "themeMuted",
+                "themeAccent",
+                "themeAccent2",
+                "themeBorder",
+                "themeOnAccent",
+            ).forEach { key ->
+                val value = (args[key] as? Number)?.toInt()
+                if (value != null) editor.putInt(key, value)
             }
             editor.apply()
 
-            val manager = AppWidgetManager.getInstance(this)
-            val taskIds = manager.getAppWidgetIds(
-                ComponentName(this, OrbitaskTodayWidget::class.java),
-            )
-            val summaryIds = manager.getAppWidgetIds(
-                ComponentName(this, OrbitaskSummaryWidget::class.java),
-            )
-            val calendarIds = manager.getAppWidgetIds(
-                ComponentName(this, OrbitaskCalendarWidget::class.java),
-            )
-
-            OrbitaskTodayWidget.updateAll(this, manager, taskIds)
-            OrbitaskSummaryWidget.updateAll(this, manager, summaryIds)
-            OrbitaskCalendarWidget.updateAll(this, manager, calendarIds)
+            OrbitaskWidgetData.refreshFromDatabase(this)
+            refreshWidgets()
             result.success(null)
         }
+    }
+
+    private fun refreshWidgets() {
+        val manager = AppWidgetManager.getInstance(this)
+
+        val allTaskIds = manager.getAppWidgetIds(
+            ComponentName(this, OrbitaskTodayWidget::class.java),
+        )
+        val upcomingIds = manager.getAppWidgetIds(
+            ComponentName(this, OrbitaskSummaryWidget::class.java),
+        )
+        val calendarIds = manager.getAppWidgetIds(
+            ComponentName(this, OrbitaskCalendarWidget::class.java),
+        )
+
+        OrbitaskTodayWidget.updateAll(this, manager, allTaskIds)
+        OrbitaskSummaryWidget.updateAll(this, manager, upcomingIds)
+        OrbitaskCalendarWidget.updateAll(this, manager, calendarIds)
     }
 }
