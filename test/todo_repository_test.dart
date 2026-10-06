@@ -136,25 +136,57 @@ void main() {
     expect(stored.trashedAt, isNull);
   });
 
-  test('eliminacion permanente crea tombstone', () async {
+  test('eliminacion permanente registra tarea y todos sus hijos', () async {
     final task = Task(
       id: 'task-1',
       title: 'Eliminar',
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
+    final subtask = Subtask(
+      id: 'sub-delete',
+      taskId: task.id,
+      title: 'Hijo',
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+    final reminder = Reminder(
+      id: 'rem-delete',
+      taskId: task.id,
+      scheduledAt: DateTime.utc(2026, 10, 10, 19),
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+    final attachment = TaskAttachment(
+      id: 'att-delete',
+      taskId: task.id,
+      name: 'archivo.txt',
+      mimeType: 'text/plain',
+      sizeBytes: 1,
+      data: Uint8List.fromList([1]),
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
 
-    await repository.createTask(task, const [], const []);
+    await repository.createTask(task, [subtask], [reminder]);
+    await repository.replaceAttachmentsForTask(task.id, [attachment]);
     await repository.deleteTask(task.id);
 
     expect(await repository.getAllTasks(), isEmpty);
+    expect(await repository.getAllSubtasks(), isEmpty);
+    expect(await repository.getAllReminders(), isEmpty);
+    expect(await repository.getAllAttachments(), isEmpty);
 
     final rows = database.raw.select(
       "SELECT entity_type, entity_id FROM sync_deletions "
-      "WHERE entity_type = 'task' AND entity_id = 'task-1';",
+      "WHERE entity_id IN ('task-1', 'sub-delete', 'rem-delete', 'att-delete');",
     );
 
-    expect(rows.length, 1);
+    expect(
+      rows.map((row) => row['entity_type']).toSet(),
+      {'task', 'subtask', 'reminder', 'attachment'},
+    );
+    expect(rows.length, 4);
   });
 
   test('eliminar una lista mueve sus tareas a inbox y registra tombstone',
