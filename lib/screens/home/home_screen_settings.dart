@@ -278,6 +278,9 @@ extension _HomeScreenSettings on _HomeScreenState {
 
     if (!mounted) return;
 
+    final displayNameController = TextEditingController(
+      text: profile?.displayName ?? '',
+    );
     final usernameController = TextEditingController(
       text: profile?.username ?? '',
     );
@@ -413,11 +416,14 @@ extension _HomeScreenSettings on _HomeScreenState {
                                                 profile!.avatarUrl!,
                                               ),
                                     child: profile?.avatarUrl == null
-                                        ? Icon(
-                                            Icons.person_rounded,
-                                            size: compactDialog ? 30 : 38,
-                                            color: theme.colorScheme
-                                                .onSurfaceVariant,
+                                        ? Text(
+                                            profile?.initials ?? '?',
+                                            style: theme.textTheme.titleLarge
+                                                ?.copyWith(
+                                              fontWeight: FontWeight.w800,
+                                              color: theme.colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
                                           )
                                         : null,
                                   ),
@@ -428,14 +434,30 @@ extension _HomeScreenSettings on _HomeScreenState {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          profile?.username == null
-                                              ? 'Configura tu username'
-                                              : '@${profile!.username}',
+                                          profile?.displayName?.trim().isNotEmpty ==
+                                                  true
+                                              ? profile!.displayName!
+                                              : (profile?.username == null
+                                                  ? 'Configura tu perfil'
+                                                  : '@${profile!.username}'),
                                           style: theme.textTheme.titleMedium
                                               ?.copyWith(
                                             fontWeight: FontWeight.w800,
                                           ),
                                         ),
+                                        if (profile?.displayName?.trim().isNotEmpty ==
+                                                true &&
+                                            profile?.username != null) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '@${profile!.username}',
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                              color: theme.colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ],
                                         const SizedBox(height: 3),
                                         Text(
                                           email ?? 'Cuenta local',
@@ -598,6 +620,22 @@ extension _HomeScreenSettings on _HomeScreenState {
                             ),
                             const SizedBox(height: 14),
                             TextField(
+                              controller: displayNameController,
+                              enabled: !profileBusy && email != null,
+                              maxLength: 40,
+                              textCapitalization: TextCapitalization.words,
+                              textInputAction: TextInputAction.next,
+                              decoration: const InputDecoration(
+                                labelText: 'Nombre visible',
+                                hintText: 'Cómo quieres que te muestre Orbitask',
+                                helperText:
+                                    'Opcional. Máximo 40 caracteres.',
+                                prefixIcon:
+                                    Icon(Icons.badge_outlined),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
                               controller: usernameController,
                               enabled: !profileBusy && email != null,
                               maxLength: 24,
@@ -626,10 +664,15 @@ extension _HomeScreenSettings on _HomeScreenState {
                                         try {
                                           final updated = await widget
                                               .profileService
-                                              .updateUsername(
-                                                usernameController.text,
+                                              .updateProfile(
+                                                rawDisplayName:
+                                                    displayNameController.text,
+                                                rawUsername:
+                                                    usernameController.text,
                                               );
                                           if (!dialogContext.mounted) return;
+                                          displayNameController.text =
+                                              updated.displayName ?? '';
                                           usernameController.text =
                                               updated.username ?? '';
                                           setDialogState(() {
@@ -658,7 +701,7 @@ extension _HomeScreenSettings on _HomeScreenState {
                                               profileError =
                                                   error is FormatException
                                                       ? error.message
-                                                      : 'No se pudo guardar el username: $error';
+                                                      : 'No se pudo guardar el perfil: $error';
                                             });
                                           }
                                         }
@@ -667,7 +710,7 @@ extension _HomeScreenSettings on _HomeScreenState {
                                 label: Text(
                                   profileBusy
                                       ? 'Guardando…'
-                                      : 'Guardar username',
+                                      : 'Guardar perfil',
                                 ),
                               ),
                             ),
@@ -1029,6 +1072,7 @@ extension _HomeScreenSettings on _HomeScreenState {
         ),
       );
     } finally {
+      displayNameController.dispose();
       usernameController.dispose();
     }
   }}
