@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import '../database/local_database_native.dart';
 import '../models/reminder.dart';
 import '../models/subtask.dart';
 import '../models/task.dart';
+import '../models/task_attachment.dart';
 import '../models/task_list.dart';
 
 class TodoRepository {
@@ -65,6 +68,25 @@ class TodoRepository {
     ''');
 
     return rows.map(_subtaskFromRow).toList(growable: false);
+  }
+
+  Future<List<TaskAttachment>> getAllAttachments() async {
+    final rows = _database.raw.select('''
+      SELECT
+        id,
+        task_id,
+        name,
+        mime_type,
+        size_bytes,
+        data,
+        remote_path,
+        created_at,
+        updated_at
+      FROM task_attachments
+      ORDER BY created_at ASC;
+    ''');
+
+    return rows.map(_attachmentFromRow).toList(growable: false);
   }
 
   Future<List<Reminder>> getAllReminders() async {
@@ -142,6 +164,60 @@ class TodoRepository {
 
       _replaceSubtasks(task.id, subtasks);
       _replaceReminders(task.id, reminders);
+      _database.raw.execute('COMMIT;');
+    } catch (_) {
+      _database.raw.execute('ROLLBACK;');
+      rethrow;
+    }
+  }
+
+  Future<void> replaceAttachmentsForTask(
+    String taskId,
+    List<TaskAttachment> attachments,
+  ) async {
+    _database.raw.execute('BEGIN IMMEDIATE;');
+    try {
+      final deleteStatement = _database.raw.prepare(
+        'DELETE FROM task_attachments WHERE task_id = ?;',
+      );
+      try {
+        deleteStatement.execute([taskId]);
+      } finally {
+        deleteStatement.close();
+      }
+
+      if (attachments.isNotEmpty) {
+        final insertStatement = _database.raw.prepare('''
+          INSERT INTO task_attachments (
+            id,
+            task_id,
+            name,
+            mime_type,
+            size_bytes,
+            data,
+            remote_path,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+        ''');
+        try {
+          for (final attachment in attachments) {
+            insertStatement.execute([
+              attachment.id,
+              taskId,
+              attachment.name,
+              attachment.mimeType,
+              attachment.sizeBytes,
+              attachment.data,
+              attachment.remotePath,
+              attachment.createdAt.millisecondsSinceEpoch,
+              attachment.updatedAt.millisecondsSinceEpoch,
+            ]);
+          }
+        } finally {
+          insertStatement.close();
+        }
+      }
       _database.raw.execute('COMMIT;');
     } catch (_) {
       _database.raw.execute('ROLLBACK;');
@@ -572,6 +648,27 @@ class TodoRepository {
       title: row['title']! as String,
       completed: ((row['completed'] as int?) ?? 0) == 1,
       position: (row['position'] as int?) ?? 0,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        row['created_at']! as int,
+      ),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(
+        row['updated_at']! as int,
+      ),
+    );
+  }
+
+  TaskAttachment _attachmentFromRow(Map<String, Object?> row) {
+    final rawData = row['data'];
+    return TaskAttachment(
+      id: row['id']! as String,
+      taskId: row['task_id']! as String,
+      name: row['name']! as String,
+      mimeType: row['mime_type']! as String,
+      sizeBytes: (row['size_bytes'] as int?) ?? 0,
+      data: rawData is List<int>
+          ? Uint8List.fromList(rawData)
+          : (rawData as Uint8List),
+      remotePath: row['remote_path'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         row['created_at']! as int,
       ),
