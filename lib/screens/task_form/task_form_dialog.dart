@@ -484,7 +484,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                             width: 46,
                             height: 46,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
+                            errorBuilder: (context, error, stackTrace) => const Icon(
                               Icons.image_outlined,
                               size: 34,
                             ),
