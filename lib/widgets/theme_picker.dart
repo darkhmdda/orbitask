@@ -125,7 +125,15 @@ class _ThemePreviewCardState extends State<_ThemePreviewCard> {
                     ),
                     child: Text(
                       preset.icon,
-                      style: const TextStyle(fontSize: 21),
+                      style: const TextStyle(
+                        fontSize: 21,
+                        fontFamilyFallback: [
+                          'Noto Color Emoji',
+                          'Noto Emoji',
+                          'Segoe UI Emoji',
+                          'Apple Color Emoji',
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 11),
