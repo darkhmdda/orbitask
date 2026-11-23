@@ -2,11 +2,6 @@ name: Release Orbitask Linux v1.0.0
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/release_linux_v1.yml"
 
 permissions:
   contents: write
@@ -37,30 +32,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Load existing Supabase build defines
-        shell: bash
-        run: |
-          python3 - <<'PY' >> "$GITHUB_ENV"
-          import re
-          from pathlib import Path
-
-          source = Path(".github/workflows/release_windows_v1.yml").read_text()
-
-          patterns = {
-              "SUPABASE_URL": r"--dart-define=SUPABASE_URL=([^\s`]+)",
-              "SUPABASE_PUBLISHABLE_KEY": r"--dart-define=SUPABASE_PUBLISHABLE_KEY=([^\s`]+)",
-              "SUPABASE_AUTH_REDIRECT_URL": r"--dart-define=SUPABASE_AUTH_REDIRECT_URL=([^\s`]+)",
-          }
-
-          for name, pattern in patterns.items():
-              match = re.search(pattern, source)
-              if not match:
-                  raise SystemExit(f"No se pudo cargar {name}.")
-              print(f"{name}={match.group(1)}")
-          PY
-
       - name: Build Linux release
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_AUTH_REDIRECT_URL: com.darkhmdda.orbitask://login-callback
         run: |
+          : "${SUPABASE_URL:?Falta la variable de repositorio SUPABASE_URL}"
+          : "${SUPABASE_PUBLISHABLE_KEY:?Falta la variable de repositorio SUPABASE_PUBLISHABLE_KEY}"
           flutter build linux --release \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \

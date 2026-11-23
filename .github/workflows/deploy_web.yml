@@ -41,12 +41,18 @@ jobs:
         run: flutter pub get
 
       - name: Build Orbitask Web
-        run: >
-          flutter build web --release
-          --base-href /orbitask/
-          --dart-define=SUPABASE_URL=https://sscfamlzjxyusvybajrt.supabase.co
-          --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_12El4MU7eURPm6as1XhRBg_5j02cxU0
-          --dart-define=SUPABASE_AUTH_REDIRECT_URL=https://darkhmdda.github.io/orbitask/
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_AUTH_REDIRECT_URL: https://darkhmdda.github.io/orbitask/
+        run: |
+          : "${SUPABASE_URL:?Falta la variable de repositorio SUPABASE_URL}"
+          : "${SUPABASE_PUBLISHABLE_KEY:?Falta la variable de repositorio SUPABASE_PUBLISHABLE_KEY}"
+          flutter build web --release \
+            --base-href /orbitask/ \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
+            --dart-define=SUPABASE_AUTH_REDIRECT_URL="$SUPABASE_AUTH_REDIRECT_URL"
 
       - name: Use official Orbitask favicon
         run: cp linux/runner/resources/orbitask.png build/web/favicon.png

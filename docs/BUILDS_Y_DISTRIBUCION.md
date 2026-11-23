@@ -91,7 +91,7 @@ La URL de redirect usada debe estar permitida en la configuración de Auth de Su
 | -------- | ----------------- | -------- |
 | `flutter_ci.yml` | Push y pull request hacia `main` | `flutter analyze`, `flutter test` y `flutter build web` |
 | `deploy_web.yml` | Push a `main` y manual | Compila la web y la despliega en GitHub Pages |
-| `release_linux_v1.yml` | Manual, y push a `main` solo si cambia el propio workflow | Compila Linux, calcula SHA-256 y sube los artefactos a la release |
+| `release_linux_v1.yml` | Solo manual | Compila Linux, calcula SHA-256 y sube los artefactos a la release (con `--clobber`, es decir, sobrescribe los existentes) |
 | `release_windows_v1.yml` | Manual | Compila Windows, crea el ZIP portable y el instalador con Inno Setup |
 | `dependabot.yml` | Semanal | Propone actualizaciones de dependencias de `pub` y de GitHub Actions |
 
@@ -99,7 +99,7 @@ La URL de redirect usada debe estar permitida en la configuración de Auth de Su
 
 - **Cada push a `main` despliega la web.** Todo lo que llegue a `main` queda público en la Web al momento.
 - **Los workflows de release están atados a v1.0.0.** Sus nombres, la versión pasada al instalador de Windows y la release a la que suben los archivos están escritos a mano. Para una versión nueva hay que parametrizarlos o duplicarlos.
-- **La configuración de Supabase está dentro de los workflows.** `deploy_web.yml` y `release_windows_v1.yml` llevan la URL y la clave publicable escritas directamente, y `release_linux_v1.yml` las **extrae con una expresión regular del archivo del workflow de Windows**. Funciona, pero es frágil: cambiar el formato de esa línea rompe la build de Linux. Lo recomendable es usar variables del repositorio (`vars.*`).
+- **La configuración de Supabase viene de variables del repositorio.** Los workflows de Web, Windows y Linux leen `vars.SUPABASE_URL` y `vars.SUPABASE_PUBLISHABLE_KEY`, y fallan con un mensaje claro si falta alguna (así no se publica por error una build sin nube). El redirect de autenticación sí está escrito en cada workflow, porque no es un dato sensible. Las variables se crean en *Settings → Secrets and variables → Actions → Variables*. Son variables y no secretos porque la clave publicable es pública por diseño.
 - **Android no tiene workflow de release.** El APK se compila en local, porque la clave de firma no está en el repositorio.
 
 ## Flujo de ramas recomendado
