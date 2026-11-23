@@ -2,6 +2,19 @@
 
 Todos los cambios importantes de Orbitask se documentan en este archivo.
 
+## [Sin publicar]
+
+### Añadido
+
+- Widgets de pantalla de inicio para Android: Hoy, Resumen y Calendario. Leen las tareas de la base de datos local en solo lectura y usan los colores del tema activo. Su diseño visual está pendiente de revisión.
+
+### Documentación
+
+- README actualizado a la versión 1.0.1.
+- Nueva documentación técnica en `docs/`: arquitectura, datos y Supabase, sincronización (con sus limitaciones conocidas) y builds y distribución.
+- Se elimina el documento `.docx` externo a favor de documentación en markdown versionada junto al código.
+
+
 ## [1.0.1] - 2026-10-06
 
 Hotfix de estabilidad para la sincronización de tareas y sus datos relacionados.
