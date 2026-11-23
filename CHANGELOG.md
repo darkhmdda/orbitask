@@ -8,6 +8,14 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 - Widgets de pantalla de inicio para Android: Hoy, Resumen y Calendario. Leen las tareas de la base de datos local en solo lectura y usan los colores del tema activo. Su diseño visual está pendiente de revisión.
 
+### Corregido
+
+- Migración de `package:flutter/material.dart` a `package:material_ui`. Flutter 3.50 marca el import anterior como obsoleto y `flutter analyze` (y con él el CI) fallaba con 12 avisos.
+
+### Cambiado
+
+- Los workflows de Web, Windows y Linux leen la URL y la clave publicable de Supabase de variables del repositorio en lugar de tenerlas escritas en el código. Fallan con un mensaje claro si faltan. El workflow de Linux ya no extrae esos valores con una expresión regular del workflow de Windows, y pasa a ejecutarse solo de forma manual (antes también se disparaba al modificar su propio archivo en `main`, lo que volvía a subir y sobrescribir los artefactos de la release).
+
 ### Documentación
 
 - README actualizado a la versión 1.0.1.

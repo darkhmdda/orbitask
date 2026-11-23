@@ -124,6 +124,6 @@ Enlaces de retorno (deben estar permitidos en la configuración de Auth de Supab
 
 - **La clave publicable no es un secreto**, pero solo es segura mientras RLS esté bien configurado. Este esquema lo está. Si añades tablas, activa RLS y crea sus políticas desde el primer momento.
 - Nunca incluyas una clave `service_role` en la app, en el repositorio ni en los workflows.
-- La URL del proyecto y la clave publicable de las builds oficiales están escritas directamente en algunos workflows de GitHub Actions. No es una filtración (acaban dentro de cada binario y de la web), pero conviene moverlas a variables del repositorio para poder cambiarlas sin editar los workflows.
+- La URL del proyecto y la clave publicable de las builds oficiales se pasan a los workflows de GitHub Actions mediante variables del repositorio (`SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`), no están escritas en el código. Esto facilita cambiarlas, pero no las oculta: acaban dentro de cada binario y de la web, y por eso su seguridad depende de RLS. Los valores que ya estuvieron en commits anteriores siguen visibles en el historial de git.
 - El registro está abierto: cualquiera puede crear una cuenta en el proyecto de Supabase de las builds oficiales. Hay límite de tamaño por archivo, pero **no hay una cuota total de almacenamiento por usuario** en las migraciones.
 - La firma de Android (`android/key.properties` y el keystore) no se versiona y debe respaldarse fuera del repositorio.

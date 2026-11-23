@@ -27,11 +27,17 @@ jobs:
 
       - name: Build Windows release
         shell: powershell
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_AUTH_REDIRECT_URL: com.darkhmdda.orbitask://login-callback
         run: |
+          if (-not $env:SUPABASE_URL) { throw "Falta la variable de repositorio SUPABASE_URL" }
+          if (-not $env:SUPABASE_PUBLISHABLE_KEY) { throw "Falta la variable de repositorio SUPABASE_PUBLISHABLE_KEY" }
           flutter build windows --release `
-            --dart-define=SUPABASE_URL=https://sscfamlzjxyusvybajrt.supabase.co `
-            --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_12El4MU7eURPm6as1XhRBg_5j02cxU0 `
-            --dart-define=SUPABASE_AUTH_REDIRECT_URL=com.darkhmdda.orbitask://login-callback
+            --dart-define=SUPABASE_URL=$env:SUPABASE_URL `
+            --dart-define=SUPABASE_PUBLISHABLE_KEY=$env:SUPABASE_PUBLISHABLE_KEY `
+            --dart-define=SUPABASE_AUTH_REDIRECT_URL=$env:SUPABASE_AUTH_REDIRECT_URL
 
       - name: Create portable ZIP
         shell: powershell
