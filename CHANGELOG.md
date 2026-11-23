@@ -16,6 +16,8 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 - Los workflows de Web, Windows y Linux leen la URL y la clave publicable de Supabase de variables del repositorio en lugar de tenerlas escritas en el código. Fallan con un mensaje claro si faltan. El workflow de Linux ya no extrae esos valores con una expresión regular del workflow de Windows, y pasa a ejecutarse solo de forma manual (antes también se disparaba al modificar su propio archivo en `main`, lo que volvía a subir y sobrescribir los artefactos de la release).
 
+- Supabase: nuevo trigger `skip_stale_sync_updates` (migración `20261123180000`). El servidor descarta, sin error, las actualizaciones de las tablas de sincronización cuyo `updated_at` no sea estrictamente mayor que el guardado. Evita que una copia antigua sobrescriba datos más recientes y que las filas idénticas generen cambios y eventos de Realtime. No resuelve los relojes desajustados de los dispositivos.
+
 ### Documentación
 
 - README actualizado a la versión 1.0.1.

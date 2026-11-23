@@ -47,6 +47,7 @@ Las migraciones están en `supabase/migrations/` y deben aplicarse en orden cron
 | `20261006012000_add_task_attachments` | Tabla y bucket de adjuntos |
 | `20261006014500_enable_task_attachments_realtime` | Realtime para adjuntos |
 | `20261006020500_allow_attachment_sync_deletions` | Permite el tipo `attachment` en el diario de borrados |
+| `20261123180000_skip_stale_sync_updates` | Trigger que descarta las actualizaciones no más recientes que lo guardado, en las tablas de sincronización (verificación en `supabase/tests/`) |
 
 ### Tablas
 
