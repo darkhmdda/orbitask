@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="branding/orbitask-logo.png" alt="Orbitask" width="320">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="branding/orbitask-logo-on-dark.png">
+    <img src="branding/orbitask-logo-on-light.png" alt="Orbitask" width="340">
+  </picture>
 </p>
 
 <p align="center"><strong>Tus tareas, siempre en órbita.</strong></p>
@@ -124,5 +127,5 @@ MIT. Consulta el archivo [LICENSE](LICENSE).
 ---
 
 <p align="center">
-  <img src="branding/orbitask-icon.png" alt="Icono de Orbitask" width="72">
+  <img src="branding/orbitask-mark.png" alt="Logo de Orbitask" width="110">
 </p>
