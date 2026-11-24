@@ -24,6 +24,7 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ### Cambiado
 
+- El despliegue de la web separa la compilación y la publicación en dos jobs, como recomienda `actions/deploy-pages`, y sube a `upload-pages-artifact@v4` y `checkout@v5`. Con todo en un mismo job, la publicación fallaba de vez en cuando porque no encontraba el artefacto recién subido.
 - Nuevo workflow manual `release_android.yml`: compila un APK firmado con la clave guardada en los secretos del repositorio y lo deja en un borrador de release. Así ya no hace falta el SDK de Android en la máquina local.
 - Los workflows de Web, Windows y Linux leen la URL y la clave publicable de Supabase de variables del repositorio en lugar de tenerlas escritas en el código. Fallan con un mensaje claro si faltan. El workflow de Linux ya no extrae esos valores con una expresión regular del workflow de Windows, y pasa a ejecutarse solo de forma manual (antes también se disparaba al modificar su propio archivo en `main`, lo que volvía a subir y sobrescribir los artefactos de la release).
 
