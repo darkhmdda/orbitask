@@ -1,540 +1,2404 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Widget de calendario. Archivo generado: 6 filas x 7 celdas (calendar_cell_0 a calendar_cell_41).
+     Cada celda tiene un círculo relleno (hoy), un anillo (día seleccionado), el número y un punto (tareas). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_calendar_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/orbitask_widget_background"
-    android:orientation="vertical"
-    android:padding="10dp">
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/widget_calendar_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/orbitask_widget_bg_shape"/>
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="42dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="10dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widget_calendar_title"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:gravity="center_vertical"
+                android:maxLines="1"
+                android:paddingStart="4dp"
+                android:textColor="#513A66"
+                android:textSize="18sp"
+                android:textStyle="bold"/>
+
+            <ImageView
+                android:id="@+id/widget_calendar_prev"
+                android:layout_width="40dp"
+                android:layout_height="44dp"
+                android:contentDescription="Mes anterior"
+                android:padding="11dp"
+                android:src="@drawable/ic_orbitask_widget_chevron_left"/>
+
+            <ImageView
+                android:id="@+id/widget_calendar_next"
+                android:layout_width="40dp"
+                android:layout_height="44dp"
+                android:contentDescription="Mes siguiente"
+                android:padding="11dp"
+                android:src="@drawable/ic_orbitask_widget_chevron_right"/>
+
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp">
+
+                <include layout="@layout/orbitask_widget_add_button"/>
+            </FrameLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp">
+
+            <TextView
+                android:id="@+id/widget_calendar_weekday_1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="L"
+                android:textColor="#6E5C7C"
+                android:textSize="11sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/widget_calendar_weekday_2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="M"
+                android:textColor="#6E5C7C"
+                android:textSize="11sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/widget_calendar_weekday_3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="X"
+                android:textColor="#6E5C7C"
+                android:textSize="11sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/widget_calendar_weekday_4"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="J"
+                android:textColor="#6E5C7C"
+                android:textSize="11sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/widget_calendar_weekday_5"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="V"
+                android:textColor="#6E5C7C"
+                android:textSize="11sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/widget_calendar_weekday_6"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="S"
+                android:textColor="#6E5C7C"
+                android:textSize="11sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/widget_calendar_weekday_7"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="D"
+                android:textColor="#6E5C7C"
+                android:textSize="11sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/widget_calendar_row_0"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_0"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_0_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_0_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_0_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_0_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_1"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_1_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_1_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_1_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_1_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_2"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_2_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_2_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_2_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_2_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_3"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_3_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_3_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_3_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_3_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_4"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_4_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_4_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_4_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_4_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_5"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_5_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_5_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_5_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_5_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_6"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_6_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_6_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_6_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_6_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_calendar_row_1"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_7"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_7_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_7_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_7_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_7_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_8"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_8_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_8_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_8_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_8_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_9"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_9_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_9_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_9_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_9_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_10"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_10_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_10_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_10_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_10_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_11"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_11_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_11_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_11_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_11_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_12"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_12_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_12_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_12_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_12_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_13"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_13_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_13_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_13_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_13_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_calendar_row_2"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_14"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_14_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_14_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_14_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_14_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_15"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_15_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_15_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_15_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_15_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_16"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_16_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_16_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_16_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_16_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_17"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_17_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_17_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_17_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_17_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_18"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_18_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_18_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_18_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_18_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_19"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_19_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_19_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_19_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_19_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_20"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_20_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_20_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_20_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_20_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_calendar_row_3"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_21"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_21_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_21_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_21_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_21_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_22"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_22_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_22_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_22_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_22_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_23"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_23_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_23_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_23_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_23_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_24"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_24_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_24_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_24_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_24_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_25"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_25_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_25_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_25_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_25_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_26"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_26_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_26_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_26_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_26_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_27"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_27_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_27_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_27_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_27_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_calendar_row_4"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_28"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_28_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_28_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_28_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_28_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_29"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_29_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_29_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_29_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_29_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_30"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_30_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_30_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_30_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_30_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_31"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_31_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_31_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_31_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_31_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_32"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_32_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_32_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_32_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_32_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_33"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_33_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_33_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_33_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_33_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_34"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_34_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_34_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_34_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_34_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_calendar_row_5"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_35"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_35_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_35_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_35_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_35_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_36"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_36_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_36_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_36_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_36_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_37"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_37_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_37_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_37_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_37_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_38"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_38_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_38_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_38_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_38_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_39"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_39_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_39_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_39_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_39_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_40"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_40_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_40_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_40_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_40_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/calendar_cell_41"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_41_bg"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_circle"
+                            android:visibility="gone"/>
+
+                        <ImageView
+                            android:id="@+id/calendar_cell_41_ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/orbitask_widget_ring"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/calendar_cell_41_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:importantForAccessibility="no"
+                            android:includeFontPadding="false"
+                            android:textColor="#513A66"
+                            android:textSize="13sp"/>
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/calendar_cell_41_dot"
+                        android:layout_width="5dp"
+                        android:layout_height="5dp"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/orbitask_widget_circle"
+                        android:visibility="invisible"/>
+                </FrameLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/widget_calendar_divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginBottom="4dp"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/orbitask_widget_line"/>
 
         <TextView
-            android:id="@+id/widget_calendar_title"
-            android:layout_width="0dp"
+            android:id="@+id/widget_agenda_label"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Octubre 2026"
-            android:textColor="#F3F5F7"
-            android:textSize="18sp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:textColor="#513A66"
+            android:textSize="13sp"
             android:textStyle="bold"/>
 
         <TextView
-            android:id="@+id/widget_calendar_prev"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:gravity="center"
-            android:text="‹"
-            android:textColor="#AAB2BC"
-            android:textSize="30sp"/>
+            android:id="@+id/widget_agenda_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="4dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="4dp"
+            android:text="Nada para este día."
+            android:textColor="#6E5C7C"
+            android:textSize="13sp"
+            android:visibility="gone"/>
+
+        <LinearLayout
+            android:id="@+id/widget_agenda_row_0"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/widget_agenda_bar_0"
+                android:layout_width="4dp"
+                android:layout_height="28dp"
+                android:importantForAccessibility="no"
+                android:scaleType="fitXY"
+                android:src="@drawable/orbitask_widget_bar"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_agenda_title_0"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="#513A66"
+                    android:textSize="14sp"/>
+
+                <TextView
+                    android:id="@+id/widget_agenda_sub_0"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="#6E5C7C"
+                    android:textSize="12sp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_agenda_row_1"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/widget_agenda_bar_1"
+                android:layout_width="4dp"
+                android:layout_height="28dp"
+                android:importantForAccessibility="no"
+                android:scaleType="fitXY"
+                android:src="@drawable/orbitask_widget_bar"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_agenda_title_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="#513A66"
+                    android:textSize="14sp"/>
+
+                <TextView
+                    android:id="@+id/widget_agenda_sub_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="#6E5C7C"
+                    android:textSize="12sp"/>
+            </LinearLayout>
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/widget_calendar_next"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:gravity="center"
-            android:text="›"
-            android:textColor="#AAB2BC"
-            android:textSize="30sp"/>
-
-        <TextView
-            android:id="@+id/widget_calendar_add"
-            android:layout_width="38dp"
-            android:layout_height="38dp"
-            android:background="@drawable/orbitask_widget_chip"
-            android:gravity="center"
-            android:text="+"
-            android:textColor="#A8BD86"
-            android:textSize="27sp"/>
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="24dp"
-        android:orientation="horizontal">
-        <TextView
-            android:id="@+id/widget_calendar_weekday_1"
-            android:layout_width="0dp"
+            android:id="@+id/widget_agenda_more"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="L"
-            android:textColor="#AAB2BC"
-            android:textSize="11sp"
-            android:textStyle="bold"/>
-        <TextView
-            android:id="@+id/widget_calendar_weekday_2"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="M"
-            android:textColor="#AAB2BC"
-            android:textSize="11sp"
-            android:textStyle="bold"/>
-        <TextView
-            android:id="@+id/widget_calendar_weekday_3"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="X"
-            android:textColor="#AAB2BC"
-            android:textSize="11sp"
-            android:textStyle="bold"/>
-        <TextView
-            android:id="@+id/widget_calendar_weekday_4"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="J"
-            android:textColor="#AAB2BC"
-            android:textSize="11sp"
-            android:textStyle="bold"/>
-        <TextView
-            android:id="@+id/widget_calendar_weekday_5"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="V"
-            android:textColor="#AAB2BC"
-            android:textSize="11sp"
-            android:textStyle="bold"/>
-        <TextView
-            android:id="@+id/widget_calendar_weekday_6"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="S"
-            android:textColor="#AAB2BC"
-            android:textSize="11sp"
-            android:textStyle="bold"/>
-        <TextView
-            android:id="@+id/widget_calendar_weekday_7"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="D"
-            android:textColor="#AAB2BC"
-            android:textSize="11sp"
-            android:textStyle="bold"/>
+            android:paddingStart="18dp"
+            android:paddingEnd="4dp"
+            android:textColor="#6E5C7C"
+            android:textSize="12sp"
+            android:visibility="gone"/>
     </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:orientation="horizontal">
-        <TextView
-            android:id="@+id/calendar_cell_0"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_1"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_2"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_3"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_4"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_5"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_6"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-    </LinearLayout>
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:orientation="horizontal">
-        <TextView
-            android:id="@+id/calendar_cell_7"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_8"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_9"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_10"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_11"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_12"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_13"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-    </LinearLayout>
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:orientation="horizontal">
-        <TextView
-            android:id="@+id/calendar_cell_14"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_15"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_16"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_17"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_18"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_19"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_20"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-    </LinearLayout>
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:orientation="horizontal">
-        <TextView
-            android:id="@+id/calendar_cell_21"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_22"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_23"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_24"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_25"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_26"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_27"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-    </LinearLayout>
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:orientation="horizontal">
-        <TextView
-            android:id="@+id/calendar_cell_28"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_29"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_30"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_31"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_32"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_33"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_34"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-    </LinearLayout>
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:orientation="horizontal">
-        <TextView
-            android:id="@+id/calendar_cell_35"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_36"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_37"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_38"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_39"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_40"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-        <TextView
-            android:id="@+id/calendar_cell_41"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:gravity="top|center_horizontal"
-            android:padding="2dp"
-            android:textColor="#F3F5F7"
-            android:textSize="10sp"/>
-    </LinearLayout>
-
-</LinearLayout>
+</FrameLayout>

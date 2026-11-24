@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Encabezado de sección dentro de la lista: "VENCIDAS", "COMPLETADAS · 2"... -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="32dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="4dp"
+    android:paddingTop="6dp">
+
+    <TextView
+        android:id="@+id/widget_section_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:letterSpacing="0.04"
+        android:maxLines="1"
+        android:textColor="#6E5C7C"
+        android:textSize="12sp"
+        android:textStyle="bold"/>
+
+    <ImageView
+        android:id="@+id/widget_section_line"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginStart="8dp"
+        android:layout_weight="1"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/orbitask_widget_line"/>
+</LinearLayout>

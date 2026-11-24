@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Botón "+" redondo. El círculo y el icono se tiñen con el color del tema. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_add"
+    android:layout_width="44dp"
+    android:layout_height="44dp"
+    android:contentDescription="Nueva tarea">
+
+    <ImageView
+        android:id="@+id/widget_add_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:src="@drawable/orbitask_widget_circle"/>
+
+    <ImageView
+        android:id="@+id/widget_add_icon"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_gravity="center"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_orbitask_widget_plus"/>
+</FrameLayout>
