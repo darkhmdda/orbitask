@@ -8,11 +8,16 @@ import '../models/task_attachment.dart';
 class AttachmentOpener {
   static Future<String?> download(TaskAttachment attachment) async {
     if (Platform.isAndroid) {
-      return FilePicker.platform.saveFile(
+      final uri = await FilePicker.saveFile(
         dialogTitle: 'Guardar adjunto',
         fileName: attachment.name,
         bytes: attachment.data,
+        mimeType: attachment.mimeType,
       );
+      if (uri == null) return null;
+      // Android suele devolver un content:// del selector de archivos, que no
+      // es una ruta legible; en ese caso basta con el nombre del archivo.
+      return uri.isScheme('file') ? uri.toFilePath() : attachment.name;
     }
 
     if (!Platform.isLinux && !Platform.isWindows) {
