@@ -39,7 +39,7 @@ Detalle en `docs/ARQUITECTURA.md`, `docs/SINCRONIZACION.md` y `docs/DATOS_Y_SUPA
 ## Entorno
 
 - Flutter estable (el CI usa `channel: stable`); el SDK de Dart pide `^3.13.0`.
-- Android: AGP 9.1.1, Gradle 9.5.1, Java 17 en el workflow.
+- Android: AGP 9.3.1, Kotlin 2.4.20, Gradle 9.5.1, Java 17 en el workflow. Son las versiones de la plantilla de Flutter estable; al subir Flutter, mirar `packages/flutter_tools/lib/src/android/gradle_utils.dart`.
 - Los APK firmados se compilan **solo en GitHub Actions**, no en local.
 - Dependabot agrupa las subidas menores y de parche (`pub-menores`, `actions-menores`). Las mayores llegan por separado y se revisan una a una: leer el changelog y migrar el código si hace falta, como se hizo con `file_picker` 13.
 
