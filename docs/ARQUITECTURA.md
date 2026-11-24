@@ -111,23 +111,37 @@ Al abrir la app o tras sincronizar, los recordatorios se reconcilian con las tar
 
 ## Widgets de Android
 
-Hay tres widgets de pantalla de inicio, escritos en Kotlin en `android/app/src/main/kotlin/com/darkhmdda/orbitask/`:
+Hay tres widgets de pantalla de inicio, escritos en Kotlin en `android/app/src/main/kotlin/com/darkhmdda/orbitask/`. Los nombres de las clases vienen de una versión anterior y no se cambian: si cambiaran, Android quitaría los widgets que el usuario ya tiene colocados.
 
-| Widget | Clase |
-| ------ | ----- |
-| Hoy | `OrbitaskTodayWidget` |
-| Resumen | `OrbitaskSummaryWidget` |
-| Calendario | `OrbitaskCalendarWidget` |
+| Widget | Clase | Layout |
+| ------ | ----- | ------ |
+| Todas las tareas | `OrbitaskTodayWidget` | `orbitask_widget_list.xml` |
+| Próximas entregas | `OrbitaskSummaryWidget` | `orbitask_widget_list.xml` |
+| Calendario | `OrbitaskCalendarWidget` | `orbitask_widget_calendar.xml` |
+
+Piezas:
+
+| Archivo | Qué hace |
+| ------- | -------- |
+| `OrbitaskWidgets.kt` | Repinta todos los widgets, construye los dos de lista y programa el refresco de medianoche. |
+| `OrbitaskTaskListService.kt` | Filas de las listas (secciones, casillas, tachado, recuadro de fecha). |
+| `OrbitaskCalendarWidget.kt` + `OrbitaskCalendarIds.kt` | Calendario y agenda. Los ids de las 42 celdas están generados junto con el layout. |
+| `OrbitaskWidgetActionReceiver.kt` | Toques: completar o desmarcar, abrir tarea, nueva tarea, navegar por el calendario y la alarma de medianoche. |
+| `OrbitaskWidgetData.kt` | Lectura y escritura de `orbitask.sqlite`, cancelación de recordatorios y acciones pendientes para Flutter. |
+| `OrbitaskWidgetStyle.kt` | Colores derivados del tema y textos de fecha en español. |
+| `lib/screens/home/home_screen_android_widgets.dart` | Lado de Flutter del canal. |
 
 Cómo funcionan:
 
-1. Flutter llama al `MethodChannel` `com.darkhmdda.orbitask/widgets`, método `updateWidgets`, y le pasa los colores del tema activo. Se guardan en `SharedPreferences` (`orbitask_widget`).
-2. `OrbitaskWidgetData.refreshFromDatabase` abre `orbitask.sqlite` **en solo lectura** directamente desde Kotlin, lee las tareas fuera de la Papelera y calcula los contadores (pendientes, completadas, importantes, hoy, próximos siete días, vencidas).
-3. Se refrescan los tres widgets.
+1. Flutter llama al `MethodChannel` `com.darkhmdda.orbitask/widgets`, método `updateWidgets`, con los colores del tema activo y si es claro u oscuro (`themeLight`). Se guardan en `SharedPreferences` (`orbitask_widget`). Los fondos y los iconos son blancos y se tiñen con esos colores. Los colores de prioridad alta y de vencida no los define ningún tema: hay un tono para temas claros y otro para oscuros.
+2. `OrbitaskWidgetData.refreshFromDatabase` abre `orbitask.sqlite` en solo lectura y copia las tareas fuera de la Papelera, completadas incluidas.
+3. **Completar o desmarcar** desde un widget escribe directamente `completed` y `updated_at` en la tabla `tasks` (con `busy_timeout` por si la app tiene la base abierta). Al completar, cancela las alarmas de sus recordatorios calculando el mismo id que `NotificationService.notificationId`. El id de la tarea queda apuntado y, al abrir la app, Flutter lo recoge con `takeChangedTasks` para cancelar o volver a programar los recordatorios y lanzar una sincronización.
+4. **Abrir una tarea o crear una**: el receptor guarda la acción (`takePendingAction`, caduca a los 2 minutos) y abre la app. Flutter la recoge al terminar de cargar los datos y abre el formulario.
+5. Una alarma inexacta (no despierta el teléfono) repinta los widgets poco después de medianoche.
 
-**Acoplamiento a tener presente:** el código Kotlin depende del nombre del archivo (`orbitask.sqlite`), de su ubicación (`filesDir`) y de los nombres de columna de la tabla `tasks`. Si cambia el esquema local, hay que actualizar también `OrbitaskWidgetData`.
+**Acoplamiento a tener presente:** el código Kotlin depende del nombre del archivo (`orbitask.sqlite`), de su ubicación (`filesDir`), de las columnas de `tasks` y `reminders`, del cálculo del id de notificación y de cómo `flutter_local_notifications` programa sus alarmas. Si cambia algo de eso, hay que actualizar también `OrbitaskWidgetData`. Si el plugin cambiara su forma de programar, la cancelación desde el widget no encontraría la alarma, pero la app la cancela igualmente al abrirse.
 
-**Estado:** los widgets están implementados pero no figuran en ninguna release ni en el CHANGELOG publicado, y su diseño visual está pendiente de rediseño.
+**Estado:** rediseñados en noviembre de 2026; todavía no figuran en ninguna release publicada.
 
 ## Temas
 

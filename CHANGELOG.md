@@ -6,7 +6,14 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ### Añadido
 
-- Widgets de pantalla de inicio para Android: Hoy, Resumen y Calendario. Leen las tareas de la base de datos local en solo lectura y usan los colores del tema activo. Su diseño visual está pendiente de revisión.
+- Widgets de pantalla de inicio para Android: **Todas las tareas**, **Próximas entregas** y **Calendario**. Usan los colores del tema activo de Orbitask.
+  - Esquinas redondeadas, fechas relativas ("Hoy", "Mañana", "en 4 días", "Vencida · ayer") y el color de la casilla según la prioridad.
+  - Al marcar una tarea, queda tachada al final de la lista y se puede desmarcar. Al completarla desde el widget se cancelan sus recordatorios; al desmarcarla, se vuelven a programar la próxima vez que se abre la app.
+  - El botón "+" abre directamente el formulario de nueva tarea. En el calendario, la tarea se propone con la fecha del día seleccionado.
+  - Tocar una tarea la abre en la app.
+  - Próximas entregas agrupa las tareas en Vencidas, Esta semana y Más adelante, con un recuadro de fecha.
+  - El calendario muestra un punto en los días con tareas pendientes y, debajo, la agenda del día que se toque. Tocar el nombre del mes vuelve a hoy.
+  - Se actualizan solos poco después de medianoche.
 - Dos temas oscuros nuevos, Subaru y Asta. El identificador del tema se sincroniza como texto, por lo que las versiones anteriores de la app mostrarán el tema por defecto si otro dispositivo elige uno de estos.
 
 ### Corregido

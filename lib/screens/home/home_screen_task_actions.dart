@@ -35,7 +35,7 @@ extension _HomeScreenTaskActions on _HomeScreenState {
     }
   }
 
-  Future<void> _openTaskForm({Task? task}) async {
+  Future<void> _openTaskForm({Task? task, DateTime? initialDueDate}) async {
     final now = DateTime.now();
     final taskId = task?.id ?? now.microsecondsSinceEpoch.toString();
     final existingSubtasks =
@@ -56,6 +56,7 @@ extension _HomeScreenTaskActions on _HomeScreenState {
         reminders: existingReminders,
         attachments: existingAttachments,
         initialListId: _selectedListId ?? 'inbox',
+        initialDueDate: initialDueDate,
       ),
     );
 

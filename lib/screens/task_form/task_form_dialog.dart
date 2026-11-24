@@ -43,6 +43,7 @@ class TaskFormDialog extends StatefulWidget {
     this.reminders = const [],
     this.attachments = const [],
     this.initialListId,
+    this.initialDueDate,
   });
 
   final String taskId;
@@ -52,6 +53,10 @@ class TaskFormDialog extends StatefulWidget {
   final List<Reminder> reminders;
   final List<TaskAttachment> attachments;
   final String? initialListId;
+
+  /// Fecha propuesta para una tarea nueva (por ejemplo, el día elegido en el
+  /// widget de calendario). Se ignora al editar una tarea existente.
+  final DateTime? initialDueDate;
 
   @override
   State<TaskFormDialog> createState() => _TaskFormDialogState();
@@ -77,7 +82,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     _titleController = TextEditingController(text: task?.title ?? '');
     _descriptionController = TextEditingController(text: task?.description ?? '');
     _priority = task?.priority ?? TaskPriority.none;
-    _dueDate = task?.dueDate;
+    _dueDate = task == null ? widget.initialDueDate : task.dueDate;
 
     final desiredListId = task?.listId ?? widget.initialListId ?? 'inbox';
     final listExists = widget.lists.any((list) => list.id == desiredListId);

@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="280dp"
-    android:minHeight="330dp"
     android:initialLayout="@layout/orbitask_widget_calendar"
+    android:minWidth="280dp"
+    android:minHeight="400dp"
+    android:minResizeWidth="250dp"
+    android:minResizeHeight="330dp"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen"
-    android:updatePeriodMillis="0"/>
+    android:targetCellWidth="4"
+    android:targetCellHeight="5"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"/>

@@ -29,6 +29,7 @@ part 'home_screen_widgets.dart';
 part 'home_screen_sync.dart';
 part 'home_screen_task_actions.dart';
 part 'home_screen_settings.dart';
+part 'home_screen_android_widgets.dart';
 
 enum _TaskPriorityFilter { all, high, medium, low, none }
 
@@ -100,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen>
   Map<String, List<Reminder>> _remindersByTask = const {};
   Map<String, List<TaskAttachment>> _attachmentsByTask = const {};
   bool _notificationsReconciled = false;
+  bool _handlingAndroidWidgetEvents = false;
   bool _loading = true;
   bool _cloudSyncing = false;
   bool _cloudSyncQueued = false;
@@ -240,6 +242,8 @@ class _HomeScreenState extends State<HomeScreen>
         _notificationsReconciled = true;
         await _reconcileNotifications(tasks, groupedReminders);
       }
+
+      unawaited(_consumeAndroidWidgetEvents());
     } catch (error) {
       if (!mounted) return;
 
@@ -825,27 +829,6 @@ class _HomeScreenState extends State<HomeScreen>
     _selectFilter(selected);
   }
 
-  Future<void> _updateAndroidHomeWidgets(List<Task> tasks) async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
-
-    final preset = AppTheme.presetFor(widget.themeId);
-    const channel = MethodChannel('com.darkhmdda.orbitask/widgets');
-
-    try {
-      await channel.invokeMethod<void>('updateWidgets', {
-        'themeSurface': preset.surface.toARGB32(),
-        'themeSurface2': preset.surface2.toARGB32(),
-        'themeText': preset.text.toARGB32(),
-        'themeMuted': preset.muted.toARGB32(),
-        'themeAccent': preset.accent.toARGB32(),
-        'themeAccent2': preset.accent2.toARGB32(),
-        'themeBorder': preset.border.toARGB32(),
-        'themeOnAccent': preset.chipSelectedText.toARGB32(),
-      });
-    } catch (_) {
-      // Home-screen widgets are an Android-only enhancement.
-    }
-  }
 
   Widget _buildQuickAdd(BuildContext context) {
     final selectedList = _selectedList();

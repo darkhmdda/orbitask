@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Casilla de completar: contorno (pendiente) o relleno con marca (completada). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_row_check"
+    android:layout_width="44dp"
+    android:layout_height="44dp">
+
+    <ImageView
+        android:id="@+id/widget_row_box"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_gravity="center"
+        android:importantForAccessibility="no"
+        android:src="@drawable/orbitask_widget_check_box"/>
+
+    <ImageView
+        android:id="@+id/widget_row_box_fill"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_gravity="center"
+        android:importantForAccessibility="no"
+        android:src="@drawable/orbitask_widget_check_fill"
+        android:visibility="gone"/>
+
+    <ImageView
+        android:id="@+id/widget_row_tick"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:layout_gravity="center"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_orbitask_widget_check"
+        android:visibility="gone"/>
+</FrameLayout>

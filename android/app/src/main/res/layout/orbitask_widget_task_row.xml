@@ -1,24 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Fila de "Todas las tareas": casilla, título y fecha relativa. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_row_root"
     android:layout_width="match_parent"
-    android:layout_height="52dp"
+    android:layout_height="54dp"
     android:gravity="center_vertical"
-    android:orientation="horizontal"
-    android:paddingHorizontal="4dp">
+    android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/widget_row_check"
-        android:layout_width="42dp"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:text="☐"
-        android:textColor="#DDE2E8"
-        android:textSize="27sp"/>
+    <include layout="@layout/orbitask_widget_check"/>
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -28,24 +22,17 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="1"
-            android:textColor="#F3F5F7"
+            android:textColor="#513A66"
             android:textSize="15sp"/>
 
         <TextView
             android:id="@+id/widget_row_date"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="#AAB2BC"
-            android:textSize="11sp"/>
+            android:layout_marginTop="1dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#6E5C7C"
+            android:textSize="12sp"/>
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/widget_row_priority"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="6dp"
-        android:text="↑"
-        android:textColor="#D9A441"
-        android:textSize="17sp"
-        android:visibility="gone"/>
 </LinearLayout>
