@@ -168,6 +168,7 @@ def main():
     write("branding/orbitask-logo.svg", lockup_svg())
     write("branding/orbitask-logo-transparent.svg", lockup_svg(background=None))
     render(lockup_svg(), "branding/orbitask-logo.png", 1200)
+    render(icon_svg(0.86, radius=225), "branding/orbitask-icon.png", 256)
 
     rounded = icon_svg(0.86, radius=225)       # escritorio y Android antiguo
     full = icon_svg(0.92)                      # web: cuadrado completo
