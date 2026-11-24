@@ -340,6 +340,21 @@ void main() {
     });
   });
 
+  group('Subida rápida', () {
+    test('solo sube lo modificado después de la última subida', () {
+      final watermark = _at(10).millisecondsSinceEpoch;
+      final tasks = [
+        _newTask('antes', 'Ya subida', _at(5)),
+        _newTask('justo', 'En la marca', _at(10)),
+        _newTask('despues', 'Editada luego', _at(11)),
+      ];
+
+      final pending = changedSince(tasks, watermark, (task) => task.updatedAt);
+
+      expect(pending.map((task) => task.id), ['despues']);
+    });
+  });
+
   group('Subida (regresión de reminders_task_fk, 1.0.1)', () {
     test('no se suben hijos de tareas que ya no existen', () {
       final reminders = [

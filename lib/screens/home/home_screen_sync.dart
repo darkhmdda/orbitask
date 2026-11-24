@@ -8,12 +8,9 @@ extension _HomeScreenSync on _HomeScreenState {
     return const Duration(seconds: 30);
   }
 
-  Duration get _cloudSyncDebounceDelay {
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
-      return const Duration(milliseconds: 500);
-    }
-    return const Duration(milliseconds: 750);
-  }
+  /// Espera tras una edición antes de la subida rápida, para agrupar
+  /// cambios seguidos (por ejemplo, completar varias tareas).
+  Duration get _cloudSyncDebounceDelay => const Duration(milliseconds: 300);
 
   void _startRealtimeSubscription() {
     if (!widget.cloudSyncService.isConfigured ||
@@ -79,20 +76,35 @@ extension _HomeScreenSync on _HomeScreenState {
     }
   }
 
+  /// Programa una sincronización.
+  ///
+  /// - Sin `immediate` (tras una edición local): espera un momento para
+  ///   agrupar cambios y hace una **subida rápida**, que sube solo lo
+  ///   modificado sin descargar nada antes.
+  /// - Con `immediate` (al abrir la app, sondeo, aviso de Realtime que no se
+  ///   puede aplicar suelto, reintentos): **sincronización completa**.
+  ///
+  /// Si se piden las dos antes de que arranque, gana la completa.
   void _scheduleCloudSync({bool immediate = false}) {
     if (!widget.cloudSyncService.isConfigured ||
         widget.authService.currentUser == null) {
       return;
     }
 
+    if (immediate) _fullSyncPending = true;
+
     _cloudSyncDebounce?.cancel();
     _cloudSyncDebounce = Timer(
       immediate ? Duration.zero : _cloudSyncDebounceDelay,
-      () => unawaited(_runAutomaticCloudSync()),
+      () {
+        final fullSync = _fullSyncPending;
+        _fullSyncPending = false;
+        unawaited(_runAutomaticCloudSync(fullSync: fullSync));
+      },
     );
   }
 
-  Future<void> _runAutomaticCloudSync() async {
+  Future<void> _runAutomaticCloudSync({bool fullSync = true}) async {
     if (!widget.cloudSyncService.isConfigured ||
         widget.authService.currentUser == null) {
       return;
@@ -100,6 +112,7 @@ extension _HomeScreenSync on _HomeScreenState {
 
     if (_cloudSyncing) {
       _cloudSyncQueued = true;
+      if (fullSync) _queuedFullSync = true;
       return;
     }
 
@@ -107,23 +120,23 @@ extension _HomeScreenSync on _HomeScreenState {
       _applyState(() => _cloudSyncing = true);
     }
 
+    var needsFullSync = false;
     try {
-      final result = await widget.cloudSyncService.syncNow();
-      if (!mounted) return;
+      if (fullSync) {
+        final result = await widget.cloudSyncService.syncNow();
+        if (!mounted) return;
 
-      widget.onCloudThemeChanged(result.themeId);
+        widget.onCloudThemeChanged(result.themeId);
+        _markCloudSyncSucceeded();
+        await _reloadAndUpdateReminders();
+      } else {
+        final result = await widget.cloudSyncService.pushLocalChanges();
+        if (!mounted) return;
 
-      _cloudSyncFailureCount = 0;
-      _cloudSyncRetryTimer?.cancel();
-      _cloudSyncRetryTimer = null;
-
-      _applyState(() {
-        _cloudSyncFailed = false;
-        _cloudSyncError = null;
-        _lastCloudSyncAt = widget.cloudSyncService.lastSuccessfulSyncAt;
-      });
-
-      await _reloadAndUpdateReminders();
+        // No cambia nada en local, así que no hace falta recargar.
+        needsFullSync = result.needsFullSync;
+        if (!needsFullSync) _markCloudSyncSucceeded();
+      }
     } catch (error) {
       if (mounted) {
         _applyState(() {
@@ -133,19 +146,37 @@ extension _HomeScreenSync on _HomeScreenState {
       }
       _scheduleCloudRetry();
     } finally {
-      final shouldRetry = _cloudSyncQueued;
+      final queued = _cloudSyncQueued;
+      final queuedFull = _queuedFullSync || needsFullSync;
       _cloudSyncQueued = false;
+      _queuedFullSync = false;
 
       if (mounted) {
         _applyState(() => _cloudSyncing = false);
       }
 
-      if (shouldRetry) {
+      if (queued || needsFullSync) {
         _cloudSyncRetryTimer?.cancel();
         _cloudSyncRetryTimer = null;
-        _scheduleCloudSync(immediate: true);
+        if (queuedFull) {
+          _scheduleCloudSync(immediate: true);
+        } else {
+          _scheduleCloudSync();
+        }
       }
     }
+  }
+
+  void _markCloudSyncSucceeded() {
+    _cloudSyncFailureCount = 0;
+    _cloudSyncRetryTimer?.cancel();
+    _cloudSyncRetryTimer = null;
+
+    _applyState(() {
+      _cloudSyncFailed = false;
+      _cloudSyncError = null;
+      _lastCloudSyncAt = widget.cloudSyncService.lastSuccessfulSyncAt;
+    });
   }
 
   void _scheduleCloudRetry() {

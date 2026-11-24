@@ -2,6 +2,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/local_database_native.dart';
 import '../repositories/todo_repository_native.dart';
+import '../models/reminder.dart';
+import '../models/subtask.dart';
+import '../models/task.dart';
+import '../models/task_list.dart';
 import 'remote_change.dart';
 import 'remote_versions.dart';
 import 'sync_upload_filter.dart';
@@ -24,6 +28,23 @@ class CloudUploadResult {
   final int attachments;
 
   int get total => lists + tasks + subtasks + reminders + attachments;
+}
+
+/// Resultado de una subida rápida ([CloudSyncService.pushLocalChanges]).
+class CloudPushResult {
+  const CloudPushResult({
+    required this.uploaded,
+    required this.needsFullSync,
+  });
+
+  /// La subida rápida no puede hacerlo sola (primera sincronización, cambios
+  /// en adjuntos...): hay que lanzar una sincronización completa.
+  const CloudPushResult.fullSyncRequired()
+      : uploaded = 0,
+        needsFullSync = true;
+
+  final int uploaded;
+  final bool needsFullSync;
 }
 
 class CloudSyncResult {
@@ -61,6 +82,10 @@ class CloudSyncResult {
 class CloudSyncService {
   static const Duration deletionRetention = Duration(days: 365);
   static const Duration deletionCleanupInterval = Duration(days: 1);
+
+  /// Marca (hora local, en ms) hasta la que todo lo local ya está en Supabase.
+  /// La subida rápida sube lo modificado después de ella.
+  static const String pushWatermarkKey = 'cloud_push_watermark';
 
   CloudSyncService({
     required SupabaseClient? client,
@@ -286,6 +311,7 @@ class CloudSyncService {
 
     _applyLocalDeletionJournal();
 
+    final snapshotAt = DateTime.now().millisecondsSinceEpoch;
     final uploaded = await uploadLocalSnapshot(remoteVersions: remoteVersions);
     await _uploadDeletionJournal(client, user.id);
     await _applyDeletionJournalToCloud(client, user.id);
@@ -295,6 +321,7 @@ class CloudSyncService {
       user.id,
     );
 
+    _database.setSetting(pushWatermarkKey, snapshotAt.toString());
     _database.setSetting(
       'last_cloud_sync_at',
       DateTime.now().toUtc().toIso8601String(),
@@ -387,89 +414,14 @@ class CloudSyncService {
             )
             .toList(growable: false);
 
-    if (listsToUpload.isNotEmpty) {
-      await client.from('task_lists').upsert(
-        listsToUpload
-            .map(
-              (list) => <String, dynamic>{
-                'user_id': userId,
-                'id': list.id,
-                'name': list.name,
-                'icon': list.icon,
-                'is_system': list.isSystem,
-                'created_at': _iso(list.createdAt),
-                'updated_at': _iso(list.updatedAt),
-              },
-            )
-            .toList(growable: false),
-        onConflict: 'user_id,id',
-      );
-    }
-
-    if (tasksToUpload.isNotEmpty) {
-      await client.from('tasks').upsert(
-        tasksToUpload
-            .map(
-              (task) => <String, dynamic>{
-                'user_id': userId,
-                'id': task.id,
-                'title': task.title,
-                'description': task.description,
-                'priority': task.priority.index,
-                'due_date':
-                    task.dueDate == null ? null : _iso(task.dueDate!),
-                'completed': task.completed,
-                'list_id': task.listId,
-                'trashed_at':
-                    task.trashedAt == null ? null : _iso(task.trashedAt!),
-                'created_at': _iso(task.createdAt),
-                'updated_at': _iso(task.updatedAt),
-              },
-            )
-            .toList(growable: false),
-        onConflict: 'user_id,id',
-      );
-    }
-
-    if (subtasksToUpload.isNotEmpty) {
-      await client.from('subtasks').upsert(
-        subtasksToUpload
-            .map(
-              (subtask) => <String, dynamic>{
-                'user_id': userId,
-                'id': subtask.id,
-                'task_id': subtask.taskId,
-                'title': subtask.title,
-                'completed': subtask.completed,
-                'position': subtask.position,
-                'created_at': _iso(subtask.createdAt),
-                'updated_at': _iso(subtask.updatedAt),
-              },
-            )
-            .toList(growable: false),
-        onConflict: 'user_id,id',
-      );
-    }
-
-    if (remindersToUpload.isNotEmpty) {
-      await client.from('reminders').upsert(
-        remindersToUpload
-            .map(
-              (reminder) => <String, dynamic>{
-                'user_id': userId,
-                'id': reminder.id,
-                'task_id': reminder.taskId,
-                'scheduled_at': _iso(reminder.scheduledAt),
-                'offset_minutes': reminder.offsetMinutes,
-                'enabled': reminder.enabled,
-                'created_at': _iso(reminder.createdAt),
-                'updated_at': _iso(reminder.updatedAt),
-              },
-            )
-            .toList(growable: false),
-        onConflict: 'user_id,id',
-      );
-    }
+    await _upsertRows(
+      client,
+      userId,
+      lists: listsToUpload,
+      tasks: tasksToUpload,
+      subtasks: subtasksToUpload,
+      reminders: remindersToUpload,
+    );
 
     if (validAttachments.isNotEmpty) {
       final remoteAttachmentRows = await client
@@ -538,6 +490,215 @@ class CloudSyncService {
       reminders: remindersToUpload.length,
       attachments: validAttachments.length,
     );
+  }
+
+  /// Subida rápida tras una edición local.
+  ///
+  /// Sube solo las filas, borrados y tema modificados desde la última subida
+  /// (ver [pushWatermarkKey]), sin descargar nada antes. Es seguro porque el
+  /// trigger `skip_stale_sync_updates` de Supabase descarta cualquier fila que
+  /// no sea más reciente que la guardada. Los demás dispositivos reciben el
+  /// cambio por Realtime al momento.
+  ///
+  /// Si no se puede hacer así (espacio sin vincular, primera sincronización
+  /// o cambios en adjuntos, que hay que subir a Storage) devuelve
+  /// [CloudPushResult.fullSyncRequired] y no sube nada.
+  Future<CloudPushResult> pushLocalChanges() async {
+    final client = _requireClient();
+    final user = _requireUser(client);
+
+    final ownerId = _database.getSetting('cloud_account_id');
+    final watermark = int.tryParse(_database.getSetting(pushWatermarkKey) ?? '');
+    if (ownerId == null || ownerId.isEmpty || watermark == null) {
+      return const CloudPushResult.fullSyncRequired();
+    }
+    _requireWorkspaceOwner(user.id);
+    final userId = user.id;
+
+    // Lo que se edite mientras se sube quedará después de esta marca.
+    final startedAt = DateTime.now().millisecondsSinceEpoch;
+
+    if (_hasAttachmentChangesSince(watermark)) {
+      return const CloudPushResult.fullSyncRequired();
+    }
+
+    final allTasks = await _repository.getAllTasks();
+    final taskIds = allTasks.map((task) => task.id).toSet();
+    final lists = changedSince(
+      await _repository.getAllLists(),
+      watermark,
+      (item) => item.updatedAt,
+    );
+    final tasks = changedSince(allTasks, watermark, (item) => item.updatedAt);
+    final subtasks = keepChildrenOfExistingTasks(
+      changedSince(
+        await _repository.getAllSubtasks(),
+        watermark,
+        (item) => item.updatedAt,
+      ),
+      taskIds,
+      (item) => item.taskId,
+    );
+    final reminders = keepChildrenOfExistingTasks(
+      changedSince(
+        await _repository.getAllReminders(),
+        watermark,
+        (item) => item.updatedAt,
+      ),
+      taskIds,
+      (item) => item.taskId,
+    );
+
+    await _upsertRows(
+      client,
+      userId,
+      lists: lists,
+      tasks: tasks,
+      subtasks: subtasks,
+      reminders: reminders,
+    );
+    await _uploadDeletionJournal(client, userId, since: watermark);
+    await _applyDeletionJournalToCloud(client, userId, since: watermark);
+    final themeUploaded = await _pushThemeIfChanged(client, userId, watermark);
+
+    _database.setSetting(pushWatermarkKey, startedAt.toString());
+    _database.setSetting(
+      'last_cloud_upload_at',
+      DateTime.now().toUtc().toIso8601String(),
+    );
+
+    return CloudPushResult(
+      uploaded: lists.length +
+          tasks.length +
+          subtasks.length +
+          reminders.length +
+          (themeUploaded ? 1 : 0),
+      needsFullSync: false,
+    );
+  }
+
+  bool _hasAttachmentChangesSince(int watermark) {
+    final rows = _database.raw.select(
+      'SELECT 1 FROM task_attachments WHERE updated_at > ? LIMIT 1;',
+      [watermark],
+    );
+    return rows.isNotEmpty;
+  }
+
+  Future<bool> _pushThemeIfChanged(
+    SupabaseClient client,
+    String userId,
+    int watermark,
+  ) async {
+    final updatedAt =
+        int.tryParse(_database.getSetting('theme_updated_at') ?? '') ?? 0;
+    if (updatedAt <= watermark) return false;
+
+    await client.from('user_preferences').upsert(
+      <String, dynamic>{
+        'user_id': userId,
+        'theme_id': _database.getSetting('theme_id') ?? 'emilia',
+        'updated_at': DateTime.fromMillisecondsSinceEpoch(
+          updatedAt,
+          isUtc: true,
+        ).toIso8601String(),
+      },
+      onConflict: 'user_id',
+    );
+    return true;
+  }
+
+  Future<void> _upsertRows(
+    SupabaseClient client,
+    String userId, {
+    required List<TaskList> lists,
+    required List<Task> tasks,
+    required List<Subtask> subtasks,
+    required List<Reminder> reminders,
+  }) async {
+    if (lists.isNotEmpty) {
+      await client.from('task_lists').upsert(
+        lists
+            .map(
+              (list) => <String, dynamic>{
+                'user_id': userId,
+                'id': list.id,
+                'name': list.name,
+                'icon': list.icon,
+                'is_system': list.isSystem,
+                'created_at': _iso(list.createdAt),
+                'updated_at': _iso(list.updatedAt),
+              },
+            )
+            .toList(growable: false),
+        onConflict: 'user_id,id',
+      );
+    }
+
+    if (tasks.isNotEmpty) {
+      await client.from('tasks').upsert(
+        tasks
+            .map(
+              (task) => <String, dynamic>{
+                'user_id': userId,
+                'id': task.id,
+                'title': task.title,
+                'description': task.description,
+                'priority': task.priority.index,
+                'due_date':
+                    task.dueDate == null ? null : _iso(task.dueDate!),
+                'completed': task.completed,
+                'list_id': task.listId,
+                'trashed_at':
+                    task.trashedAt == null ? null : _iso(task.trashedAt!),
+                'created_at': _iso(task.createdAt),
+                'updated_at': _iso(task.updatedAt),
+              },
+            )
+            .toList(growable: false),
+        onConflict: 'user_id,id',
+      );
+    }
+
+    if (subtasks.isNotEmpty) {
+      await client.from('subtasks').upsert(
+        subtasks
+            .map(
+              (subtask) => <String, dynamic>{
+                'user_id': userId,
+                'id': subtask.id,
+                'task_id': subtask.taskId,
+                'title': subtask.title,
+                'completed': subtask.completed,
+                'position': subtask.position,
+                'created_at': _iso(subtask.createdAt),
+                'updated_at': _iso(subtask.updatedAt),
+              },
+            )
+            .toList(growable: false),
+        onConflict: 'user_id,id',
+      );
+    }
+
+    if (reminders.isNotEmpty) {
+      await client.from('reminders').upsert(
+        reminders
+            .map(
+              (reminder) => <String, dynamic>{
+                'user_id': userId,
+                'id': reminder.id,
+                'task_id': reminder.taskId,
+                'scheduled_at': _iso(reminder.scheduledAt),
+                'offset_minutes': reminder.offsetMinutes,
+                'enabled': reminder.enabled,
+                'created_at': _iso(reminder.createdAt),
+                'updated_at': _iso(reminder.updatedAt),
+              },
+            )
+            .toList(growable: false),
+        onConflict: 'user_id,id',
+      );
+    }
   }
 
   Future<String> _syncThemePreference(
@@ -892,12 +1053,17 @@ class CloudSyncService {
 
   Future<void> _uploadDeletionJournal(
     SupabaseClient client,
-    String userId,
-  ) async {
-    final rows = _database.raw.select('''
+    String userId, {
+    int since = -1,
+  }) async {
+    final rows = _database.raw.select(
+      '''
       SELECT entity_type, entity_id, deleted_at
-      FROM sync_deletions;
-    ''');
+      FROM sync_deletions
+      WHERE deleted_at > ?;
+      ''',
+      [since],
+    );
 
     if (rows.isEmpty) return;
 
@@ -921,13 +1087,18 @@ class CloudSyncService {
 
   Future<void> _applyDeletionJournalToCloud(
     SupabaseClient client,
-    String userId,
-  ) async {
-    final rows = _database.raw.select('''
+    String userId, {
+    int since = -1,
+  }) async {
+    final rows = _database.raw.select(
+      '''
       SELECT entity_type, entity_id, deleted_at
       FROM sync_deletions
+      WHERE deleted_at > ?
       ORDER BY deleted_at ASC;
-    ''');
+      ''',
+      [since],
+    );
 
     for (final row in rows) {
       final type = row['entity_type']! as String;
