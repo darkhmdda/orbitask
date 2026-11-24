@@ -262,6 +262,7 @@ extension _HomeScreenSettings on _HomeScreenState {
 
   Future<void> _showSettingsInfo() async {
     var selectedThemeId = widget.themeId;
+    var appliedThemeId = widget.themeId;
     var uploadingCloud = false;
     var profileBusy = false;
     String? profileError;
@@ -347,39 +348,98 @@ extension _HomeScreenSettings on _HomeScreenState {
                   height: compactDialog ? dialogSize.height * 0.68 : 570,
                   child: TabBarView(
                     children: [
-                      SingleChildScrollView(
-                        padding: const EdgeInsets.only(top: 8, bottom: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'Tema de Orbitask',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.only(
+                                top: 8,
+                                bottom: 12,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    'Tema de Orbitask',
+                                    style:
+                                        theme.textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    widget.authService.currentUser == null
+                                        ? 'Elige un tema y pulsa «Aplicar tema». Se guarda en este dispositivo.'
+                                        : 'Elige un tema y pulsa «Aplicar tema». Se aplica en tus otros dispositivos al momento.',
+                                    style:
+                                        theme.textTheme.bodyMedium?.copyWith(
+                                      color:
+                                          theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ThemePicker(
+                                    currentThemeId: selectedThemeId,
+                                    appliedThemeId: appliedThemeId,
+                                    onSelected: (themeId) {
+                                      setDialogState(
+                                        () => selectedThemeId = themeId,
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              widget.authService.currentUser == null
-                                  ? 'Elige la apariencia que prefieras. La selección se guarda localmente.'
-                                  : 'Elige la apariencia que prefieras. La selección se sincroniza con tu cuenta.',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
+                          ),
+                          const Divider(height: 1),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    selectedThemeId == appliedThemeId
+                                        ? 'Tema en uso: ${AppTheme.presetFor(appliedThemeId).name}'
+                                        : 'Seleccionado: ${AppTheme.presetFor(selectedThemeId).name}',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color:
+                                          theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                                if (selectedThemeId != appliedThemeId) ...[
+                                  const SizedBox(width: 8),
+                                  TextButton(
+                                    onPressed: () => setDialogState(
+                                      () => selectedThemeId = appliedThemeId,
+                                    ),
+                                    child: const Text('Descartar'),
+                                  ),
+                                ],
+                                const SizedBox(width: 8),
+                                FilledButton.icon(
+                                  onPressed: selectedThemeId == appliedThemeId
+                                      ? null
+                                      : () {
+                                          widget.onThemeChanged(
+                                            selectedThemeId,
+                                          );
+                                          setDialogState(
+                                            () => appliedThemeId =
+                                                selectedThemeId,
+                                          );
+                                          unawaited(_pushThemeToCloud());
+                                        },
+                                  icon: const Icon(Icons.check_rounded),
+                                  label: const Text('Aplicar tema'),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 16),
-                            ThemePicker(
-                              currentThemeId: selectedThemeId,
-                              onSelected: (themeId) {
-                                setDialogState(
-                                  () => selectedThemeId = themeId,
-                                );
-                                widget.onThemeChanged(themeId);
-                                _scheduleCloudSync();
-                              },
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                       SingleChildScrollView(
                         padding: const EdgeInsets.only(top: 8, bottom: 12),
@@ -807,17 +867,19 @@ extension _HomeScreenSettings on _HomeScreenState {
                                             () => _cloudSyncing = true,
                                           );
                                           try {
-                                            final result = await widget
-                                                .cloudSyncService
+                                            await widget.cloudSyncService
                                                 .syncNow();
                                             if (!mounted) return;
 
+                                            final syncedThemeId = widget
+                                                .cloudSyncService
+                                                .localThemeId;
                                             widget.onCloudThemeChanged(
-                                              result.themeId,
+                                              syncedThemeId,
                                             );
                                             setDialogState(() {
-                                              selectedThemeId =
-                                                  result.themeId;
+                                              selectedThemeId = syncedThemeId;
+                                              appliedThemeId = syncedThemeId;
                                             });
 
                                             _applyState(() {

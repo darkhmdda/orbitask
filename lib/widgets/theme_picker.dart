@@ -8,10 +8,16 @@ class ThemePicker extends StatelessWidget {
     super.key,
     required this.currentThemeId,
     required this.onSelected,
+    this.appliedThemeId,
   });
 
+  /// Tema seleccionado en el selector (borde y marca).
   final String currentThemeId;
   final ValueChanged<String> onSelected;
+
+  /// Tema aplicado en la app (etiqueta "En uso"). Si es `null`, se usa
+  /// [currentThemeId].
+  final String? appliedThemeId;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +37,7 @@ class ThemePicker extends StatelessWidget {
                   child: _ThemePreviewCard(
                     preset: preset,
                     selected: currentThemeId == preset.id,
+                    inUse: (appliedThemeId ?? currentThemeId) == preset.id,
                     onTap: () => onSelected(preset.id),
                   ),
                 ),
@@ -46,11 +53,13 @@ class _ThemePreviewCard extends StatefulWidget {
   const _ThemePreviewCard({
     required this.preset,
     required this.selected,
+    required this.inUse,
     required this.onTap,
   });
 
   final OrbitaskThemePreset preset;
   final bool selected;
+  final bool inUse;
   final VoidCallback onTap;
 
   @override
@@ -144,7 +153,7 @@ class _ThemePreviewCardState extends State<_ThemePreviewCard> {
                                 ),
                               ),
                             ),
-                            if (selected) ...[
+                            if (widget.inUse) ...[
                               const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(

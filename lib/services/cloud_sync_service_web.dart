@@ -489,9 +489,68 @@ class CloudSyncService {
     );
   }
 
-  /// Subida rápida tras una edición local.
+  /// Tema guardado en este dispositivo (el último elegido o recibido).
+  String get localThemeId => _database.getSetting('theme_id') ?? 'emilia';
+
+  /// Sube el tema al momento, sin tocar las tareas. Se llama al pulsar
+  /// "Aplicar tema". Si falla (sin conexión), la sincronización completa lo
+  /// subirá después, porque el tema local es más reciente.
+  Future<void> pushTheme() async {
+    final client = _requireClient();
+    final user = _requireUser(client);
+
+    final ownerId = _database.getSetting('cloud_account_id');
+    if (ownerId == null || ownerId.isEmpty) return;
+    _requireWorkspaceOwner(user.id);
+
+    final updatedAt =
+        int.tryParse(_database.getSetting('theme_updated_at') ?? '') ?? 0;
+    if (updatedAt == 0) return;
+
+    await client.from('user_preferences').upsert(
+      <String, dynamic>{
+        'user_id': user.id,
+        'theme_id': localThemeId,
+        'updated_at': DateTime.fromMillisecondsSinceEpoch(
+          updatedAt,
+          isUtc: true,
+        ).toIso8601String(),
+      },
+      onConflict: 'user_id',
+    );
+  }
+
+  /// Aplica un cambio de tema que llegó por Realtime. Devuelve el tema nuevo
+  /// si es más reciente que el local; `null` si es el eco del propio cambio,
+  /// una versión antigua o de otra cuenta.
+  String? applyRemoteTheme(RemoteChange change) {
+    if (change.table != RemoteChange.tablePreferences ||
+        change.type == RemoteChangeType.delete) {
+      return null;
+    }
+
+    final ownerId = _database.getSetting('cloud_account_id');
+    if (ownerId == null || ownerId.isEmpty || change.userId != ownerId) {
+      return null;
+    }
+
+    final themeId = change.record['theme_id'] as String?;
+    final rawUpdatedAt = change.record['updated_at'];
+    if (themeId == null || rawUpdatedAt == null) return null;
+
+    final remoteUpdatedAt = _millis(rawUpdatedAt);
+    final localUpdatedAt =
+        int.tryParse(_database.getSetting('theme_updated_at') ?? '') ?? 0;
+    if (remoteUpdatedAt <= localUpdatedAt) return null;
+
+    _database.setSetting('theme_id', themeId);
+    _database.setSetting('theme_updated_at', remoteUpdatedAt.toString());
+    return themeId;
+  }
+
+  /// Subida rápida tras una edición local (el tema va aparte: [pushTheme]).
   ///
-  /// Sube solo las filas, borrados y tema modificados desde la última subida
+  /// Sube solo las filas y borrados modificados desde la última subida
   /// (ver [pushWatermarkKey]), sin descargar nada antes. Es seguro porque el
   /// trigger `skip_stale_sync_updates` de Supabase descarta cualquier fila que
   /// no sea más reciente que la guardada. Los demás dispositivos reciben el
@@ -556,7 +615,6 @@ class CloudSyncService {
     );
     await _uploadDeletionJournal(client, userId, since: watermark);
     await _applyDeletionJournalToCloud(client, userId, since: watermark);
-    final themeUploaded = await _pushThemeIfChanged(client, userId, watermark);
 
     _database.setSetting(pushWatermarkKey, startedAt.toString());
     _database.setSetting(
@@ -568,8 +626,7 @@ class CloudSyncService {
       uploaded: lists.length +
           tasks.length +
           subtasks.length +
-          reminders.length +
-          (themeUploaded ? 1 : 0),
+          reminders.length,
       needsFullSync: false,
     );
   }
@@ -578,29 +635,6 @@ class CloudSyncService {
     return _database.readCollection('task_attachments').any(
           (item) => ((item['updated_at'] as num?)?.toInt() ?? 0) > watermark,
         );
-  }
-
-  Future<bool> _pushThemeIfChanged(
-    SupabaseClient client,
-    String userId,
-    int watermark,
-  ) async {
-    final updatedAt =
-        int.tryParse(_database.getSetting('theme_updated_at') ?? '') ?? 0;
-    if (updatedAt <= watermark) return false;
-
-    await client.from('user_preferences').upsert(
-      <String, dynamic>{
-        'user_id': userId,
-        'theme_id': _database.getSetting('theme_id') ?? 'emilia',
-        'updated_at': DateTime.fromMillisecondsSinceEpoch(
-          updatedAt,
-          isUtc: true,
-        ).toIso8601String(),
-      },
-      onConflict: 'user_id',
-    );
-    return true;
   }
 
   Future<void> _upsertRows(

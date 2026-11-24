@@ -31,12 +31,20 @@ Tras una edición local no se hace una sincronización completa: `pushLocalChang
 1. Si el espacio no está vinculado, no hay marca todavía (primera sincronización) o hay adjuntos modificados (hay que subirlos a Storage), no sube nada y pide una sincronización completa.
 2. Sube las listas, tareas, subtareas y recordatorios con `updated_at` posterior a la marca, con el mismo filtro de hijos huérfanos que la sincronización completa.
 3. Sube los tombstones posteriores a la marca y los aplica en la nube.
-4. Sube el tema si cambió después de la marca.
-5. Mueve la marca a la hora en que empezó la subida, de modo que lo editado mientras subía queda pendiente para la siguiente.
+4. Mueve la marca a la hora en que empezó la subida, de modo que lo editado mientras subía queda pendiente para la siguiente.
 
 Es seguro subir sin comparar antes porque el trigger `skip_stale_sync_updates` descarta en el servidor cualquier fila que no sea más reciente que la guardada. Los demás dispositivos reciben el cambio por Realtime y lo aplican al momento. La sincronización completa (al abrir la app, cada 20–30 s, ante un aviso que no se puede aplicar suelto o tras un fallo) sigue subiendo todo lo pendiente y actualiza la marca al terminar, así que cualquier cosa que la subida rápida no cubra se sube como mucho en el siguiente sondeo.
 
 Las filas que llegan de otros dispositivos con un `updated_at` posterior a la marca se vuelven a enviar en la siguiente subida rápida; el servidor las descarta sin generar cambios ni avisos.
+
+## Tema
+
+El tema tiene su propia sincronización, separada de las tareas:
+
+- Se elige en *Ajustes → Apariencia* y se confirma con **Aplicar tema**. Al aplicarlo, `pushTheme` lo sube al momento a `user_preferences`, sin tocar las tareas.
+- Los demás dispositivos lo reciben por Realtime y `applyRemoteTheme` lo aplica al momento si es más reciente que el suyo, sin lanzar una sincronización completa.
+- Al elegir un tema, su `theme_updated_at` es como mínimo el último que conoce el dispositivo más 1 ms, así que una elección explícita siempre gana a lo que ese dispositivo ya ha visto, aunque otro dispositivo tenga el reloj adelantado.
+- La sincronización completa sigue comparando el tema (paso 2 del flujo) como respaldo, por ejemplo si `pushTheme` falló sin conexión. Al terminar aplica el tema **guardado en ese momento**. Antes aplicaba el que había leído al empezar, de modo que un tema elegido mientras se sincronizaba se revertía en pantalla.
 
 ## Cambios por Realtime
 
