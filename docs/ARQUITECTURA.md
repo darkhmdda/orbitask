@@ -48,7 +48,7 @@ lib/
 ├── app.dart                   MaterialApp, tema activo
 ├── core/
 │   ├── config/cloud_config.dart   Variables --dart-define de Supabase
-│   ├── theme/app_theme.dart       12 temas (solo definiciones de color)
+│   ├── theme/app_theme.dart       14 temas (solo definiciones de color)
 │   └── list_icons.dart            Iconos disponibles para listas
 ├── models/                    Task, Subtask, Reminder, TaskList,
 │                              TaskAttachment, OrbitaskProfile
@@ -131,7 +131,7 @@ Cómo funcionan:
 
 ## Temas
 
-Hay 12 temas, definidos en `lib/core/theme/app_theme.dart` solo como paletas de color. El tema elegido se guarda en la configuración local (`theme_id`, con `theme_updated_at`) y se sincroniza por cuenta en la tabla `user_preferences`. Si el identificador guardado no existe, se normaliza a uno válido.
+Hay 14 temas, definidos en `lib/core/theme/app_theme.dart` solo como paletas de color. El tema elegido se guarda en la configuración local (`theme_id`, con `theme_updated_at`) y se sincroniza por cuenta en la tabla `user_preferences`. Si el identificador guardado no existe, se normaliza a uno válido.
 
 ## Pruebas y CI
 

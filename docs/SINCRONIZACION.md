@@ -34,7 +34,7 @@ Para no reaccionar a sus propios cambios, el dispositivo **ignora los eventos de
 4. **Descargar datos.** Trae completas las tablas `task_lists`, `tasks`, `subtasks`, `reminders` y `task_attachments` del usuario.
 5. **Fusionar en local.** Inserta o actualiza cada registro solo si el remoto tiene un `updated_at` **mayor** que el local (`WHERE excluded.updated_at > tabla.updated_at`).
 6. **Aplicar borrados en local.** Elimina los registros marcados en el diario, salvo que el registro local sea posterior al borrado.
-7. **Subir datos.** Sube con `upsert` todas las listas, tareas, subtareas, recordatorios y adjuntos locales. El servidor descarta, sin error, las filas cuyo `updated_at` no sea estrictamente mayor que el guardado (trigger `skip_stale_sync_updates`). Desde 1.0.1 **no sube** subtareas, recordatorios ni adjuntos cuya tarea ya no existe en local (evita el error de clave foránea `reminders_task_fk`).
+7. **Subir datos.** Sube con `upsert` las listas, tareas, subtareas y recordatorios locales que no existen en Supabase o son estrictamente más recientes que su copia remota (se compara con las versiones descargadas en el paso 4; los adjuntos siguen su propia comprobación). El servidor descarta, sin error, las filas cuyo `updated_at` no sea estrictamente mayor que el guardado (trigger `skip_stale_sync_updates`). Desde 1.0.1 **no sube** subtareas, recordatorios ni adjuntos cuya tarea ya no existe en local (evita el error de clave foránea `reminders_task_fk`).
 8. **Subir y aplicar borrados en la nube.** Sube el diario local y elimina en Supabase los registros (y archivos de Storage) borrados, salvo que su `updated_at` sea posterior.
 9. **Limpiar el diario.** Como máximo una vez al día (ver [Tombstones](#tombstones)).
 10. **Registrar la hora** de la última sincronización correcta.
@@ -68,8 +68,8 @@ Estas limitaciones son del diseño actual y están pendientes de mejorar.
 
 1. **Granularidad de registro completo.** Si dos dispositivos editan campos distintos de la misma tarea sin conexión, el registro más reciente sobrescribe al otro entero; los cambios del perdedor se pierden.
 2. **Dependencia del reloj del cliente.** El `updated_at` lo escribe el dispositivo. Desde la migración `20261123180000_skip_stale_sync_updates`, el servidor ya no deja que una escritura más antigua o idéntica pise a una más nueva, lo que cierra la ventana entre descargar y subir. Pero el orden sigue dependiendo del reloj de cada dispositivo: uno con el reloj muy adelantado sigue ganando los conflictos.
-3. **Sincronización completa en cada pasada.** Cada ejecución descarga todas las tablas y sube todos los registros locales, cambiados o no, y se repite cada 20 o 30 s. El coste crece con el número de tareas.
-4. **Posible reacción en cadena entre dispositivos.** Antes de la migración `20261123180000`, un `upsert` de filas sin cambios generaba eventos de Realtime para los otros dispositivos, que sincronizaban a su vez, y la única protección era la ventana de 5 s basada en tiempo. Ahora el servidor omite las filas idénticas y esas escrituras no generan evento, lo que debería eliminar la reacción en cadena. Falta confirmarlo midiendo el tráfico real; la ventana de 5 s se mantiene como respaldo.
+3. **Descarga completa en cada pasada.** Cada ejecución descarga todas las tablas del usuario, hayan cambiado o no, y se repite cada 20 o 30 s. La subida ya envía solo las filas más recientes que su copia remota, pero el coste de la descarga crece con el número de tareas.
+4. **Posible reacción en cadena entre dispositivos.** Antes de la migración `20261123180000`, un `upsert` de filas sin cambios generaba eventos de Realtime para los otros dispositivos, que sincronizaban a su vez, y la única protección era la ventana de 5 s basada en tiempo. Ahora el cliente ya no sube las filas sin cambios y el servidor omite las que lleguen idénticas, de modo que esas escrituras no generan evento, lo que debería eliminar la reacción en cadena. Falta confirmarlo midiendo el tráfico real; la ventana de 5 s se mantiene como respaldo.
 5. **Lógica duplicada.** Existe una versión nativa y otra web del servicio; cada corrección hay que hacerla dos veces.
 6. **Sin pruebas automatizadas** del servicio de sincronización, el fusionado ni los tombstones.
 7. **Dispositivos muy antiguos.** Un dispositivo que pase más de 365 días sin sincronizar podría reintroducir registros cuyos tombstones ya se purgaron.
@@ -80,7 +80,7 @@ Estas limitaciones son del diseño actual y están pendientes de mejorar.
 No están implementadas.
 
 - Corregir el desfase de reloj: que el servidor limite los `updated_at` futuros y que el cliente adopte el valor del servidor después de subir. El trigger actual no lo resuelve por sí solo, porque sustituir el valor en el servidor sin que el cliente lo adopte provocaría reenvíos continuos.
-- Sincronización incremental: pedir solo lo modificado desde la última sincronización y subir solo lo modificado.
+- Descarga incremental: pedir solo lo modificado desde la última sincronización (la subida ya es incremental).
 - Identificar el dispositivo de origen en cada cambio para ignorar eventos propios de Realtime sin depender de una ventana de tiempo.
 - Fusionar por campo en lugar de por registro.
 - Extraer la lógica de fusión a una capa común que dependa solo de una interfaz de almacenamiento, y escribir pruebas con dos "dispositivos" simulados, empezando por una prueba de regresión del error de `reminders_task_fk`.

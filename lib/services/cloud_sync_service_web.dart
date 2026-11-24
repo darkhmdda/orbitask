@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/local_database_web.dart';
 import '../repositories/todo_repository_web.dart';
+import 'remote_versions.dart';
 
 class CloudUploadResult {
   const CloudUploadResult({
@@ -154,6 +155,13 @@ class CloudSyncService {
     final remoteAttachments =
         await client.from('task_attachments').select().eq('user_id', user.id);
 
+    final remoteVersions = RemoteVersions.fromRows(
+      lists: remoteLists,
+      tasks: remoteTasks,
+      subtasks: remoteSubtasks,
+      reminders: remoteReminders,
+    );
+
     _mergeRemoteSnapshot(
       lists: remoteLists,
       tasks: remoteTasks,
@@ -164,7 +172,7 @@ class CloudSyncService {
 
     _applyLocalDeletionJournal();
 
-    final uploaded = await uploadLocalSnapshot();
+    final uploaded = await uploadLocalSnapshot(remoteVersions: remoteVersions);
     await _uploadDeletionJournal(client, user.id);
     await _applyDeletionJournalToCloud(client, user.id);
 
@@ -191,7 +199,9 @@ class CloudSyncService {
     );
   }
 
-  Future<CloudUploadResult> uploadLocalSnapshot() async {
+  Future<CloudUploadResult> uploadLocalSnapshot({
+    RemoteVersions? remoteVersions,
+  }) async {
     final client = _requireClient();
     final user = _requireUser(client);
     _requireWorkspaceOwner(user.id);
@@ -214,9 +224,58 @@ class CloudSyncService {
     final validAttachments =
         attachments.where((item) => taskIds.contains(item.taskId)).toList();
 
-    if (lists.isNotEmpty) {
+    // Con las versiones remotas de esta sincronización solo se suben las filas
+    // que no existen en Supabase o son más recientes que su copia remota. El
+    // trigger skip_stale_sync_updates sigue protegiendo ante cambios concurrentes.
+    final versions = remoteVersions;
+    final listsToUpload = versions == null
+        ? lists
+        : lists
+            .where(
+              (item) => versions.needsUpload(
+                RemoteVersions.tableLists,
+                item.id,
+                item.updatedAt,
+              ),
+            )
+            .toList(growable: false);
+    final tasksToUpload = versions == null
+        ? tasks
+        : tasks
+            .where(
+              (item) => versions.needsUpload(
+                RemoteVersions.tableTasks,
+                item.id,
+                item.updatedAt,
+              ),
+            )
+            .toList(growable: false);
+    final subtasksToUpload = versions == null
+        ? validSubtasks
+        : validSubtasks
+            .where(
+              (item) => versions.needsUpload(
+                RemoteVersions.tableSubtasks,
+                item.id,
+                item.updatedAt,
+              ),
+            )
+            .toList(growable: false);
+    final remindersToUpload = versions == null
+        ? validReminders
+        : validReminders
+            .where(
+              (item) => versions.needsUpload(
+                RemoteVersions.tableReminders,
+                item.id,
+                item.updatedAt,
+              ),
+            )
+            .toList(growable: false);
+
+    if (listsToUpload.isNotEmpty) {
       await client.from('task_lists').upsert(
-        lists
+        listsToUpload
             .map(
               (list) => <String, dynamic>{
                 'user_id': userId,
@@ -233,9 +292,9 @@ class CloudSyncService {
       );
     }
 
-    if (tasks.isNotEmpty) {
+    if (tasksToUpload.isNotEmpty) {
       await client.from('tasks').upsert(
-        tasks
+        tasksToUpload
             .map(
               (task) => <String, dynamic>{
                 'user_id': userId,
@@ -258,9 +317,9 @@ class CloudSyncService {
       );
     }
 
-    if (validSubtasks.isNotEmpty) {
+    if (subtasksToUpload.isNotEmpty) {
       await client.from('subtasks').upsert(
-        validSubtasks
+        subtasksToUpload
             .map(
               (subtask) => <String, dynamic>{
                 'user_id': userId,
@@ -278,9 +337,9 @@ class CloudSyncService {
       );
     }
 
-    if (validReminders.isNotEmpty) {
+    if (remindersToUpload.isNotEmpty) {
       await client.from('reminders').upsert(
-        validReminders
+        remindersToUpload
             .map(
               (reminder) => <String, dynamic>{
                 'user_id': userId,
@@ -359,10 +418,10 @@ class CloudSyncService {
     );
 
     return CloudUploadResult(
-      lists: lists.length,
-      tasks: tasks.length,
-      subtasks: validSubtasks.length,
-      reminders: validReminders.length,
+      lists: listsToUpload.length,
+      tasks: tasksToUpload.length,
+      subtasks: subtasksToUpload.length,
+      reminders: remindersToUpload.length,
       attachments: validAttachments.length,
     );
   }
