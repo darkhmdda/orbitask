@@ -21,6 +21,7 @@ import '../../services/cloud_sync_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/profile_service.dart';
 import '../../services/reminder_plan.dart';
+import '../../widgets/about_orbitask.dart';
 import '../../widgets/orbitask_brand.dart';
 import '../../widgets/task_card.dart';
 import '../../widgets/theme_picker.dart';

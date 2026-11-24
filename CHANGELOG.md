@@ -6,6 +6,7 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ### Añadido
 
+- Nueva pestaña **Acerca de** en Ajustes, después de Notificaciones. Muestra la versión instalada (en las versiones de prueba, su etiqueta, como `v0.19-dev`), las notas de esa versión y las de las anteriores, y un botón para descargar la última versión. En las versiones de prueba el botón lleva a la lista completa de versiones, porque la página de la última versión se salta las de prueba. En la web, el botón ofrece descargar la app.
 - Logo nuevo: la "O" de Orbitask como un agujero negro, con un anillo en degradado de cian a naranja. Se aplica al icono de Android (ahora adaptativo, con versión monocroma para los iconos temáticos), a la web (que todavía mostraba el logo de Flutter), a Linux, a Windows y al logo dentro de la app. Las fuentes y el script que genera todos los iconos están en `branding/`.
 - Widgets de pantalla de inicio para Android: **Todas las tareas**, **Próximas entregas** y **Calendario**. Usan los colores del tema activo de Orbitask.
   - Esquinas redondeadas, fechas relativas ("Hoy", "Mañana", "en 4 días", "Vencida · ayer") y el color de la casilla según la prioridad.
@@ -22,7 +23,6 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 - El tema ya no se revierte al cambiarlo mientras hay una sincronización en curso (se aplicaba el tema leído al empezar). Además, un tema elegido en un dispositivo ya no pierde frente a otro dispositivo con el reloj adelantado.
 - Los recordatorios de una tarea borrada en otro dispositivo se cancelan al sincronizar. Antes seguían programados hasta reiniciar la app.
 - Los widgets de Android ya no abren la base de datos local desde Kotlin. En la versión de prueba v0.10-dev lo hacían a la vez que la app, con dos copias distintas de SQLite en el mismo proceso, y eso podía corromper la base local ("database disk image is malformed"). Ahora la app les pasa las tareas y guarda ella misma lo que se marca en el widget.
-- Migración de `package:flutter/material.dart` a `package:material_ui`. Flutter 3.50 marca el import anterior como obsoleto y `flutter analyze` (y con él el CI) fallaba con 12 avisos.
 
 ### Cambiado
 
@@ -30,13 +30,6 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 - El tema tiene su propia sincronización: se confirma con el botón «Aplicar tema», se sube al momento y los otros dispositivos lo aplican en cuanto les llega por Realtime, sin esperar a una sincronización de las tareas.
 - Subida rápida: tras una edición, la app sube solo lo que cambió 300 ms después, sin descargar antes todas las tablas. Junto con la aplicación inmediata de Realtime, un cambio pasa de un dispositivo a otro en alrededor de un segundo. La sincronización completa sigue ejecutándose al abrir la app, cada 20–30 s y ante cualquier caso que la subida rápida no cubra (adjuntos, primera sincronización).
 - Sincronización más rápida: los cambios que avisa Realtime se aplican al momento con la fila que llega, sin descargar todas las tablas. El eco de los cambios propios se detecta por `updated_at` y se descarta, así que desaparece la ventana de 5 s en la que se ignoraban los avisos, que hacía que los cambios de otro dispositivo tardaran hasta 30 s. Tras sincronizar solo se reprograman los recordatorios de las tareas que cambiaron.
-- El despliegue de la web separa la compilación y la publicación en dos jobs, como recomienda `actions/deploy-pages`, y sube a `upload-pages-artifact@v4` y `checkout@v5`. Con todo en un mismo job, la publicación fallaba de vez en cuando porque no encontraba el artefacto recién subido.
-- Nuevo workflow manual `release_android.yml`: compila un APK firmado con la clave guardada en los secretos del repositorio y lo deja en un borrador de release. Así ya no hace falta el SDK de Android en la máquina local.
-- Los workflows de Web, Windows y Linux leen la URL y la clave publicable de Supabase de variables del repositorio en lugar de tenerlas escritas en el código. Fallan con un mensaje claro si faltan. El workflow de Linux ya no extrae esos valores con una expresión regular del workflow de Windows, y pasa a ejecutarse solo de forma manual (antes también se disparaba al modificar su propio archivo en `main`, lo que volvía a subir y sobrescribir los artefactos de la release).
-
-- Supabase: nuevo trigger `skip_stale_sync_updates` (migración `20261123180000`). El servidor descarta, sin error, las actualizaciones de las tablas de sincronización cuyo `updated_at` no sea estrictamente mayor que el guardado. Evita que una copia antigua sobrescriba datos más recientes y que las filas idénticas generen cambios y eventos de Realtime. No resuelve los relojes desajustados de los dispositivos.
-
-- Sincronización: la subida ahora solo envía las listas, tareas, subtareas y recordatorios que no existen en Supabase o son más recientes que su copia remota (antes subía todo en cada pasada). Se añade `RemoteVersions` con pruebas unitarias; el trigger del servidor sigue como red de seguridad.
 
 ### Documentación
 
@@ -45,6 +38,17 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 - Nueva documentación técnica en `docs/`: arquitectura, datos y Supabase, sincronización (con sus limitaciones conocidas) y builds y distribución.
 - Se elimina el documento `.docx` externo a favor de documentación en markdown versionada junto al código.
 
+### Interno
+
+- La sección `### Interno` del changelog recoge los cambios técnicos. La pestaña Acerca de no la muestra, igual que `### Documentación`.
+- `release_android.yml` pasa la etiqueta de la release a la app con `--dart-define=ORBITASK_TAG`. Antes las versiones de prueba se identificaban como 1.0.1.
+- Nuevas dependencias: `package_info_plus` (versión instalada) y `url_launcher` (abrir la página de descarga). El `CHANGELOG.md` se incluye como asset de la app.
+- Migración de `package:flutter/material.dart` a `package:material_ui`. Flutter 3.50 marca el import anterior como obsoleto y `flutter analyze` (y con él el CI) fallaba con 12 avisos.
+- El despliegue de la web separa la compilación y la publicación en dos jobs, como recomienda `actions/deploy-pages`, y sube a `upload-pages-artifact@v4` y `checkout@v5`. Con todo en un mismo job, la publicación fallaba de vez en cuando porque no encontraba el artefacto recién subido.
+- Nuevo workflow manual `release_android.yml`: compila un APK firmado con la clave guardada en los secretos del repositorio y lo deja en un borrador de release. Así ya no hace falta el SDK de Android en la máquina local.
+- Los workflows de Web, Windows y Linux leen la URL y la clave publicable de Supabase de variables del repositorio en lugar de tenerlas escritas en el código. Fallan con un mensaje claro si faltan. El workflow de Linux ya no extrae esos valores con una expresión regular del workflow de Windows, y pasa a ejecutarse solo de forma manual (antes también se disparaba al modificar su propio archivo en `main`, lo que volvía a subir y sobrescribir los artefactos de la release).
+- Supabase: nuevo trigger `skip_stale_sync_updates` (migración `20261123180000`). El servidor descarta, sin error, las actualizaciones de las tablas de sincronización cuyo `updated_at` no sea estrictamente mayor que el guardado. Evita que una copia antigua sobrescriba datos más recientes y que las filas idénticas generen cambios y eventos de Realtime. No resuelve los relojes desajustados de los dispositivos.
+- Sincronización: la subida ahora solo envía las listas, tareas, subtareas y recordatorios que no existen en Supabase o son más recientes que su copia remota (antes subía todo en cada pasada). Se añade `RemoteVersions` con pruebas unitarias; el trigger del servidor sigue como red de seguridad.
 
 ## [1.0.1] - 2026-10-06
 
