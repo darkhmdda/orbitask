@@ -40,6 +40,7 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ### Interno
 
+- Gradle pasa de la 9.3.1 a la 9.5.1 (con la 9.3.1 el build de Android mostraba un aviso). AGP sigue en 9.1.1.
 - La sección `### Interno` del changelog recoge los cambios técnicos. La pestaña Acerca de no la muestra, igual que `### Documentación`.
 - `release_android.yml` pasa la etiqueta de la release a la app con `--dart-define=ORBITASK_TAG`. Antes las versiones de prueba se identificaban como 1.0.1.
 - Nuevas dependencias: `package_info_plus` (versión instalada) y `url_launcher` (abrir la página de descarga). El `CHANGELOG.md` se incluye como asset de la app.

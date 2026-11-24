@@ -39,7 +39,7 @@ Detalle en `docs/ARQUITECTURA.md`, `docs/SINCRONIZACION.md` y `docs/DATOS_Y_SUPA
 ## Entorno
 
 - Flutter estable (el CI usa `channel: stable`); el SDK de Dart pide `^3.13.0`.
-- Android: AGP 9.1.1, Java 17 en el workflow.
+- Android: AGP 9.1.1, Gradle 9.5.1, Java 17 en el workflow.
 - Los APK firmados se compilan **solo en GitHub Actions**, no en local.
 - Dependabot agrupa las subidas menores y de parche (`pub-menores`, `actions-menores`). Las mayores llegan por separado y se revisan una a una: leer el changelog y migrar el código si hace falta, como se hizo con `file_picker` 13.
 
@@ -47,7 +47,6 @@ Detalle en `docs/ARQUITECTURA.md`, `docs/SINCRONIZACION.md` y `docs/DATOS_Y_SUPA
 
 1. Terminar los PRs de dependencias: `pub-menores`, `actions/setup-java` v6 y `actions/upload-artifact` v7. Probarlos con la `v0.17-dev`.
 2. Probar el toggle del widget con la app cerrada del todo.
-3. Subir Gradle a 9.5 o más (el CI muestra un aviso).
-4. Parametrizar `release_linux_v1.yml` y `release_windows_v1.yml` como el de Android. Ahora están atados a la v1.0.0.
-5. Sacar la **1.1.0** estable para todas las plataformas con lo que hay en `[Sin publicar]`.
-6. Opcional: descarga incremental en la sincronización (requiere una migración en Supabase).
+3. Parametrizar `release_linux_v1.yml` y `release_windows_v1.yml` como el de Android. Ahora están atados a la v1.0.0.
+4. Sacar la **1.1.0** estable para todas las plataformas con lo que hay en `[Sin publicar]`.
+5. Opcional: descarga incremental en la sincronización (requiere una migración en Supabase).
