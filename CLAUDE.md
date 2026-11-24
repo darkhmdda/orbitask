@@ -45,7 +45,6 @@ Detalle en `docs/ARQUITECTURA.md`, `docs/SINCRONIZACION.md` y `docs/DATOS_Y_SUPA
 
 ## Pendiente (noviembre de 2026)
 
-1. Terminar los PRs de dependencias: `pub-menores`, `actions/setup-java` v6 y `actions/upload-artifact` v7. Probarlos con la `v0.17-dev`.
-2. Parametrizar `release_linux_v1.yml` y `release_windows_v1.yml` como el de Android. Ahora están atados a la v1.0.0.
-3. Sacar la **1.1.0** estable para todas las plataformas con lo que hay en `[Sin publicar]`.
-4. Opcional: descarga incremental en la sincronización (requiere una migración en Supabase).
+1. Parametrizar `release_linux_v1.yml` y `release_windows_v1.yml` como el de Android. Ahora están atados a la v1.0.0.
+2. Sacar la **1.1.0** estable para todas las plataformas con lo que hay en `[Sin publicar]`.
+3. Opcional: descarga incremental en la sincronización (requiere una migración en Supabase).
