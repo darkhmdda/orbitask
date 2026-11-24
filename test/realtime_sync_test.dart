@@ -340,6 +340,50 @@ void main() {
     });
   });
 
+  group('Tema por Realtime', () {
+    Map<String, dynamic> themeRow(String themeId, DateTime updatedAt, {String userId = _user}) {
+      return <String, dynamic>{
+        'user_id': userId,
+        'theme_id': themeId,
+        'updated_at': _iso(updatedAt),
+      };
+    }
+
+    RemoteChange themeChange(Map<String, dynamic> row) => RemoteChange(
+          table: RemoteChange.tablePreferences,
+          type: RemoteChangeType.update,
+          record: row,
+        );
+
+    test('un tema más reciente de otro dispositivo se aplica al momento', () {
+      phone.database.setSetting('theme_id', 'subaru');
+      phone.database.setSetting('theme_updated_at', _at(1).millisecondsSinceEpoch.toString());
+
+      final applied = phone.sync.applyRemoteTheme(themeChange(themeRow('veldora', _at(2))));
+
+      expect(applied, 'veldora');
+      expect(phone.sync.localThemeId, 'veldora');
+    });
+
+    test('el eco del propio cambio o un tema más antiguo no cambian nada', () {
+      phone.database.setSetting('theme_id', 'veldora');
+      phone.database.setSetting('theme_updated_at', _at(5).millisecondsSinceEpoch.toString());
+
+      expect(phone.sync.applyRemoteTheme(themeChange(themeRow('veldora', _at(5)))), isNull);
+      expect(phone.sync.applyRemoteTheme(themeChange(themeRow('subaru', _at(3)))), isNull);
+      expect(phone.sync.localThemeId, 'veldora');
+    });
+
+    test('no aplica el tema de otra cuenta', () {
+      final applied = phone.sync.applyRemoteTheme(
+        themeChange(themeRow('asta', _at(9), userId: 'otra-cuenta')),
+      );
+
+      expect(applied, isNull);
+      expect(phone.sync.localThemeId, isNot('asta'));
+    });
+  });
+
   group('Subida rápida', () {
     test('solo sube lo modificado después de la última subida', () {
       final watermark = _at(10).millisecondsSinceEpoch;

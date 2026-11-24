@@ -30,6 +30,14 @@ extension _HomeScreenSync on _HomeScreenState {
   void _handleRemoteChange(RemoteChange change) {
     if (!mounted) return;
 
+    // El tema va por su propio camino: se aplica al momento y no lanza una
+    // sincronización de las tareas.
+    if (change.table == RemoteChange.tablePreferences) {
+      final themeId = widget.cloudSyncService.applyRemoteTheme(change);
+      if (themeId != null) widget.onCloudThemeChanged(themeId);
+      return;
+    }
+
     switch (widget.cloudSyncService.applyRemoteChange(change)) {
       case RemoteChangeOutcome.unchanged:
         return;
@@ -123,10 +131,12 @@ extension _HomeScreenSync on _HomeScreenState {
     var needsFullSync = false;
     try {
       if (fullSync) {
-        final result = await widget.cloudSyncService.syncNow();
+        await widget.cloudSyncService.syncNow();
         if (!mounted) return;
 
-        widget.onCloudThemeChanged(result.themeId);
+        // El tema guardado ahora, no el que se leyó al empezar: si se cambió
+        // mientras se sincronizaba, aplicar el de entonces lo revertiría.
+        widget.onCloudThemeChanged(widget.cloudSyncService.localThemeId);
         _markCloudSyncSucceeded();
         await _reloadAndUpdateReminders();
       } else {
@@ -164,6 +174,20 @@ extension _HomeScreenSync on _HomeScreenState {
           _scheduleCloudSync();
         }
       }
+    }
+  }
+
+  /// Sube el tema recién aplicado, sin esperar ni tocar las tareas.
+  Future<void> _pushThemeToCloud() async {
+    if (!widget.cloudSyncService.isConfigured ||
+        widget.authService.currentUser == null) {
+      return;
+    }
+    try {
+      await widget.cloudSyncService.pushTheme();
+    } catch (_) {
+      // Sin conexión, por ejemplo: la sincronización completa lo subirá.
+      _scheduleCloudSync(immediate: true);
     }
   }
 

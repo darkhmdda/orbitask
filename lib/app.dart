@@ -47,11 +47,15 @@ class _OrbitaskAppState extends State<OrbitaskApp> {
     final normalized = AppTheme.normalizeThemeId(themeId);
     if (normalized == _themeId) return;
 
+    // Un cambio hecho aquí siempre gana a lo que este dispositivo ya conoce,
+    // aunque el reloj de otro dispositivo vaya adelantado.
+    final previous =
+        int.tryParse(widget.database.getSetting('theme_updated_at') ?? '') ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final updatedAt = now > previous ? now : previous + 1;
+
     widget.database.setSetting('theme_id', normalized);
-    widget.database.setSetting(
-      'theme_updated_at',
-      DateTime.now().millisecondsSinceEpoch.toString(),
-    );
+    widget.database.setSetting('theme_updated_at', updatedAt.toString());
     setState(() => _themeId = normalized);
   }
 
