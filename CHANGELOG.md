@@ -26,6 +26,7 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ### Cambiado
 
+- `file_picker` pasa de la 10 a la 13. La API cambió (métodos estáticos y lectura con `readAsBytes()`), así que se migraron la elección de adjuntos, la foto de perfil y la descarga de adjuntos en Android y en la web. Los adjuntos de más de 15 MB se rechazan antes de leerlos cuando se conoce su tamaño, y la descarga indica el tipo MIME del archivo.
 - El tema tiene su propia sincronización: se confirma con el botón «Aplicar tema», se sube al momento y los otros dispositivos lo aplican en cuanto les llega por Realtime, sin esperar a una sincronización de las tareas.
 - Subida rápida: tras una edición, la app sube solo lo que cambió 300 ms después, sin descargar antes todas las tablas. Junto con la aplicación inmediata de Realtime, un cambio pasa de un dispositivo a otro en alrededor de un segundo. La sincronización completa sigue ejecutándose al abrir la app, cada 20–30 s y ante cualquier caso que la subida rápida no cubra (adjuntos, primera sincronización).
 - Sincronización más rápida: los cambios que avisa Realtime se aplican al momento con la fila que llega, sin descargar todas las tablas. El eco de los cambios propios se detecta por `updated_at` y se descarta, así que desaparece la ventana de 5 s en la que se ignoraban los avisos, que hacía que los cambios de otro dispositivo tardaran hasta 30 s. Tras sincronizar solo se reprograman los recordatorios de las tareas que cambiaron.

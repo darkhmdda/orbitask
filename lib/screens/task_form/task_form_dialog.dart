@@ -627,7 +627,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Archivo guardado en $path',
+            'Guardado: $path',
           ),
         ),
       );
@@ -644,29 +644,35 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   }
 
   Future<void> _pickAttachments() async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: true,
-      withData: true,
-    );
-    if (result == null) return;
+    final files = await FilePicker.pickFiles();
+    if (files.isEmpty) return;
 
     final now = DateTime.now();
     final selected = <TaskAttachment>[];
 
-    for (final file in result.files) {
-      final bytes = file.bytes;
-      if (bytes == null) continue;
+    for (final file in files) {
+      // Se mira el tamaño antes de leer para no cargar en memoria un archivo
+      // que se va a rechazar. Si no se puede saber, se comprueba tras leerlo.
+      final length = await file.length();
+      if (length != null && length > _maxAttachmentBytes) {
+        _showAttachmentTooLarge(file.name);
+        continue;
+      }
 
-      if (bytes.length > 15 * 1024 * 1024) {
+      final Uint8List bytes;
+      try {
+        bytes = await file.readAsBytes();
+      } catch (_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '${file.name} supera el límite de 15 MB.',
-              ),
-            ),
+            SnackBar(content: Text('No se pudo leer ${file.name}.')),
           );
         }
+        continue;
+      }
+
+      if (bytes.length > _maxAttachmentBytes) {
+        _showAttachmentTooLarge(file.name);
         continue;
       }
 
@@ -682,7 +688,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
           name: file.name,
           mimeType: mimeType,
           sizeBytes: bytes.length,
-          data: Uint8List.fromList(bytes),
+          data: bytes,
           createdAt: now,
           updatedAt: now,
         ),
@@ -692,6 +698,15 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     if (selected.isNotEmpty && mounted) {
       setState(() => _attachments.addAll(selected));
     }
+  }
+
+  static const _maxAttachmentBytes = 15 * 1024 * 1024;
+
+  void _showAttachmentTooLarge(String name) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$name supera el límite de 15 MB.')),
+    );
   }
 
   String _mimeTypeFor(String extension) {
