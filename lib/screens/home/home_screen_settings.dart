@@ -520,10 +520,9 @@ extension _HomeScreenSettings on _HomeScreenState {
                                                       email == null
                                                   ? null
                                                   : () async {
-                                                      final picked =
+                                                      final file =
                                                           await FilePicker
-                                                              .platform
-                                                              .pickFiles(
+                                                              .pickFile(
                                                         type: FileType.custom,
                                                         allowedExtensions: const [
                                                           'jpg',
@@ -531,19 +530,20 @@ extension _HomeScreenSettings on _HomeScreenState {
                                                           'png',
                                                           'webp',
                                                         ],
-                                                        withData: true,
-                                                        allowMultiple: false,
                                                       );
+                                                      if (file == null) return;
 
-                                                      if (picked == null ||
-                                                          picked.files
-                                                              .isEmpty) {
+                                                      Uint8List? bytes;
+                                                      try {
+                                                        bytes = await file
+                                                            .readAsBytes();
+                                                      } catch (_) {
+                                                        bytes = null;
+                                                      }
+                                                      if (!dialogContext
+                                                          .mounted) {
                                                         return;
                                                       }
-
-                                                      final file =
-                                                          picked.files.single;
-                                                      final bytes = file.bytes;
                                                       if (bytes == null) {
                                                         setDialogState(() {
                                                           profileError =
