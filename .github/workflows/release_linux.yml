@@ -32,7 +32,12 @@ concurrency:
 jobs:
   build-linux:
     name: Build Linux ${{ inputs.tag }}
-    runs-on: ubuntu-latest
+    # Fijado a 24.04 a propósito. ubuntu-latest pasó a 26.04, cuyo compilador
+    # marca el ejecutable como x86-64-v3 (AVX2): en CPU sin AVX2 (el
+    # Chromebook) no arranca ("CPU ISA level is lower than required"). Además
+    # 24.04 enlaza contra una glibc más antigua, así que el paquete funciona
+    # en más distribuciones.
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
 
     steps:
@@ -75,6 +80,21 @@ jobs:
             --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
             --dart-define=SUPABASE_AUTH_REDIRECT_URL="$SUPABASE_AUTH_REDIRECT_URL" \
             --dart-define=ORBITASK_TAG="$TAG"
+
+      # Red de seguridad: si algún binario exige x86-64-v3 o v4 (AVX2 o
+      # AVX-512), no arrancaría en CPU más antiguas. Mejor fallar aquí.
+      - name: Check CPU requirements of the binaries
+        run: |
+          bad=0
+          for f in build/linux/x64/release/bundle/orbitask build/linux/x64/release/bundle/lib/*.so; do
+            isa="$(readelf -n "$f" | grep 'x86 ISA needed' || true)"
+            echo "$f: ${isa:-sin marca ISA}"
+            if echo "$isa" | grep -qE 'x86-64-v(3|4)'; then
+              echo "::error file=$f::Exige x86-64-v3 o superior y no arrancaría en CPU sin AVX2."
+              bad=1
+            fi
+          done
+          exit "$bad"
 
       # El paquete .deb lleva la versión del pubspec (dpkg exige un número de
       # versión); el nombre del archivo lleva la etiqueta de la release.
