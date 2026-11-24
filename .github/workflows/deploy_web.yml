@@ -54,9 +54,6 @@ jobs:
             --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
             --dart-define=SUPABASE_AUTH_REDIRECT_URL="$SUPABASE_AUTH_REDIRECT_URL"
 
-      - name: Use official Orbitask favicon
-        run: cp linux/runner/resources/orbitask.png build/web/favicon.png
-
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

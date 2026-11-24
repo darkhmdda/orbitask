@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><rect width="1024" height="1024" rx="225" fill="#09090F"/><defs>
+<linearGradient id="mo" x1="-232" y1="-232" x2="232" y2="162" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4F7BFF"/><stop offset="0.45" stop-color="#A88CFF"/><stop offset="0.75" stop-color="#FF8F7A"/><stop offset="1" stop-color="#FF5A5F"/></linearGradient>
+<linearGradient id="mring" x1="-470" y1="0" x2="470" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#46E0FF"/><stop offset="0.25" stop-color="#5B8CFF"/><stop offset="0.5" stop-color="#9A5CFF"/><stop offset="0.75" stop-color="#FF5C9E"/><stop offset="1" stop-color="#FFA24C"/></linearGradient>
+<radialGradient id="mcore" cx="0" cy="0" r="162" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#020203"/><stop offset="0.78" stop-color="#05040A"/>
+  <stop offset="0.93" stop-color="#2A1B5C"/><stop offset="1" stop-color="#6B4BFF"/>
+</radialGradient>
+<radialGradient id="mhalo" cx="0" cy="0" r="360" gradientUnits="userSpaceOnUse">
+  <stop offset="0.5" stop-color="#7A5CFF" stop-opacity="0.30"/>
+  <stop offset="0.8" stop-color="#3A2A8F" stop-opacity="0.08"/>
+  <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+</radialGradient>
+<filter id="mglow" x="-40%" y="-80%" width="180%" height="260%"><feGaussianBlur stdDeviation="16"/></filter>
+<clipPath id="mfront"><rect x="-700" y="0" width="1400" height="400"/></clipPath>
+<mask id="mcut" maskUnits="userSpaceOnUse" x="-700" y="-700" width="1400" height="1400">
+  <rect x="-700" y="-700" width="1400" height="1400" fill="#fff"/>
+  <g transform="rotate(-20)" clip-path="url(#mfront)">
+    <path d="M-470,0 a470,128 0 1,0 940,0 a470,128 0 1,0 -940,0 Z M-442,-30 a442,82 0 1,0 884,0 a442,82 0 1,0 -884,0 Z" fill="#000" fill-rule="evenodd" stroke="#000" stroke-width="20" stroke-linejoin="round"/>
+  </g>
+</mask>
+<linearGradient id="mword" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F5F7FF"/><stop offset="1" stop-color="#DCCFFF"/></linearGradient>
+</defs><g transform="translate(512.0,512.0) scale(0.86)"><circle r="360" fill="url(#mhalo)"/><path d="M-232,0 a232,232 0 1,0 464,0 a232,232 0 1,0 -464,0 Z M-162,0 a162,162 0 1,0 324,0 a162,162 0 1,0 -324,0 Z" fill="url(#mo)" fill-rule="evenodd" filter="url(#mglow)" opacity="0.9" mask="url(#mcut)"/><path transform="rotate(-20)" d="M-470,0 a470,128 0 1,0 940,0 a470,128 0 1,0 -940,0 Z M-442,-30 a442,82 0 1,0 884,0 a442,82 0 1,0 -884,0 Z" fill="url(#mring)" fill-rule="evenodd" filter="url(#mglow)" opacity="0.81"/><path transform="rotate(-20)" d="M-470,0 a470,128 0 1,0 940,0 a470,128 0 1,0 -940,0 Z M-442,-30 a442,82 0 1,0 884,0 a442,82 0 1,0 -884,0 Z" fill="url(#mring)" fill-rule="evenodd"/><circle r="162" fill="url(#mcore)"/><path d="M-232,0 a232,232 0 1,0 464,0 a232,232 0 1,0 -464,0 Z M-162,0 a162,162 0 1,0 324,0 a162,162 0 1,0 -324,0 Z" fill="url(#mo)" fill-rule="evenodd" mask="url(#mcut)"/><g transform="rotate(-20)" clip-path="url(#mfront)"><path d="M-470,0 a470,128 0 1,0 940,0 a470,128 0 1,0 -940,0 Z M-442,-30 a442,82 0 1,0 884,0 a442,82 0 1,0 -884,0 Z" fill="url(#mring)" fill-rule="evenodd"/></g></g></svg>

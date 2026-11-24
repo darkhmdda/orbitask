@@ -6,6 +6,7 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ### Añadido
 
+- Logo nuevo: la "O" de Orbitask como un agujero negro, con un anillo en degradado de cian a naranja. Se aplica al icono de Android (ahora adaptativo, con versión monocroma para los iconos temáticos), a la web (que todavía mostraba el logo de Flutter), a Linux, a Windows y al logo dentro de la app. Las fuentes y el script que genera todos los iconos están en `branding/`.
 - Widgets de pantalla de inicio para Android: **Todas las tareas**, **Próximas entregas** y **Calendario**. Usan los colores del tema activo de Orbitask.
   - Esquinas redondeadas, fechas relativas ("Hoy", "Mañana", "en 4 días", "Vencida · ayer") y el color de la casilla según la prioridad.
   - Al marcar una tarea, queda tachada al final de la lista y se puede desmarcar. Al completarla desde el widget se cancelan sus recordatorios al momento. El cambio se guarda en la base de datos y se sincroniza en cuanto la app está en marcha (al momento si sigue abierta en segundo plano, o la próxima vez que se abra).
