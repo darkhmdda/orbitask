@@ -4,13 +4,15 @@ import '../models/task_attachment.dart';
 
 class AttachmentOpener {
   static Future<String?> download(TaskAttachment attachment) async {
-    final result = await FilePicker.platform.saveFile(
+    final uri = await FilePicker.saveFile(
       dialogTitle: 'Guardar adjunto',
       fileName: attachment.name,
       bytes: attachment.data,
+      mimeType: attachment.mimeType,
     );
 
-    if (result == null || result.isEmpty) return null;
-    return result;
+    // En la web el navegador gestiona la descarga y no hay ruta que mostrar.
+    if (uri == null) return null;
+    return attachment.name;
   }
 }
