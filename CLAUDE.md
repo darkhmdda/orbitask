@@ -16,7 +16,7 @@ App de tareas en Flutter con Supabase. Funciona en Android, web (GitHub Pages), 
 ## Cómo prueba el usuario
 
 1. Fusiona el PR en `main`.
-2. Lanza manualmente el workflow **Release Orbitask Android** (`release_android.yml`) con una etiqueta `vX.Y-dev` y *prerelease*. El workflow crea un **borrador** de release con el APK firmado y su `.sha256`.
+2. Lanza manualmente el workflow **Release Orbitask Android** (`release_android.yml`) con una etiqueta `vX.Y-dev` y *prerelease*. El workflow crea un **borrador** de release con el APK firmado y su `.sha256`. `release_linux.yml` y `release_windows.yml` funcionan igual y añaden sus archivos al mismo borrador (ver `docs/BUILDS_Y_DISTRIBUCION.md`).
 3. Pega las notas, publica la pre-release y descarga el APK en su teléfono (Honor, Android).
 4. La web se despliega sola al fusionar en `main` (`deploy_web.yml`).
 
@@ -45,6 +45,6 @@ Detalle en `docs/ARQUITECTURA.md`, `docs/SINCRONIZACION.md` y `docs/DATOS_Y_SUPA
 
 ## Pendiente (noviembre de 2026)
 
-1. Parametrizar `release_linux_v1.yml` y `release_windows_v1.yml` como el de Android. Ahora están atados a la v1.0.0.
+1. Probar `release_linux.yml` y `release_windows.yml` con una `vX.Y-dev` (en Windows, comprobar adjuntar y descargar: `win32` subió a la 6).
 2. Sacar la **1.1.0** estable para todas las plataformas con lo que hay en `[Sin publicar]`.
 3. Opcional: descarga incremental en la sincronización (requiere una migración en Supabase).
