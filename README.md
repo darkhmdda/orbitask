@@ -29,7 +29,7 @@ La versión del código en `main` es **1.0.1+13**. Es un hotfix de estabilidad d
 - Papelera con restauración, vaciado y eliminación permanente.
 - Cuenta con correo y contraseña, perfil (nombre visible, username y avatar) y preferencias sincronizadas.
 - Sincronización entre dispositivos con Supabase (Realtime más sondeo periódico) y modo local sin conexión.
-- 12 temas de color, adaptables a escritorio, móvil y navegador.
+- 14 temas de color, adaptables a escritorio, móvil y navegador.
 - Widgets de pantalla de inicio en Android (calendario, resumen y "hoy"). Están en el código pero todavía no forman parte de ninguna release, y su diseño está pendiente de revisión.
 
 ## Instalación
