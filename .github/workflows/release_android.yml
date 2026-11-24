@@ -111,7 +111,7 @@ jobs:
           sha256sum "Orbitask-$TAG-android.apk" > "Orbitask-$TAG-android.apk.sha256"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Orbitask-${{ inputs.tag }}-android
           path: |
