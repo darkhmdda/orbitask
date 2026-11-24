@@ -6,7 +6,7 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ### Añadido
 
-- Nueva pestaña **Acerca de** en Ajustes, después de Notificaciones. Muestra la versión instalada (en las versiones de prueba, su etiqueta, como `v0.19-dev`), las notas de esa versión y las de las anteriores, y un botón para descargar la última versión. En las versiones de prueba el botón lleva a la lista completa de versiones, porque la página de la última versión se salta las de prueba. En la web, el botón ofrece descargar la app.
+- Nueva pestaña **Acerca de** en Ajustes, después de Notificaciones (en el móvil, «Info», para que quepan las cuatro pestañas). Muestra la versión instalada (en las versiones de prueba, su etiqueta, como `v0.19-dev`), las notas de esa versión y las de las anteriores, y un botón para descargar la última versión. En las versiones de prueba el botón lleva a la lista completa de versiones, porque la página de la última versión se salta las de prueba. En la web, el botón ofrece descargar la app.
 - Logo nuevo: la "O" de Orbitask como un agujero negro, con un anillo en degradado de cian a naranja. Se aplica al icono de Android (ahora adaptativo, con versión monocroma para los iconos temáticos), a la web (que todavía mostraba el logo de Flutter), a Linux, a Windows y al logo dentro de la app. Las fuentes y el script que genera todos los iconos están en `branding/`.
 - Widgets de pantalla de inicio para Android: **Todas las tareas**, **Próximas entregas** y **Calendario**. Usan los colores del tema activo de Orbitask.
   - Esquinas redondeadas, fechas relativas ("Hoy", "Mañana", "en 4 días", "Vencida · ayer") y el color de la casilla según la prioridad.

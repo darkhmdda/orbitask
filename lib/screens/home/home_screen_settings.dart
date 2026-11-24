@@ -339,9 +339,9 @@ extension _HomeScreenSettings on _HomeScreenState {
                           icon: const Icon(Icons.notifications_outlined),
                           text: compactDialog ? 'Avisos' : 'Notificaciones',
                         ),
-                        const Tab(
-                          icon: Icon(Icons.info_outline_rounded),
-                          text: 'Acerca de',
+                        Tab(
+                          icon: const Icon(Icons.info_outline_rounded),
+                          text: compactDialog ? 'Info' : 'Acerca de',
                         ),
                       ],
                     ),
