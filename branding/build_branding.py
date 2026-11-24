@@ -121,7 +121,7 @@ def icon_svg(scale, background=BG, radius=0, halo=True, mono=False, size=1024):
     return _svg(size, body, background, radius)
 
 
-def lockup_svg(background=BG):
+def lockup_svg(background=BG, text=("#F5F7FF", "#DCCFFF"), halo=True):
     with open(os.path.join(HERE, "wordmark_orbitask.txt")) as f:
         header, d = f.read().split("\n", 1)
     text_units = float(header.split()[0])
@@ -129,8 +129,10 @@ def lockup_svg(background=BG):
     text_w = 780
     s = text_w / text_units
     body = (f"<defs>{_defs(p)}</defs>"
-            f'<g transform="translate(600,470) scale(0.98)">{mark(p)}</g>'
-            f'<g transform="translate({(w - text_w) / 2},920) scale({s:.5f})"><path d="{d}" fill="url(#{p}word)"/></g>')
+            f'<linearGradient id="{p}text" x1="0" y1="0" x2="1" y2="0">'
+            f'<stop offset="0" stop-color="{text[0]}"/><stop offset="1" stop-color="{text[1]}"/></linearGradient>'
+            f'<g transform="translate(600,470) scale(0.98)">{mark(p, halo=halo)}</g>'
+            f'<g transform="translate({(w - text_w) / 2},920) scale({s:.5f})"><path d="{d}" fill="url(#{p}text)"/></g>')
     return _svg(w, body, background)
 
 
@@ -169,6 +171,16 @@ def main():
     write("branding/orbitask-logo-transparent.svg", lockup_svg(background=None))
     render(lockup_svg(), "branding/orbitask-logo.png", 1200)
     render(icon_svg(0.86, radius=225), "branding/orbitask-icon.png", 256)
+
+    # README: versiones transparentes, recortadas, para el tema oscuro y el claro de GitHub.
+    readme = {
+        "branding/orbitask-logo-on-dark.png": lockup_svg(background=None, halo=False),
+        "branding/orbitask-logo-on-light.png": lockup_svg(background=None, halo=False, text=("#1C1733", "#43337A")),
+        "branding/orbitask-mark.png": icon_svg(1.0, background=None, halo=False, size=1100),
+    }
+    for path, svg_text in readme.items():
+        out = render(svg_text, path, 1200 if "logo" in path else 1100)
+        subprocess.run(["convert", out, "-trim", "+repage", "-resize", "640x", out], check=True)
 
     rounded = icon_svg(0.86, radius=225)       # escritorio y Android antiguo
     full = icon_svg(0.92)                      # web: cuadrado completo
