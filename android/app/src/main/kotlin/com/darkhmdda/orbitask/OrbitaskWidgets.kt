@@ -16,10 +16,8 @@ object OrbitaskWidgets {
     const val MODE_ALL = "all"
     const val MODE_UPCOMING = "upcoming"
 
-    /** Relee la base de datos (si se pide) y repinta todos los widgets colocados. */
-    fun refreshAll(context: Context, reloadData: Boolean = true) {
-        if (reloadData) OrbitaskWidgetData.refreshFromDatabase(context)
-
+    /** Repinta todos los widgets colocados con las últimas tareas que mandó Flutter. */
+    fun refreshAll(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
         val allIds = idsOf(context, manager, OrbitaskTodayWidget::class.java)
         val upcomingIds = idsOf(context, manager, OrbitaskSummaryWidget::class.java)

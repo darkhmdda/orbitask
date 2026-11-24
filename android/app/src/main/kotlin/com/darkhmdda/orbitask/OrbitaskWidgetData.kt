@@ -3,15 +3,12 @@ package com.darkhmdda.orbitask
 import android.app.AlarmManager
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -24,6 +21,7 @@ data class WidgetTask(
     val dueMillis: Long?,
     val completed: Boolean,
     val updatedAt: Long,
+    val reminderIds: List<String> = emptyList(),
 ) {
     val dueDate: LocalDate?
         get() = dueMillis?.let {
@@ -40,20 +38,24 @@ data class WidgetTask(
 }
 
 /**
- * Acceso a los datos de los widgets.
+ * Datos de los widgets.
  *
- * Lee y escribe directamente `orbitask.sqlite` (la base de datos local de la
- * app en `filesDir`). Depende del nombre del archivo y de las columnas de las
- * tablas `tasks` y `reminders`: si cambia el esquema local, hay que
- * actualizar también este archivo.
+ * **Kotlin no abre nunca `orbitask.sqlite`.** La app usa su propia copia de
+ * SQLite (paquete `sqlite3`) y el sistema Android trae otra: si las dos abren
+ * el mismo archivo en el mismo proceso, al cerrar una se pierden los bloqueos
+ * de la otra y la base de datos puede corromperse
+ * (https://www.sqlite.org/howtocorrupt.html, apartado 2.2).
+ *
+ * Por eso Flutter manda las tareas ya leídas (`updateWidgets`), y lo que se
+ * marca o desmarca en el widget se guarda aquí como cambio pendiente hasta que
+ * Flutter lo aplica en la base de datos (`takeWidgetToggles`).
  */
 object OrbitaskWidgetData {
     private const val TAG = "OrbitaskWidgets"
     const val PREFS = "orbitask_widget"
-    private const val DB_NAME = "orbitask.sqlite"
     private const val TASKS_JSON = "tasksJson"
+    private const val PENDING_TOGGLES = "pendingToggles"
     private const val PENDING_ACTION = "pendingAction"
-    private const val CHANGED_TASKS = "changedTaskIds"
 
     /** Una acción pendiente (abrir tarea, nueva tarea) caduca a los 2 minutos. */
     private const val PENDING_ACTION_TTL_MS = 2 * 60 * 1000L
@@ -65,122 +67,105 @@ object OrbitaskWidgetData {
     fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    private fun databaseFile(context: Context) = File(context.filesDir, DB_NAME)
-
-    /** Copia las tareas fuera de la Papelera a SharedPreferences para que los widgets las pinten. */
-    fun refreshFromDatabase(context: Context) {
-        val dbFile = databaseFile(context)
-        if (!dbFile.exists()) return
-
-        val tasks = JSONArray()
-        try {
-            SQLiteDatabase.openDatabase(
-                dbFile.path,
-                null,
-                SQLiteDatabase.OPEN_READONLY,
-            ).use { db ->
-                db.rawQuery(
-                    """
-                    SELECT id, title, priority, due_date, completed, updated_at
-                    FROM tasks
-                    WHERE trashed_at IS NULL
-                    """.trimIndent(),
-                    null,
-                ).use { cursor ->
-                    val idIndex = cursor.getColumnIndexOrThrow("id")
-                    val titleIndex = cursor.getColumnIndexOrThrow("title")
-                    val priorityIndex = cursor.getColumnIndexOrThrow("priority")
-                    val dueIndex = cursor.getColumnIndexOrThrow("due_date")
-                    val completedIndex = cursor.getColumnIndexOrThrow("completed")
-                    val updatedIndex = cursor.getColumnIndexOrThrow("updated_at")
-
-                    while (cursor.moveToNext()) {
-                        val json = JSONObject()
-                            .put("id", cursor.getString(idIndex))
-                            .put("title", cursor.getString(titleIndex) ?: "")
-                            .put("priority", cursor.getInt(priorityIndex))
-                            .put("completed", cursor.getInt(completedIndex) != 0)
-                            .put("updatedAt", cursor.getLong(updatedIndex))
-                        if (!cursor.isNull(dueIndex)) {
-                            json.put("dueMillis", cursor.getLong(dueIndex))
-                        }
-                        tasks.put(json)
-                    }
-                }
-            }
-        } catch (error: Exception) {
-            Log.w(TAG, "No se pudo leer la base de datos local", error)
-            return
-        }
-
-        prefs(context).edit().putString(TASKS_JSON, tasks.toString()).apply()
+    /** Guarda las tareas que manda Flutter (JSON ya preparado en Dart). */
+    fun storeTasks(context: Context, tasksJson: String) {
+        prefs(context).edit().putString(TASKS_JSON, tasksJson).apply()
     }
 
+    /** Tareas para pintar, con los cambios pendientes del widget ya aplicados. */
     fun tasks(context: Context): List<WidgetTask> {
-        val raw = prefs(context).getString(TASKS_JSON, "[]") ?: "[]"
-        val array = try {
-            JSONArray(raw)
-        } catch (ignored: Exception) {
-            JSONArray()
-        }
+        val prefs = prefs(context)
+        val toggles = readToggles(prefs)
+        val array = readArray(prefs.getString(TASKS_JSON, "[]"))
+
         return List(array.length()) { index ->
             val json = array.getJSONObject(index)
+            val id = json.optString("id")
+            val toggle = toggles.optJSONObject(id)
+            val reminders = json.optJSONArray("reminderIds")
             WidgetTask(
-                id = json.optString("id"),
+                id = id,
                 title = json.optString("title"),
                 priority = json.optInt("priority", 0),
-                dueMillis = if (json.has("dueMillis")) json.optLong("dueMillis") else null,
-                completed = json.optBoolean("completed", false),
-                updatedAt = json.optLong("updatedAt", 0L),
+                dueMillis = if (json.has("dueMillis") && !json.isNull("dueMillis")) {
+                    json.optLong("dueMillis")
+                } else {
+                    null
+                },
+                completed = toggle?.optBoolean("completed")
+                    ?: json.optBoolean("completed", false),
+                updatedAt = toggle?.optLong("at") ?: json.optLong("updatedAt", 0L),
+                reminderIds = if (reminders == null) {
+                    emptyList()
+                } else {
+                    List(reminders.length()) { reminders.optString(it) }
+                },
             )
         }
     }
 
     /**
-     * Marca o desmarca una tarea desde el widget.
-     *
-     * Al completarla también cancela sus recordatorios programados. Al
-     * desmarcarla, los recordatorios se vuelven a programar cuando se abre la
-     * app (ver [takeChangedTasks]).
+     * Apunta que una tarea se marcó o desmarcó en el widget. Al completarla
+     * también cancela en el momento las alarmas de sus recordatorios.
      */
-    fun setCompleted(context: Context, taskId: String, completed: Boolean): Boolean {
-        val dbFile = databaseFile(context)
-        if (!dbFile.exists()) return false
+    fun recordToggle(context: Context, taskId: String, completed: Boolean) {
+        val prefs = prefs(context)
+        val toggles = readToggles(prefs)
+        toggles.put(
+            taskId,
+            JSONObject()
+                .put("completed", completed)
+                .put("at", System.currentTimeMillis()),
+        )
+        prefs.edit().putString(PENDING_TOGGLES, toggles.toString()).commit()
 
-        val reminderIds = mutableListOf<String>()
-        try {
-            SQLiteDatabase.openDatabase(
-                dbFile.path,
-                null,
-                SQLiteDatabase.OPEN_READWRITE,
-            ).use { db ->
-                // La app puede tener la base abierta: espera en vez de fallar al instante.
-                db.rawQuery("PRAGMA busy_timeout = 3000", null).use { it.moveToFirst() }
+        if (completed) {
+            val task = tasks(context).firstOrNull { it.id == taskId }
+            if (task != null) cancelReminders(context, task.reminderIds)
+        }
+    }
 
-                val values = ContentValues().apply {
-                    put("completed", if (completed) 1 else 0)
-                    put("updated_at", System.currentTimeMillis())
-                }
-                db.update("tasks", values, "id = ?", arrayOf(taskId))
+    /**
+     * Devuelve y borra los cambios pendientes para que Flutter los guarde en la
+     * base de datos. También los pasa a la copia local de tareas, para que el
+     * widget no muestre el estado antiguo mientras Flutter los aplica.
+     */
+    fun takeToggles(context: Context): List<Map<String, Any>> {
+        val prefs = prefs(context)
+        val toggles = readToggles(prefs)
+        if (toggles.length() == 0) return emptyList()
 
-                if (completed) {
-                    db.rawQuery(
-                        "SELECT id FROM reminders WHERE task_id = ?",
-                        arrayOf(taskId),
-                    ).use { cursor ->
-                        while (cursor.moveToNext()) reminderIds.add(cursor.getString(0))
-                    }
-                }
-            }
-        } catch (error: Exception) {
-            Log.w(TAG, "No se pudo actualizar la tarea $taskId", error)
-            return false
+        val array = readArray(prefs.getString(TASKS_JSON, "[]"))
+        for (index in 0 until array.length()) {
+            val json = array.getJSONObject(index)
+            val toggle = toggles.optJSONObject(json.optString("id")) ?: continue
+            json.put("completed", toggle.optBoolean("completed"))
+            json.put("updatedAt", toggle.optLong("at"))
         }
 
-        if (reminderIds.isNotEmpty()) cancelReminders(context, reminderIds)
-        markChanged(context, taskId)
-        refreshFromDatabase(context)
-        return true
+        val result = mutableListOf<Map<String, Any>>()
+        toggles.keys().forEach { taskId ->
+            val toggle = toggles.optJSONObject(taskId) ?: return@forEach
+            result.add(mapOf("taskId" to taskId, "completed" to toggle.optBoolean("completed")))
+        }
+
+        prefs.edit()
+            .putString(TASKS_JSON, array.toString())
+            .remove(PENDING_TOGGLES)
+            .commit()
+        return result
+    }
+
+    private fun readToggles(prefs: SharedPreferences): JSONObject = try {
+        JSONObject(prefs.getString(PENDING_TOGGLES, "{}") ?: "{}")
+    } catch (ignored: Exception) {
+        JSONObject()
+    }
+
+    private fun readArray(raw: String?): JSONArray = try {
+        JSONArray(raw ?: "[]")
+    } catch (ignored: Exception) {
+        JSONArray()
     }
 
     /** Mismo cálculo que `NotificationService.notificationId` en Dart (FNV-1a de 31 bits). */
@@ -197,9 +182,10 @@ object OrbitaskWidgetData {
      * Cancela la alarma que flutter_local_notifications programó para cada
      * recordatorio y quita el aviso si ya se mostró. Si el plugin cambiara su
      * forma de programar, esto no encontraría la alarma y no haría nada; en ese
-     * caso la app la cancela igualmente al abrirse.
+     * caso la app la cancela igualmente al aplicar el cambio.
      */
     private fun cancelReminders(context: Context, reminderIds: List<String>) {
+        if (reminderIds.isEmpty()) return
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
@@ -223,21 +209,6 @@ object OrbitaskWidgetData {
                 Log.w(TAG, "No se pudo cancelar el recordatorio $reminderId", error)
             }
         }
-    }
-
-    private fun markChanged(context: Context, taskId: String) {
-        val prefs = prefs(context)
-        val ids = HashSet(prefs.getStringSet(CHANGED_TASKS, emptySet()) ?: emptySet())
-        ids.add(taskId)
-        prefs.edit().putStringSet(CHANGED_TASKS, ids).apply()
-    }
-
-    /** Ids de tareas que cambiaron desde el widget. Flutter los recoge al abrirse. */
-    fun takeChangedTasks(context: Context): List<String> {
-        val prefs = prefs(context)
-        val ids = prefs.getStringSet(CHANGED_TASKS, emptySet())?.toList() ?: emptyList()
-        prefs.edit().remove(CHANGED_TASKS).apply()
-        return ids
     }
 
     /** Guarda lo que la app debe hacer al abrirse desde el widget. */

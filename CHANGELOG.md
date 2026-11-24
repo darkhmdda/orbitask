@@ -8,7 +8,7 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 - Widgets de pantalla de inicio para Android: **Todas las tareas**, **Próximas entregas** y **Calendario**. Usan los colores del tema activo de Orbitask.
   - Esquinas redondeadas, fechas relativas ("Hoy", "Mañana", "en 4 días", "Vencida · ayer") y el color de la casilla según la prioridad.
-  - Al marcar una tarea, queda tachada al final de la lista y se puede desmarcar. Al completarla desde el widget se cancelan sus recordatorios; al desmarcarla, se vuelven a programar la próxima vez que se abre la app.
+  - Al marcar una tarea, queda tachada al final de la lista y se puede desmarcar. Al completarla desde el widget se cancelan sus recordatorios al momento. El cambio se guarda en la base de datos y se sincroniza en cuanto la app está en marcha (al momento si sigue abierta en segundo plano, o la próxima vez que se abra).
   - El botón "+" abre directamente el formulario de nueva tarea. En el calendario, la tarea se propone con la fecha del día seleccionado.
   - Tocar una tarea la abre en la app.
   - Próximas entregas agrupa las tareas en Vencidas, Esta semana y Más adelante, con un recuadro de fecha.
@@ -18,6 +18,7 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ### Corregido
 
+- Los widgets de Android ya no abren la base de datos local desde Kotlin. En la versión de prueba v0.10-dev lo hacían a la vez que la app, con dos copias distintas de SQLite en el mismo proceso, y eso podía corromper la base local ("database disk image is malformed"). Ahora la app les pasa las tareas y guarda ella misma lo que se marca en el widget.
 - Migración de `package:flutter/material.dart` a `package:material_ui`. Flutter 3.50 marca el import anterior como obsoleto y `flutter analyze` (y con él el CI) fallaba con 12 avisos.
 
 ### Cambiado

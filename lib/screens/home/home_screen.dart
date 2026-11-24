@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -120,6 +121,7 @@ class _HomeScreenState extends State<HomeScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _listenToAndroidWidgets();
     unawaited(_initializeHome());
   }
 
@@ -168,6 +170,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _stopListeningToAndroidWidgets();
     _cloudSyncDebounce?.cancel();
     _cloudSyncTimer?.cancel();
     _cloudSyncRetryTimer?.cancel();
