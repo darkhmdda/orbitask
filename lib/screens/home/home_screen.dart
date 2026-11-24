@@ -117,6 +117,8 @@ class _HomeScreenState extends State<HomeScreen>
   int _cloudSyncFailureCount = 0;
   RealtimeChannel? _cloudRealtimeChannel;
   Timer? _remoteReloadTimer;
+  bool _fullSyncPending = false;
+  bool _queuedFullSync = false;
 
   @override
   void initState() {

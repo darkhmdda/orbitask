@@ -14,7 +14,7 @@ Este documento explica cómo sincroniza Orbitask los datos locales con Supabase:
 
 | Disparador | Detalle |
 | ---------- | ------- |
-| Cambio local | Con un pequeño retardo para agrupar cambios (500 ms en Windows, 750 ms en el resto) |
+| Cambio local | **Subida rápida** 300 ms después, para agrupar cambios seguidos (ver [Subida rápida](#subida-rápida)) |
 | Realtime | Cuando Supabase avisa de un cambio, la fila se aplica en local al momento (ver [Cambios por Realtime](#cambios-por-realtime)). Solo los adjuntos, el tema y los casos que no se pueden aplicar sueltos lanzan una sincronización completa |
 | Sondeo periódico | Cada 20 s en Windows y cada 30 s en el resto, como respaldo de Realtime |
 | Manual | El usuario puede forzar una sincronización desde la interfaz |
@@ -23,6 +23,20 @@ Este documento explica cómo sincroniza Orbitask los datos locales con Supabase:
 Si llega un disparador mientras ya hay una sincronización en curso, se encola y se ejecuta otra al terminar.
 
 Realtime escucha las tablas `user_preferences`, `task_lists`, `tasks`, `subtasks`, `reminders`, `task_attachments` y `sync_deletions`, filtradas por `user_id`.
+
+## Subida rápida
+
+Tras una edición local no se hace una sincronización completa: `pushLocalChanges` sube solo lo modificado después de la **marca de subida** (`cloud_push_watermark`, hora local en ms) y no descarga nada antes.
+
+1. Si el espacio no está vinculado, no hay marca todavía (primera sincronización) o hay adjuntos modificados (hay que subirlos a Storage), no sube nada y pide una sincronización completa.
+2. Sube las listas, tareas, subtareas y recordatorios con `updated_at` posterior a la marca, con el mismo filtro de hijos huérfanos que la sincronización completa.
+3. Sube los tombstones posteriores a la marca y los aplica en la nube.
+4. Sube el tema si cambió después de la marca.
+5. Mueve la marca a la hora en que empezó la subida, de modo que lo editado mientras subía queda pendiente para la siguiente.
+
+Es seguro subir sin comparar antes porque el trigger `skip_stale_sync_updates` descarta en el servidor cualquier fila que no sea más reciente que la guardada. Los demás dispositivos reciben el cambio por Realtime y lo aplican al momento. La sincronización completa (al abrir la app, cada 20–30 s, ante un aviso que no se puede aplicar suelto o tras un fallo) sigue subiendo todo lo pendiente y actualiza la marca al terminar, así que cualquier cosa que la subida rápida no cubra se sube como mucho en el siguiente sondeo.
+
+Las filas que llegan de otros dispositivos con un `updated_at` posterior a la marca se vuelven a enviar en la siguiente subida rápida; el servidor las descarta sin generar cambios ni avisos.
 
 ## Cambios por Realtime
 

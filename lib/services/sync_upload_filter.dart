@@ -14,3 +14,15 @@ List<T> keepChildrenOfExistingTasks<T>(
       .where((child) => existingTaskIds.contains(taskIdOf(child)))
       .toList();
 }
+
+/// Filas modificadas después de la marca de la última subida (en ms, hora
+/// local). Es lo que sube la subida rápida tras una edición.
+List<T> changedSince<T>(
+  Iterable<T> items,
+  int watermark,
+  DateTime Function(T item) updatedAtOf,
+) {
+  return items
+      .where((item) => updatedAtOf(item).millisecondsSinceEpoch > watermark)
+      .toList();
+}
