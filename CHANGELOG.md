@@ -42,6 +42,7 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 - Gradle pasa de la 9.3.1 a la 9.5.1 (con la 9.3.1 el build de Android mostraba un aviso).
 - Android Gradle Plugin pasa de la 9.1.1 a la 9.3.1 y Kotlin de la 2.4.0 a la 2.4.20, las versiones de la plantilla de Flutter 3.50. Con las anteriores, el build avisaba de que Flutter dejaría de admitirlas pronto.
+- `release_android.yml` compila con Java 21 en lugar de 17: el lint de AGP 9.3.1 usa `List.removeLast()`, que no existe en Java 17, y la compilación fallaba con `NoSuchMethodError`. La app sigue generando bytecode para Java 17.
 - Los workflows usan `actions/checkout@v5` (la v4 funciona con Node.js 20, que GitHub Actions ya no recomienda).
 - La sección `### Interno` del changelog recoge los cambios técnicos. La pestaña Acerca de no la muestra, igual que `### Documentación`.
 - `release_android.yml` pasa la etiqueta de la release a la app con `--dart-define=ORBITASK_TAG`. Antes las versiones de prueba se identificaban como 1.0.1.
