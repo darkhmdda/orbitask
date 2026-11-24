@@ -16,17 +16,12 @@ class OrbitaskWidgetActionReceiver : BroadcastReceiver() {
             ACTION_TOGGLE, ACTION_COMPLETE_LEGACY -> {
                 val taskId = intent.getStringExtra(EXTRA_TASK_ID) ?: return
                 val completed = intent.getBooleanExtra(EXTRA_COMPLETED, true)
-                val pending = goAsync()
-                Thread {
-                    try {
-                        OrbitaskWidgetData.setCompleted(context, taskId, completed)
-                        OrbitaskWidgets.refreshAll(context, reloadData = false)
-                    } catch (error: Exception) {
-                        Log.w(TAG, "No se pudo cambiar la tarea desde el widget", error)
-                    } finally {
-                        pending.finish()
-                    }
-                }.start()
+                // No se toca la base de datos: el cambio queda pendiente y
+                // Flutter lo guarda (al momento si la app está abierta en
+                // segundo plano, o la próxima vez que se abra).
+                OrbitaskWidgetData.recordToggle(context, taskId, completed)
+                OrbitaskWidgets.refreshAll(context)
+                MainActivity.notifyWidgetToggles()
             }
 
             ACTION_OPEN_TASK -> {
