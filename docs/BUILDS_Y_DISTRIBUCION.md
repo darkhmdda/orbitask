@@ -38,7 +38,7 @@ export SUPABASE_AUTH_REDIRECT_URL=com.darkhmdda.orbitask://login-callback
 bash installer/android/build_release.sh
 ```
 
-Genera `build/app/outputs/flutter-apk/app-release.apk`.
+Genera `build/app/outputs/flutter-apk/app-release.apk`. Necesita el SDK de Android y un JDK en la máquina; si no los tienes, usa el workflow `release_android.yml` (abajo).
 
 **Firma.** La build de release requiere `android/key.properties` con los datos del keystore; sin él, Gradle aborta con un mensaje claro. El keystore y sus contraseñas **no se versionan** y deben respaldarse en un lugar seguro fuera del repositorio. Si se pierde, no se podrán publicar actualizaciones firmadas con la misma clave.
 
@@ -93,6 +93,7 @@ La URL de redirect usada debe estar permitida en la configuración de Auth de Su
 | `deploy_web.yml` | Push a `main` y manual | Compila la web y la despliega en GitHub Pages |
 | `release_linux_v1.yml` | Solo manual | Compila Linux, calcula SHA-256 y sube los artefactos a la release (con `--clobber`, es decir, sobrescribe los existentes) |
 | `release_windows_v1.yml` | Manual | Compila Windows, crea el ZIP portable y el instalador con Inno Setup |
+| `release_android.yml` | Solo manual | Compila un APK firmado de la rama elegida y lo deja en un **borrador** de release con su SHA-256. Nunca publica ni sobrescribe una release existente |
 | `dependabot.yml` | Semanal | Propone actualizaciones de dependencias de `pub` y de GitHub Actions |
 
 ### Aspectos a tener en cuenta
@@ -100,7 +101,8 @@ La URL de redirect usada debe estar permitida en la configuración de Auth de Su
 - **Cada push a `main` despliega la web.** Todo lo que llegue a `main` queda público en la Web al momento.
 - **Los workflows de release están atados a v1.0.0.** Sus nombres, la versión pasada al instalador de Windows y la release a la que suben los archivos están escritos a mano. Para una versión nueva hay que parametrizarlos o duplicarlos.
 - **La configuración de Supabase viene de variables del repositorio.** Los workflows de Web, Windows y Linux leen `vars.SUPABASE_URL` y `vars.SUPABASE_PUBLISHABLE_KEY`, y fallan con un mensaje claro si falta alguna (así no se publica por error una build sin nube). El redirect de autenticación sí está escrito en cada workflow, porque no es un dato sensible. Las variables se crean en *Settings → Secrets and variables → Actions → Variables*. Son variables y no secretos porque la clave publicable es pública por diseño.
-- **Android no tiene workflow de release.** El APK se compila en local, porque la clave de firma no está en el repositorio.
+- **Release de Android con `release_android.yml`.** Se lanza desde *Actions → Release Orbitask Android → Run workflow*, eligiendo la rama en *Use workflow from*, la etiqueta (por ejemplo `v1.0.1-dev.1`) y si es pre-release. Si la etiqueta ya existe, falla sin tocar nada. Al terminar, en *Releases* aparece un borrador con el APK: se pegan las notas y se publica. Como cualquier workflow manual, el archivo tiene que estar en `main` para que aparezca el botón, y también en la rama que se compila.
+- **La clave de firma de Android vive en secretos del repositorio**: `ANDROID_KEYSTORE_BASE64` (el keystore en base64, con `base64 -w0 archivo.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` y `ANDROID_KEY_PASSWORD`. El workflow la escribe solo durante la build y la borra al terminar. Aun así, guarda una copia del keystore y de sus contraseñas fuera de GitHub: si se pierde, las actualizaciones no se pueden instalar encima de la app y hay que desinstalarla.
 
 ## Flujo de ramas recomendado
 
