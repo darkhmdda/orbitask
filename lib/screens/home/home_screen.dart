@@ -20,6 +20,7 @@ import '../../services/auth_service.dart';
 import '../../services/cloud_sync_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/profile_service.dart';
+import '../../services/reminder_plan.dart';
 import '../../widgets/orbitask_brand.dart';
 import '../../widgets/task_card.dart';
 import '../../widgets/theme_picker.dart';
@@ -115,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen>
   Timer? _cloudSyncRetryTimer;
   int _cloudSyncFailureCount = 0;
   RealtimeChannel? _cloudRealtimeChannel;
-  DateTime? _ignoreRealtimeUntil;
+  Timer? _remoteReloadTimer;
 
   @override
   void initState() {
@@ -174,6 +175,7 @@ class _HomeScreenState extends State<HomeScreen>
     _cloudSyncDebounce?.cancel();
     _cloudSyncTimer?.cancel();
     _cloudSyncRetryTimer?.cancel();
+    _remoteReloadTimer?.cancel();
 
     final realtimeChannel = _cloudRealtimeChannel;
     if (realtimeChannel != null) {

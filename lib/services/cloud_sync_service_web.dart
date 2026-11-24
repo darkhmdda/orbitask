@@ -4,7 +4,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../database/local_database_web.dart';
 import '../repositories/todo_repository_web.dart';
+import 'remote_change.dart';
 import 'remote_versions.dart';
+import 'sync_upload_filter.dart';
+
+export 'remote_change.dart';
 
 class CloudUploadResult {
   const CloudUploadResult({
@@ -94,7 +98,11 @@ class CloudSyncService {
     return DateTime.tryParse(raw)?.toLocal();
   }
 
-  RealtimeChannel? subscribeToRemoteChanges(void Function() onChange) {
+  /// Escucha los cambios de las tablas del usuario y entrega cada uno a
+  /// [onChange] con la fila que cambió (ver [applyRemoteChange]).
+  RealtimeChannel? subscribeToRemoteChanges(
+    void Function(RemoteChange change) onChange,
+  ) {
     final client = _client;
     final user = client?.auth.currentUser;
     if (client == null || user == null) return null;
@@ -120,12 +128,115 @@ class CloudSyncService {
           column: 'user_id',
           value: user.id,
         ),
-        callback: (_) => onChange(),
+        callback: (payload) => onChange(_remoteChangeFrom(payload)),
       );
     }
 
     channel.subscribe();
     return channel;
+  }
+
+  RemoteChange _remoteChangeFrom(PostgresChangePayload payload) {
+    final type = switch (payload.eventType) {
+      PostgresChangeEvent.insert => RemoteChangeType.insert,
+      PostgresChangeEvent.delete => RemoteChangeType.delete,
+      _ => RemoteChangeType.update,
+    };
+    return RemoteChange(
+      table: payload.table,
+      type: type,
+      record: type == RemoteChangeType.delete
+          ? payload.oldRecord
+          : payload.newRecord,
+    );
+  }
+
+  /// Aplica en local un cambio que llegó por Realtime, sin descargar nada.
+  /// Misma lógica que la versión nativa (ver `cloud_sync_service_native.dart`).
+  RemoteChangeOutcome applyRemoteChange(RemoteChange change) {
+    final ownerId = _database.getSetting('cloud_account_id');
+    if (ownerId == null || ownerId.isEmpty || change.userId != ownerId) {
+      return RemoteChangeOutcome.needsFullSync;
+    }
+
+    try {
+      if (change.table == RemoteChange.tableDeletions) {
+        if (change.type == RemoteChangeType.delete) {
+          return RemoteChangeOutcome.unchanged;
+        }
+        return _applyRemoteDeletion(change.record);
+      }
+
+      if (!change.isRowTable || change.type == RemoteChangeType.delete) {
+        return RemoteChangeOutcome.needsFullSync;
+      }
+
+      final id = change.record['id'] as String?;
+      if (id == null) return RemoteChangeOutcome.needsFullSync;
+
+      // En Web no hay claves foráneas: una fila hija sin su tarea se queda a
+      // la espera de la sincronización completa.
+      if ((change.table == RemoteChange.tableSubtasks ||
+              change.table == RemoteChange.tableReminders) &&
+          _localUpdatedAt('tasks', change.record['task_id'] as String?) ==
+              null) {
+        return RemoteChangeOutcome.needsFullSync;
+      }
+
+      final before = _localUpdatedAt(change.table, id);
+      // Eco o versión antigua: se descarta sin escribir nada.
+      if (before != null && before >= _millis(change.record['updated_at'])) {
+        return RemoteChangeOutcome.unchanged;
+      }
+
+      final single = <Map<String, dynamic>>[change.record];
+      const none = <Map<String, dynamic>>[];
+      _mergeRemoteSnapshot(
+        lists: change.table == RemoteChange.tableLists ? single : none,
+        tasks: change.table == RemoteChange.tableTasks ? single : none,
+        subtasks: change.table == RemoteChange.tableSubtasks ? single : none,
+        reminders: change.table == RemoteChange.tableReminders ? single : none,
+      );
+      final after = _localUpdatedAt(change.table, id);
+
+      return before == after
+          ? RemoteChangeOutcome.unchanged
+          : RemoteChangeOutcome.applied;
+    } catch (_) {
+      return RemoteChangeOutcome.needsFullSync;
+    }
+  }
+
+  RemoteChangeOutcome _applyRemoteDeletion(Map<String, dynamic> record) {
+    final type = record['entity_type'] as String?;
+    final id = record['entity_id'] as String?;
+    final key = switch (type) {
+      'task' => 'tasks',
+      'subtask' => 'subtasks',
+      'reminder' => 'reminders',
+      'attachment' => 'task_attachments',
+      'task_list' => 'task_lists',
+      _ => null,
+    };
+    if (key == null || id == null) return RemoteChangeOutcome.needsFullSync;
+
+    final existed = _localUpdatedAt(key, id) != null;
+    _mergeRemoteDeletions([record]);
+    if (!existed) return RemoteChangeOutcome.unchanged;
+    _applyLocalDeletionJournal();
+    final exists = _localUpdatedAt(key, id) != null;
+
+    return exists
+        ? RemoteChangeOutcome.unchanged
+        : RemoteChangeOutcome.applied;
+  }
+
+  int? _localUpdatedAt(String key, String? id) {
+    if (id == null) return null;
+    for (final item in _database.readCollection(key)) {
+      if (item['id'] == id) return (item['updated_at'] as num?)?.toInt() ?? 0;
+    }
+    return null;
   }
 
   Future<CloudSyncResult> syncNow() async {
@@ -218,11 +329,11 @@ class CloudSyncService {
     // deletion tombstone is merged and would otherwise violate Supabase FKs.
     final taskIds = tasks.map((task) => task.id).toSet();
     final validSubtasks =
-        subtasks.where((item) => taskIds.contains(item.taskId)).toList();
+        keepChildrenOfExistingTasks(subtasks, taskIds, (item) => item.taskId);
     final validReminders =
-        reminders.where((item) => taskIds.contains(item.taskId)).toList();
+        keepChildrenOfExistingTasks(reminders, taskIds, (item) => item.taskId);
     final validAttachments =
-        attachments.where((item) => taskIds.contains(item.taskId)).toList();
+        keepChildrenOfExistingTasks(attachments, taskIds, (item) => item.taskId);
 
     // Con las versiones remotas de esta sincronización solo se suben las filas
     // que no existen en Supabase o son más recientes que su copia remota. El

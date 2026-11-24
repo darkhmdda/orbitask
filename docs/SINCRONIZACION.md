@@ -15,7 +15,7 @@ Este documento explica cómo sincroniza Orbitask los datos locales con Supabase:
 | Disparador | Detalle |
 | ---------- | ------- |
 | Cambio local | Con un pequeño retardo para agrupar cambios (500 ms en Windows, 750 ms en el resto) |
-| Realtime | Cuando Supabase avisa de un cambio en alguna tabla del usuario |
+| Realtime | Cuando Supabase avisa de un cambio, la fila se aplica en local al momento (ver [Cambios por Realtime](#cambios-por-realtime)). Solo los adjuntos, el tema y los casos que no se pueden aplicar sueltos lanzan una sincronización completa |
 | Sondeo periódico | Cada 20 s en Windows y cada 30 s en el resto, como respaldo de Realtime |
 | Manual | El usuario puede forzar una sincronización desde la interfaz |
 | Reintento tras un fallo | Esperas de 5 s, 15 s, 30 s y 1 min (se repite 1 min mientras siga fallando) |
@@ -24,7 +24,23 @@ Si llega un disparador mientras ya hay una sincronización en curso, se encola y
 
 Realtime escucha las tablas `user_preferences`, `task_lists`, `tasks`, `subtasks`, `reminders`, `task_attachments` y `sync_deletions`, filtradas por `user_id`.
 
-Para no reaccionar a sus propios cambios, el dispositivo **ignora los eventos de Realtime durante 5 segundos** desde el inicio de cada sincronización.
+## Cambios por Realtime
+
+Cada aviso de Realtime trae la fila que cambió. `applyRemoteChange` la aplica en la base local con la misma regla que la sincronización completa (solo si su `updated_at` es estrictamente mayor que el local) y devuelve:
+
+| Resultado | Cuándo | Qué hace la interfaz |
+| --------- | ------ | -------------------- |
+| `applied` | La copia local cambió | Recarga los datos (agrupando los avisos que llegan en 150 ms) y reprograma solo los recordatorios de las tareas que cambiaron |
+| `unchanged` | Es el eco de un cambio propio (misma fila, mismo `updated_at`) o una versión más antigua | Nada |
+| `needsFullSync` | Adjuntos (hay que descargar el archivo), tema, borrados de filas, una cuenta distinta de la vinculada, un espacio sin vincular o una fila hija cuya tarea aún no ha llegado | Lanza una sincronización completa |
+
+Los borrados llegan como filas nuevas de `sync_deletions`: se guardan en el diario local y se aplican al momento con las reglas de los [tombstones](#tombstones).
+
+Hasta la versión 1.0.1, el dispositivo ignoraba Realtime durante 5 segundos desde el inicio de cada sincronización para no reaccionar a sus propios cambios. Eso también descartaba los cambios de los otros dispositivos que llegaban en esa ventana, que no aparecían hasta el siguiente sondeo (20–30 s). Con la detección del eco por `updated_at` esa ventana ya no existe.
+
+### Recordatorios tras sincronizar
+
+Tras una sincronización completa o un cambio de Realtime, `ReminderPlan.diff` compara las tareas y recordatorios de antes y de después y solo cancela y vuelve a programar los de las tareas que cambiaron. Antes se reprogramaban todos tras cada sincronización, y los avisos de una tarea borrada en otro dispositivo no se cancelaban porque la tarea ya no aparecía en la lista. Al abrir la app se sigue haciendo una reconciliación completa una vez.
 
 ## Flujo de `syncNow()`
 
@@ -39,7 +55,7 @@ Para no reaccionar a sus propios cambios, el dispositivo **ignora los eventos de
 9. **Limpiar el diario.** Como máximo una vez al día (ver [Tombstones](#tombstones)).
 10. **Registrar la hora** de la última sincronización correcta.
 
-Después de una sincronización correcta, la interfaz recarga los datos y reconcilia los recordatorios.
+Después de una sincronización correcta, la interfaz recarga los datos y reprograma los recordatorios de las tareas que cambiaron (ver [Recordatorios tras sincronizar](#recordatorios-tras-sincronizar)).
 
 ## Resolución de conflictos
 
@@ -69,9 +85,9 @@ Estas limitaciones son del diseño actual y están pendientes de mejorar.
 1. **Granularidad de registro completo.** Si dos dispositivos editan campos distintos de la misma tarea sin conexión, el registro más reciente sobrescribe al otro entero; los cambios del perdedor se pierden.
 2. **Dependencia del reloj del cliente.** El `updated_at` lo escribe el dispositivo. Desde la migración `20261123180000_skip_stale_sync_updates`, el servidor ya no deja que una escritura más antigua o idéntica pise a una más nueva, lo que cierra la ventana entre descargar y subir. Pero el orden sigue dependiendo del reloj de cada dispositivo: uno con el reloj muy adelantado sigue ganando los conflictos.
 3. **Descarga completa en cada pasada.** Cada ejecución descarga todas las tablas del usuario, hayan cambiado o no, y se repite cada 20 o 30 s. La subida ya envía solo las filas más recientes que su copia remota, pero el coste de la descarga crece con el número de tareas.
-4. **Posible reacción en cadena entre dispositivos.** Antes de la migración `20261123180000`, un `upsert` de filas sin cambios generaba eventos de Realtime para los otros dispositivos, que sincronizaban a su vez, y la única protección era la ventana de 5 s basada en tiempo. Ahora el cliente ya no sube las filas sin cambios y el servidor omite las que lleguen idénticas, de modo que esas escrituras no generan evento, lo que debería eliminar la reacción en cadena. Falta confirmarlo midiendo el tráfico real; la ventana de 5 s se mantiene como respaldo.
+4. **Reacción en cadena entre dispositivos: resuelta.** El cliente no sube filas sin cambios, el servidor descarta las idénticas (trigger `skip_stale_sync_updates`) y los ecos que aun así lleguen por Realtime no modifican nada en local, así que no disparan nada más.
 5. **Lógica duplicada.** Existe una versión nativa y otra web del servicio; cada corrección hay que hacerla dos veces.
-6. **Sin pruebas automatizadas** del servicio de sincronización, el fusionado ni los tombstones.
+6. **Pruebas parciales.** `test/realtime_sync_test.dart` prueba con dos dispositivos simulados cómo se aplican los cambios de Realtime (ediciones cruzadas, ecos, versiones antiguas, tombstones, listas eliminadas, filas de otra cuenta) y la regresión de `reminders_task_fk`; `test/reminder_plan_test.dart` prueba la reprogramación de recordatorios. La sincronización completa contra Supabase (`syncNow`) sigue sin pruebas automatizadas.
 7. **Dispositivos muy antiguos.** Un dispositivo que pase más de 365 días sin sincronizar podría reintroducir registros cuyos tombstones ya se purgaron.
 8. **Web.** Los datos locales viven en `localStorage`, con la cuota del navegador (alrededor de 5 MB según el navegador).
 
@@ -81,6 +97,5 @@ No están implementadas.
 
 - Corregir el desfase de reloj: que el servidor limite los `updated_at` futuros y que el cliente adopte el valor del servidor después de subir. El trigger actual no lo resuelve por sí solo, porque sustituir el valor en el servidor sin que el cliente lo adopte provocaría reenvíos continuos.
 - Descarga incremental: pedir solo lo modificado desde la última sincronización (la subida ya es incremental).
-- Identificar el dispositivo de origen en cada cambio para ignorar eventos propios de Realtime sin depender de una ventana de tiempo.
 - Fusionar por campo en lugar de por registro.
-- Extraer la lógica de fusión a una capa común que dependa solo de una interfaz de almacenamiento, y escribir pruebas con dos "dispositivos" simulados, empezando por una prueba de regresión del error de `reminders_task_fk`.
+- Extraer la lógica de fusión a una capa común que dependa solo de una interfaz de almacenamiento, para unificar nativo y web y poder probar `syncNow` completo.

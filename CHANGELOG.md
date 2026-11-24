@@ -19,11 +19,13 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ### Corregido
 
+- Los recordatorios de una tarea borrada en otro dispositivo se cancelan al sincronizar. Antes seguían programados hasta reiniciar la app.
 - Los widgets de Android ya no abren la base de datos local desde Kotlin. En la versión de prueba v0.10-dev lo hacían a la vez que la app, con dos copias distintas de SQLite en el mismo proceso, y eso podía corromper la base local ("database disk image is malformed"). Ahora la app les pasa las tareas y guarda ella misma lo que se marca en el widget.
 - Migración de `package:flutter/material.dart` a `package:material_ui`. Flutter 3.50 marca el import anterior como obsoleto y `flutter analyze` (y con él el CI) fallaba con 12 avisos.
 
 ### Cambiado
 
+- Sincronización más rápida: los cambios que avisa Realtime se aplican al momento con la fila que llega, sin descargar todas las tablas. El eco de los cambios propios se detecta por `updated_at` y se descarta, así que desaparece la ventana de 5 s en la que se ignoraban los avisos, que hacía que los cambios de otro dispositivo tardaran hasta 30 s. Tras sincronizar solo se reprograman los recordatorios de las tareas que cambiaron.
 - El despliegue de la web separa la compilación y la publicación en dos jobs, como recomienda `actions/deploy-pages`, y sube a `upload-pages-artifact@v4` y `checkout@v5`. Con todo en un mismo job, la publicación fallaba de vez en cuando porque no encontraba el artefacto recién subido.
 - Nuevo workflow manual `release_android.yml`: compila un APK firmado con la clave guardada en los secretos del repositorio y lo deja en un borrador de release. Así ya no hace falta el SDK de Android en la máquina local.
 - Los workflows de Web, Windows y Linux leen la URL y la clave publicable de Supabase de variables del repositorio en lugar de tenerlas escritas en el código. Fallan con un mensaje claro si faltan. El workflow de Linux ya no extrae esos valores con una expresión regular del workflow de Windows, y pasa a ejecutarse solo de forma manual (antes también se disparaba al modificar su propio archivo en `main`, lo que volvía a subir y sobrescribir los artefactos de la release).

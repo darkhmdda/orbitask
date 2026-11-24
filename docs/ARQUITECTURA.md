@@ -107,7 +107,7 @@ Cada tarea puede tener varios recordatorios, relativos a la fecha límite o con 
 | Windows | Notificaciones locales | — |
 | Web | Notificaciones del navegador, con permiso del usuario | Solo funcionan con la pestaña abierta (no hay Push / Service Worker) |
 
-Al abrir la app o tras sincronizar, los recordatorios se reconcilian con las tareas actuales.
+Al abrir la app, los recordatorios se reconcilian con todas las tareas. Tras sincronizar, solo se reprograman los de las tareas que cambiaron (`ReminderPlan`, ver [SINCRONIZACION.md](SINCRONIZACION.md#recordatorios-tras-sincronizar)).
 
 ## Widgets de Android
 
