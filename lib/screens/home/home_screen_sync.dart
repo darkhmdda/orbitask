@@ -22,14 +22,61 @@ extension _HomeScreenSync on _HomeScreenState {
     }
 
     _cloudRealtimeChannel = widget.cloudSyncService.subscribeToRemoteChanges(
-      () {
-        final ignoreUntil = _ignoreRealtimeUntil;
-        if (ignoreUntil != null && DateTime.now().isBefore(ignoreUntil)) {
-          return;
-        }
-        _scheduleCloudSync(immediate: true);
-      },
+      _handleRemoteChange,
     );
+  }
+
+  /// Aplica al momento cada cambio que avisa Realtime. Los ecos de los
+  /// cambios propios no modifican nada y se descartan solos, así que ya no
+  /// se ignoran avisos durante unos segundos tras cada sincronización (lo
+  /// que hacía perder los cambios de otros dispositivos en esa ventana).
+  void _handleRemoteChange(RemoteChange change) {
+    if (!mounted) return;
+
+    switch (widget.cloudSyncService.applyRemoteChange(change)) {
+      case RemoteChangeOutcome.unchanged:
+        return;
+      case RemoteChangeOutcome.applied:
+        _scheduleRemoteReload();
+      case RemoteChangeOutcome.needsFullSync:
+        _scheduleCloudSync(immediate: true);
+    }
+  }
+
+  /// Agrupa los avisos que llegan seguidos (otro dispositivo que sube
+  /// varias filas a la vez) en una sola recarga.
+  void _scheduleRemoteReload() {
+    _remoteReloadTimer?.cancel();
+    _remoteReloadTimer = Timer(
+      const Duration(milliseconds: 150),
+      () => unawaited(_reloadAndUpdateReminders()),
+    );
+  }
+
+  /// Recarga los datos y reprograma solo los recordatorios de las tareas
+  /// que cambiaron (también cancela los de tareas borradas en otro sitio).
+  Future<void> _reloadAndUpdateReminders() async {
+    final oldTasks = _tasks;
+    final oldReminders = _remindersByTask;
+
+    await _loadData();
+    if (!mounted) return;
+
+    final plan = ReminderPlan.diff(
+      oldTasks: oldTasks,
+      oldReminders: oldReminders,
+      newTasks: _tasks,
+      newReminders: _remindersByTask,
+    );
+    if (plan.isEmpty) return;
+
+    await widget.notificationService.cancelReminders(plan.toCancel);
+    for (final item in plan.toSchedule) {
+      await widget.notificationService.scheduleTaskReminders(
+        task: item.task,
+        reminders: item.reminders,
+      );
+    }
   }
 
   void _scheduleCloudSync({bool immediate = false}) {
@@ -60,10 +107,6 @@ extension _HomeScreenSync on _HomeScreenState {
       _applyState(() => _cloudSyncing = true);
     }
 
-    _ignoreRealtimeUntil = DateTime.now().add(
-      const Duration(seconds: 5),
-    );
-
     try {
       final result = await widget.cloudSyncService.syncNow();
       if (!mounted) return;
@@ -80,8 +123,7 @@ extension _HomeScreenSync on _HomeScreenState {
         _lastCloudSyncAt = widget.cloudSyncService.lastSuccessfulSyncAt;
       });
 
-      _notificationsReconciled = false;
-      await _loadData();
+      await _reloadAndUpdateReminders();
     } catch (error) {
       if (mounted) {
         _applyState(() {
