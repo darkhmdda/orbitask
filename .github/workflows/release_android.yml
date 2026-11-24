@@ -91,13 +91,15 @@ jobs:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
           SUPABASE_AUTH_REDIRECT_URL: com.darkhmdda.orbitask://login-callback
+          TAG: ${{ inputs.tag }}
         run: |
           if [ -z "$SUPABASE_URL" ]; then echo "::error::Falta la variable de repositorio SUPABASE_URL"; exit 1; fi
           if [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then echo "::error::Falta la variable de repositorio SUPABASE_PUBLISHABLE_KEY"; exit 1; fi
           flutter build apk --release \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
-            --dart-define=SUPABASE_AUTH_REDIRECT_URL="$SUPABASE_AUTH_REDIRECT_URL"
+            --dart-define=SUPABASE_AUTH_REDIRECT_URL="$SUPABASE_AUTH_REDIRECT_URL" \
+            --dart-define=ORBITASK_TAG="$TAG"
 
       - name: Remove signing key
         if: always()
