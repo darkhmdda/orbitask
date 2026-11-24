@@ -9,7 +9,7 @@ Todo sale de una única definición vectorial en `build_branding.py`. Para cambi
 | Archivo | Uso |
 | ------- | --- |
 | `orbitask-mark.svg` | Marca sola, fondo transparente |
-| `orbitask-icon.svg` | Icono cuadrado redondeado con fondo oscuro |
+| `orbitask-icon.svg` / `.png` | Icono cuadrado redondeado con fondo oscuro (el PNG, de 256 px, se usa al final del README) |
 | `orbitask-logo.svg` / `.png` | Marca + "Orbitask" sobre fondo oscuro |
 | `orbitask-logo-transparent.svg` | Marca + "Orbitask", fondo transparente (solo para fondos oscuros: el texto es claro) |
 | `wordmark_orbitask.txt` | El texto "Orbitask" convertido a trazos (Montserrat SemiBold) |

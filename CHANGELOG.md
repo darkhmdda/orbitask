@@ -34,6 +34,7 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ### Documentación
 
+- README con el logo nuevo arriba y el icono al final, y enlace a `branding/README.md`.
 - README actualizado a la versión 1.0.1.
 - Nueva documentación técnica en `docs/`: arquitectura, datos y Supabase, sincronización (con sus limitaciones conocidas) y builds y distribución.
 - Se elimina el documento `.docx` externo a favor de documentación en markdown versionada junto al código.

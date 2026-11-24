@@ -1,6 +1,8 @@
-# Orbitask
+<p align="center">
+  <img src="branding/orbitask-logo.png" alt="Orbitask" width="320">
+</p>
 
-**Tus tareas, siempre en órbita.**
+<p align="center"><strong>Tus tareas, siempre en órbita.</strong></p>
 
 Orbitask es una aplicación de tareas multiplataforma hecha con Flutter. Organiza tareas en listas, con subtareas, prioridades, fechas, recordatorios y archivos adjuntos. Funciona sin conexión con una base de datos local y, si inicias sesión, sincroniza entre dispositivos mediante Supabase.
 
@@ -113,7 +115,14 @@ Usa siempre la clave **publicable**. Nunca pongas una clave `service_role` dentr
 | [docs/SINCRONIZACION.md](docs/SINCRONIZACION.md) | Cómo funciona la sincronización, conflictos, tombstones y limitaciones conocidas |
 | [docs/BUILDS_Y_DISTRIBUCION.md](docs/BUILDS_Y_DISTRIBUCION.md) | Builds por plataforma, firma, CI/CD y proceso de release |
 | [CHANGELOG.md](CHANGELOG.md) | Historial de cambios por versión |
+| [branding/README.md](branding/README.md) | Logo, iconos de cada plataforma y cómo regenerarlos |
 
 ## Licencia
 
 MIT. Consulta el archivo [LICENSE](LICENSE).
+
+---
+
+<p align="center">
+  <img src="branding/orbitask-icon.png" alt="Icono de Orbitask" width="72">
+</p>
