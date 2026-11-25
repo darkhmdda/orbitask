@@ -534,18 +534,16 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                             ],
                           ),
                         ),
-                        IconButton(
-                          tooltip: attachment.isImage
-                              ? 'Ver imagen'
-                              : 'Descargar archivo',
-                          onPressed: () => attachment.isImage
-                              ? _previewImage(attachment)
-                              : _downloadAttachment(attachment),
-                          icon: Icon(
-                            attachment.isImage
-                                ? Icons.visibility_outlined
-                                : Icons.download_rounded,
+                        if (attachment.isImage)
+                          IconButton(
+                            tooltip: 'Ver imagen',
+                            onPressed: () => _previewImage(attachment),
+                            icon: const Icon(Icons.visibility_outlined),
                           ),
+                        IconButton(
+                          tooltip: 'Descargar archivo',
+                          onPressed: () => _downloadAttachment(attachment),
+                          icon: const Icon(Icons.download_rounded),
                         ),
                         IconButton(
                           tooltip: 'Eliminar adjunto',
@@ -590,6 +588,11 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                               fontWeight: FontWeight.w800,
                             ),
                       ),
+                    ),
+                    IconButton(
+                      tooltip: 'Descargar imagen',
+                      onPressed: () => _downloadAttachment(attachment),
+                      icon: const Icon(Icons.download_rounded),
                     ),
                     IconButton(
                       tooltip: 'Cerrar',
