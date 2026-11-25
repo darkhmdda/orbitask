@@ -29,6 +29,7 @@ Primera versión estable desde la 1.0.0. Reúne todo lo probado en las versiones
 ### Corregido
 
 - Las imágenes adjuntas se pueden descargar: tienen botón de descarga junto al de ver, también dentro de la vista previa. Antes solo se podían ver, en todas las plataformas.
+- En el móvil, la lista de adjuntos se lee mejor: los botones son más compactos, el nombre del archivo puede ocupar dos líneas y debajo solo se muestra el tamaño (sin «Toca para ver»), que antes ocupaba hasta cuatro líneas.
 - Al descargar un adjunto en Windows o Linux, el archivo conserva su nombre con acentos, eñes y espacios. Antes se cambiaban por `_` (`Planificación del año.pdf` se guardaba como `Planificaci_n_del_a_o.pdf`); ahora solo se cambian los caracteres que el sistema no admite.
 - El tema ya no se revierte al cambiarlo mientras hay una sincronización en curso (se aplicaba el tema leído al empezar). Además, un tema elegido en un dispositivo ya no pierde frente a otro dispositivo con el reloj adelantado.
 - Los recordatorios de una tarea borrada en otro dispositivo se cancelan al sincronizar. Antes seguían programados hasta reiniciar la app.
