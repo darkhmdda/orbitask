@@ -15,7 +15,7 @@ Este documento explica cómo sincroniza Orbitask los datos locales con Supabase:
 | Disparador | Detalle |
 | ---------- | ------- |
 | Cambio local | **Subida rápida** 300 ms después, para agrupar cambios seguidos (ver [Subida rápida](#subida-rápida)) |
-| Realtime | Cuando Supabase avisa de un cambio, la fila se aplica en local al momento (ver [Cambios por Realtime](#cambios-por-realtime)). Los adjuntos descargan solo su archivo. Solo los casos que no se pueden aplicar sueltos lanzan una sincronización completa |
+| Realtime | Cuando Supabase avisa de un cambio, la fila se aplica en local al momento (ver [Cambios por Realtime](#cambios-por-realtime)). Solo los adjuntos, el tema y los casos que no se pueden aplicar sueltos lanzan una sincronización completa |
 | Sondeo periódico | Cada 20 s en Windows y cada 30 s en el resto, como respaldo de Realtime |
 | Manual | El usuario puede forzar una sincronización desde la interfaz |
 | Reintento tras un fallo | Esperas de 5 s, 15 s, 30 s y 1 min (se repite 1 min mientras siga fallando) |
@@ -28,11 +28,10 @@ Realtime escucha las tablas `user_preferences`, `task_lists`, `tasks`, `subtasks
 
 Tras una edición local no se hace una sincronización completa: `pushLocalChanges` sube solo lo modificado después de la **marca de subida** (`cloud_push_watermark`, hora local en ms) y no descarga nada antes.
 
-1. Si el espacio no está vinculado o no hay marca todavía (primera sincronización), no sube nada y pide una sincronización completa.
+1. Si el espacio no está vinculado, no hay marca todavía (primera sincronización) o hay adjuntos modificados (hay que subirlos a Storage), no sube nada y pide una sincronización completa.
 2. Sube las listas, tareas, subtareas y recordatorios con `updated_at` posterior a la marca, con el mismo filtro de hijos huérfanos que la sincronización completa.
-3. Sube los adjuntos con `updated_at` posterior a la marca (sin los de tareas que ya no existen), **después** de sus tareas por la clave foránea `task_attachments_task_fk`. Es el mismo código que en la sincronización completa: consulta las versiones remotas solo de esos adjuntos y se salta los que ya están igual o más nuevos en Supabase (por ejemplo, uno que llegó de otro dispositivo), sube el archivo a Storage (`task-attachments`, ruta `userId/taskId/id_nombre`, con `upsert`) y luego hace `upsert` de la fila. Si algo falla aquí, no mueve la marca y pide una sincronización completa.
-4. Sube los tombstones posteriores a la marca y los aplica en la nube.
-5. Mueve la marca a la hora en que empezó la subida, de modo que lo editado mientras subía queda pendiente para la siguiente.
+3. Sube los tombstones posteriores a la marca y los aplica en la nube.
+4. Mueve la marca a la hora en que empezó la subida, de modo que lo editado mientras subía queda pendiente para la siguiente.
 
 Es seguro subir sin comparar antes porque el trigger `skip_stale_sync_updates` descarta en el servidor cualquier fila que no sea más reciente que la guardada. Los demás dispositivos reciben el cambio por Realtime y lo aplican al momento. La sincronización completa (al abrir la app, cada 20–30 s, ante un aviso que no se puede aplicar suelto o tras un fallo) sigue subiendo todo lo pendiente y actualiza la marca al terminar, así que cualquier cosa que la subida rápida no cubra se sube como mucho en el siguiente sondeo.
 
@@ -55,10 +54,7 @@ Cada aviso de Realtime trae la fila que cambió. `applyRemoteChange` la aplica e
 | --------- | ------ | -------------------- |
 | `applied` | La copia local cambió | Recarga los datos (agrupando los avisos que llegan en 150 ms) y reprograma solo los recordatorios de las tareas que cambiaron |
 | `unchanged` | Es el eco de un cambio propio (misma fila, mismo `updated_at`) o una versión más antigua | Nada |
-| `needsAttachmentDownload` | Un adjunto más reciente que el local cuya tarea ya existe en local | Llama a `applyRemoteAttachment`, que descarga solo ese archivo de Storage y lo guarda; luego actúa según su resultado (`applied`, `unchanged` o, si la descarga falla, `needsFullSync`) |
-| `needsFullSync` | Tema, borrados de filas, una cuenta distinta de la vinculada, un espacio sin vincular o una fila hija (subtarea, recordatorio o adjunto) cuya tarea aún no ha llegado | Lanza una sincronización completa |
-
-Los adjuntos comparten la descarga con la sincronización completa (`_mergeRemoteAttachment`), que vuelve a comparar `updated_at` al guardar. El eco del adjunto propio no descarga nada. En la web, donde el archivo no se guarda en `localStorage`, un adjunto al día pero sin archivo (tras recargar la página) se vuelve a descargar.
+| `needsFullSync` | Adjuntos (hay que descargar el archivo), tema, borrados de filas, una cuenta distinta de la vinculada, un espacio sin vincular o una fila hija cuya tarea aún no ha llegado | Lanza una sincronización completa |
 
 Los borrados llegan como filas nuevas de `sync_deletions`: se guardan en el diario local y se aplican al momento con las reglas de los [tombstones](#tombstones).
 
@@ -113,7 +109,7 @@ Estas limitaciones son del diseño actual y están pendientes de mejorar.
 3. **Descarga completa en cada pasada.** Cada ejecución descarga todas las tablas del usuario, hayan cambiado o no, y se repite cada 20 o 30 s. La subida ya envía solo las filas más recientes que su copia remota, pero el coste de la descarga crece con el número de tareas.
 4. **Reacción en cadena entre dispositivos: resuelta.** El cliente no sube filas sin cambios, el servidor descarta las idénticas (trigger `skip_stale_sync_updates`) y los ecos que aun así lleguen por Realtime no modifican nada en local, así que no disparan nada más.
 5. **Lógica duplicada.** Existe una versión nativa y otra web del servicio; cada corrección hay que hacerla dos veces.
-6. **Pruebas parciales.** `test/realtime_sync_test.dart` prueba con dos dispositivos simulados cómo se aplican los cambios de Realtime (ediciones cruzadas, ecos, versiones antiguas, tombstones, listas eliminadas, filas de otra cuenta) y la regresión de `reminders_task_fk`; `test/attachment_sync_test.dart` prueba la subida rápida y la descarga de adjuntos contra un Supabase simulado por HTTP (solo el servicio nativo; el web depende del navegador); `test/reminder_plan_test.dart` prueba la reprogramación de recordatorios. La sincronización completa contra Supabase (`syncNow`) sigue sin pruebas automatizadas.
+6. **Pruebas parciales.** `test/realtime_sync_test.dart` prueba con dos dispositivos simulados cómo se aplican los cambios de Realtime (ediciones cruzadas, ecos, versiones antiguas, tombstones, listas eliminadas, filas de otra cuenta) y la regresión de `reminders_task_fk`; `test/reminder_plan_test.dart` prueba la reprogramación de recordatorios. La sincronización completa contra Supabase (`syncNow`) sigue sin pruebas automatizadas.
 7. **Dispositivos muy antiguos.** Un dispositivo que pase más de 365 días sin sincronizar podría reintroducir registros cuyos tombstones ya se purgaron.
 8. **Web.** Los datos locales viven en `localStorage`, con la cuota del navegador (alrededor de 5 MB según el navegador).
 
