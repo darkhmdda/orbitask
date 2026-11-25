@@ -38,14 +38,38 @@ extension _HomeScreenSync on _HomeScreenState {
       return;
     }
 
-    switch (widget.cloudSyncService.applyRemoteChange(change)) {
+    _handleRemoteOutcome(
+      change,
+      widget.cloudSyncService.applyRemoteChange(change),
+    );
+  }
+
+  void _handleRemoteOutcome(RemoteChange change, RemoteChangeOutcome outcome) {
+    switch (outcome) {
       case RemoteChangeOutcome.unchanged:
         return;
       case RemoteChangeOutcome.applied:
         _scheduleRemoteReload();
+      case RemoteChangeOutcome.needsAttachmentDownload:
+        unawaited(_downloadRemoteAttachment(change));
       case RemoteChangeOutcome.needsFullSync:
         _scheduleCloudSync(immediate: true);
     }
+  }
+
+  /// Descarga solo el archivo del adjunto que avisó Realtime, sin
+  /// sincronización completa. Si no puede, la pide.
+  Future<void> _downloadRemoteAttachment(RemoteChange change) async {
+    final outcome = await widget.cloudSyncService.applyRemoteAttachment(change);
+    if (!mounted) return;
+    // applyRemoteAttachment nunca vuelve a pedir la descarga, pero por si
+    // acaso no se entra en bucle.
+    _handleRemoteOutcome(
+      change,
+      outcome == RemoteChangeOutcome.needsAttachmentDownload
+          ? RemoteChangeOutcome.needsFullSync
+          : outcome,
+    );
   }
 
   /// Agrupa los avisos que llegan seguidos (otro dispositivo que sube

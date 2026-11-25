@@ -33,6 +33,10 @@ class RemoteChange {
       table == tableTasks ||
       table == tableSubtasks ||
       table == tableReminders;
+
+  /// Adjuntos: la fila llega por Realtime, pero el archivo hay que
+  /// descargarlo aparte de Storage.
+  bool get isAttachmentTable => table == tableAttachments;
 }
 
 enum RemoteChangeType { insert, update, delete }
@@ -45,7 +49,13 @@ enum RemoteChangeOutcome {
   /// No cambió nada: era el eco de un cambio propio o una versión más antigua.
   unchanged,
 
-  /// No se puede aplicar suelto (adjuntos, tema, cuenta sin vincular, falta
-  /// la tarea de una subtarea...): hace falta una sincronización completa.
+  /// Es un adjunto más reciente que el local y su tarea ya existe: hay que
+  /// descargar solo ese archivo (`applyRemoteAttachment`), sin
+  /// sincronización completa.
+  needsAttachmentDownload,
+
+  /// No se puede aplicar suelto (tema, borrados de filas, cuenta sin
+  /// vincular, falta la tarea de una subtarea o de un adjunto...): hace falta
+  /// una sincronización completa.
   needsFullSync,
 }
