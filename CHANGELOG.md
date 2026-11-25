@@ -4,6 +4,14 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ## [Sin publicar]
 
+## [1.1.0] - 2026-11-25
+
+Primera versión estable desde la 1.0.0. Reúne todo lo probado en las versiones de prueba v0.10-dev a v0.24-dev para Android, Windows, Linux y la web. (La 1.0.1 de este historial no llegó a publicarse como release; sus correcciones van incluidas aquí).
+
+### Importante
+
+- **Android, si tienes instalada la 1.0.0:** esta versión está firmada con otra clave, así que Android no la instala encima. Antes de actualizar, inicia sesión y espera a que diga «Sincronizado»; después desinstala la 1.0.0 e instala la 1.1.0. Tus tareas vuelven al iniciar sesión. Lo que no esté sincronizado (por ejemplo, si usabas la app sin cuenta) se pierde al desinstalar. Si ya tenías alguna versión de prueba v0.11-dev o posterior, se instala encima sin problema.
+
 ### Añadido
 
 - Nueva pestaña **Acerca de** en Ajustes, después de Notificaciones (en el móvil, «Info», para que quepan las cuatro pestañas). Muestra la versión instalada (en las versiones de prueba, su etiqueta, como `v0.19-dev`), las notas de esa versión y las de las anteriores, y un botón para descargar la última versión. En las versiones de prueba el botón lleva a la lista completa de versiones, porque la página de la última versión se salta las de prueba. En la web, el botón ofrece descargar la app.
@@ -20,6 +28,9 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ### Corregido
 
+- Las imágenes adjuntas se pueden descargar: tienen botón de descarga junto al de ver, también dentro de la vista previa. Antes solo se podían ver, en todas las plataformas.
+- En el móvil, la lista de adjuntos se lee mejor: los botones son más compactos, el nombre del archivo puede ocupar dos líneas y debajo solo se muestra el tamaño (sin «Toca para ver»), que antes ocupaba hasta cuatro líneas.
+- Al descargar un adjunto en Windows o Linux, el archivo conserva su nombre con acentos, eñes y espacios. Antes se cambiaban por `_` (`Planificación del año.pdf` se guardaba como `Planificaci_n_del_a_o.pdf`); ahora solo se cambian los caracteres que el sistema no admite.
 - El tema ya no se revierte al cambiarlo mientras hay una sincronización en curso (se aplicaba el tema leído al empezar). Además, un tema elegido en un dispositivo ya no pierde frente a otro dispositivo con el reloj adelantado.
 - Los recordatorios de una tarea borrada en otro dispositivo se cancelan al sincronizar. Antes seguían programados hasta reiniciar la app.
 - Los widgets de Android ya no abren la base de datos local desde Kotlin. En la versión de prueba v0.10-dev lo hacían a la vez que la app, con dos copias distintas de SQLite en el mismo proceso, y eso podía corromper la base local ("database disk image is malformed"). Ahora la app les pasa las tareas y guarda ella misma lo que se marca en el widget.
