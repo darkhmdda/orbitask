@@ -4,7 +4,6 @@ import '../database/local_database_native.dart';
 import '../repositories/todo_repository_native.dart';
 import '../models/reminder.dart';
 import '../models/subtask.dart';
-import '../models/task_attachment.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
 import 'remote_change.dart';
@@ -183,12 +182,8 @@ class CloudSyncService {
   /// nada y devuelve [RemoteChangeOutcome.unchanged]; ya no hace falta
   /// ignorar Realtime durante unos segundos tras cada sincronización.
   ///
-  /// Un adjunto más reciente que el local cuya tarea ya existe devuelve
-  /// [RemoteChangeOutcome.needsAttachmentDownload]: la fila no se guarda aquí
-  /// porque falta el archivo, que descarga [applyRemoteAttachment].
-  ///
-  /// Lo que no se puede aplicar suelto (tema, borrados de filas, cuentas no
-  /// vinculadas, filas cuya tarea aún no existe) devuelve
+  /// Lo que no se puede aplicar suelto (adjuntos, tema, borrados de filas,
+  /// cuentas no vinculadas, filas cuya tarea aún no existe) devuelve
   /// [RemoteChangeOutcome.needsFullSync].
   RemoteChangeOutcome applyRemoteChange(RemoteChange change) {
     final ownerId = _database.getSetting('cloud_account_id');
@@ -203,8 +198,6 @@ class CloudSyncService {
         }
         return _applyRemoteDeletion(change.record);
       }
-
-      if (change.isAttachmentTable) return _remoteAttachmentOutcome(change);
 
       if (!change.isRowTable || change.type == RemoteChangeType.delete) {
         return RemoteChangeOutcome.needsFullSync;
@@ -235,65 +228,6 @@ class CloudSyncService {
     } catch (_) {
       // Por ejemplo, una subtarea cuya tarea todavía no ha llegado (clave
       // foránea): la sincronización completa lo resuelve en orden.
-      return RemoteChangeOutcome.needsFullSync;
-    }
-  }
-
-  /// Qué hacer con un adjunto que llegó por Realtime, sin descargar nada.
-  RemoteChangeOutcome _remoteAttachmentOutcome(RemoteChange change) {
-    // Los borrados llegan como tombstones de `sync_deletions`.
-    if (change.type == RemoteChangeType.delete) {
-      return RemoteChangeOutcome.needsFullSync;
-    }
-
-    final record = change.record;
-    final id = record['id'] as String?;
-    final taskId = record['task_id'] as String?;
-    final path = record['storage_path'] as String?;
-    if (id == null || taskId == null || path == null || path.isEmpty) {
-      return RemoteChangeOutcome.needsFullSync;
-    }
-
-    final local = _localUpdatedAt('task_attachments', id);
-    // Eco del adjunto propio o versión antigua: no se descarga nada.
-    if (local != null && local >= _millis(record['updated_at'])) {
-      return RemoteChangeOutcome.unchanged;
-    }
-
-    // Sin su tarea no se puede guardar (clave foránea): la sincronización
-    // completa trae las dos en orden.
-    if (_localUpdatedAt('tasks', taskId) == null) {
-      return RemoteChangeOutcome.needsFullSync;
-    }
-
-    return RemoteChangeOutcome.needsAttachmentDownload;
-  }
-
-  /// Descarga de Storage solo el archivo de un adjunto que llegó por
-  /// Realtime y lo guarda en local, sin sincronización completa.
-  ///
-  /// Se llama cuando [applyRemoteChange] devuelve
-  /// [RemoteChangeOutcome.needsAttachmentDownload]. Vuelve a comprobar el
-  /// cambio (pudo llegar otra versión mientras tanto) y, si la descarga
-  /// falla, devuelve [RemoteChangeOutcome.needsFullSync].
-  Future<RemoteChangeOutcome> applyRemoteAttachment(RemoteChange change) async {
-    final outcome = applyRemoteChange(change);
-    if (!change.isAttachmentTable ||
-        outcome != RemoteChangeOutcome.needsAttachmentDownload) {
-      return outcome;
-    }
-
-    final client = _client;
-    if (client == null) return RemoteChangeOutcome.needsFullSync;
-
-    try {
-      final changed = await _mergeRemoteAttachment(client, change.record);
-      return changed
-          ? RemoteChangeOutcome.applied
-          : RemoteChangeOutcome.unchanged;
-    } catch (_) {
-      // Sin conexión, archivo que aún no está en Storage, tarea borrada
-      // mientras se descargaba...: la sincronización completa lo resuelve.
       return RemoteChangeOutcome.needsFullSync;
     }
   }
@@ -489,9 +423,60 @@ class CloudSyncService {
       reminders: remindersToUpload,
     );
 
-    // Las tareas ya están subidas: los adjuntos van después por la clave
-    // foránea task_attachments_task_fk.
-    await _uploadAttachments(client, userId, validAttachments);
+    if (validAttachments.isNotEmpty) {
+      final remoteAttachmentRows = await client
+          .from('task_attachments')
+          .select('id, updated_at')
+          .eq('user_id', userId);
+      final remoteUpdatedById = <String, int>{
+        for (final row in remoteAttachmentRows)
+          row['id']! as String: _millis(row['updated_at']),
+      };
+
+      final rows = <Map<String, dynamic>>[];
+      for (final attachment in validAttachments) {
+        final remoteUpdated = remoteUpdatedById[attachment.id];
+        if (remoteUpdated != null &&
+            remoteUpdated >= attachment.updatedAt.millisecondsSinceEpoch) {
+          continue;
+        }
+
+        final safeName = attachment.name.replaceAll(
+          RegExp(r'[^A-Za-z0-9._-]+'),
+          '_',
+        );
+        final path =
+            '$userId/${attachment.taskId}/${attachment.id}_$safeName';
+
+        await client.storage.from('task-attachments').uploadBinary(
+          path,
+          attachment.data,
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: attachment.mimeType,
+          ),
+        );
+
+        rows.add(<String, dynamic>{
+          'user_id': userId,
+          'id': attachment.id,
+          'task_id': attachment.taskId,
+          'name': attachment.name,
+          'mime_type': attachment.mimeType,
+          'size_bytes': attachment.sizeBytes,
+          'storage_path': path,
+          'created_at': _iso(attachment.createdAt),
+          'updated_at': _iso(attachment.updatedAt),
+        });
+      }
+
+      if (rows.isNotEmpty) {
+        await client.from('task_attachments').upsert(
+          rows,
+          onConflict: 'user_id,id',
+        );
+      }
+    }
 
     _database.setSetting(
       'last_cloud_upload_at',
@@ -574,12 +559,9 @@ class CloudSyncService {
   /// no sea más reciente que la guardada. Los demás dispositivos reciben el
   /// cambio por Realtime al momento.
   ///
-  /// Los adjuntos modificados también se suben aquí (archivo a Storage y
-  /// fila a `task_attachments`), después de sus tareas.
-  ///
-  /// Si no se puede hacer así (espacio sin vincular o primera sincronización)
-  /// devuelve [CloudPushResult.fullSyncRequired] y no sube nada. Si falla la
-  /// subida de un adjunto, también la pide: la completa lo sube todo en orden.
+  /// Si no se puede hacer así (espacio sin vincular, primera sincronización
+  /// o cambios en adjuntos, que hay que subir a Storage) devuelve
+  /// [CloudPushResult.fullSyncRequired] y no sube nada.
   Future<CloudPushResult> pushLocalChanges() async {
     final client = _requireClient();
     final user = _requireUser(client);
@@ -594,6 +576,10 @@ class CloudSyncService {
 
     // Lo que se edite mientras se sube quedará después de esta marca.
     final startedAt = DateTime.now().millisecondsSinceEpoch;
+
+    if (_hasAttachmentChangesSince(watermark)) {
+      return const CloudPushResult.fullSyncRequired();
+    }
 
     final allTasks = await _repository.getAllTasks();
     final taskIds = allTasks.map((task) => task.id).toSet();
@@ -622,20 +608,6 @@ class CloudSyncService {
       (item) => item.taskId,
     );
 
-    // Leer los adjuntos carga sus archivos, así que solo se hace si alguno
-    // cambió.
-    final attachments = _hasAttachmentChangesSince(watermark)
-        ? keepChildrenOfExistingTasks(
-            changedSince(
-              await _repository.getAllAttachments(),
-              watermark,
-              (item) => item.updatedAt,
-            ),
-            taskIds,
-            (item) => item.taskId,
-          )
-        : const <TaskAttachment>[];
-
     await _upsertRows(
       client,
       userId,
@@ -644,22 +616,6 @@ class CloudSyncService {
       subtasks: subtasks,
       reminders: reminders,
     );
-
-    // Después de las tareas, por la clave foránea task_attachments_task_fk.
-    final int uploadedAttachments;
-    try {
-      uploadedAttachments = await _uploadAttachments(
-        client,
-        userId,
-        attachments,
-        lookupOnlyThese: true,
-      );
-    } catch (_) {
-      // Red de seguridad: la sincronización completa lo sube todo en orden.
-      // La marca no se mueve, así que nada se queda sin subir.
-      return const CloudPushResult.fullSyncRequired();
-    }
-
     await _uploadDeletionJournal(client, userId, since: watermark);
     await _applyDeletionJournalToCloud(client, userId, since: watermark);
 
@@ -673,8 +629,7 @@ class CloudSyncService {
       uploaded: lists.length +
           tasks.length +
           subtasks.length +
-          reminders.length +
-          uploadedAttachments,
+          reminders.length,
       needsFullSync: false,
     );
   }
@@ -685,83 +640,6 @@ class CloudSyncService {
       [watermark],
     );
     return rows.isNotEmpty;
-  }
-
-  /// Sube los adjuntos que no existen en Supabase o son más recientes que su
-  /// copia remota: primero el archivo a Storage (`task-attachments`) y luego
-  /// la fila de `task_attachments`. Devuelve cuántos subió.
-  ///
-  /// Sus tareas tienen que estar ya en Supabase (clave foránea). Con
-  /// [lookupOnlyThese] solo consulta las versiones remotas de estos adjuntos
-  /// (subida rápida); si no, las de todos (sincronización completa). Así un
-  /// adjunto que llegó de otro dispositivo no se vuelve a subir.
-  Future<int> _uploadAttachments(
-    SupabaseClient client,
-    String userId,
-    List<TaskAttachment> attachments, {
-    bool lookupOnlyThese = false,
-  }) async {
-    if (attachments.isEmpty) return 0;
-
-    var query = client
-        .from('task_attachments')
-        .select('id, updated_at')
-        .eq('user_id', userId);
-    if (lookupOnlyThese) {
-      query = query.inFilter(
-        'id',
-        attachments.map((item) => item.id).toList(growable: false),
-      );
-    }
-    final remoteAttachmentRows = await query;
-    final remoteUpdatedById = <String, int>{
-      for (final row in remoteAttachmentRows)
-        row['id']! as String: _millis(row['updated_at']),
-    };
-
-    final rows = <Map<String, dynamic>>[];
-    for (final attachment in attachments) {
-      final remoteUpdated = remoteUpdatedById[attachment.id];
-      if (remoteUpdated != null &&
-          remoteUpdated >= attachment.updatedAt.millisecondsSinceEpoch) {
-        continue;
-      }
-
-      final safeName = attachment.name.replaceAll(
-        RegExp(r'[^A-Za-z0-9._-]+'),
-        '_',
-      );
-      final path = '$userId/${attachment.taskId}/${attachment.id}_$safeName';
-
-      await client.storage.from('task-attachments').uploadBinary(
-        path,
-        attachment.data,
-        fileOptions: FileOptions(
-          upsert: true,
-          contentType: attachment.mimeType,
-        ),
-      );
-
-      rows.add(<String, dynamic>{
-        'user_id': userId,
-        'id': attachment.id,
-        'task_id': attachment.taskId,
-        'name': attachment.name,
-        'mime_type': attachment.mimeType,
-        'size_bytes': attachment.sizeBytes,
-        'storage_path': path,
-        'created_at': _iso(attachment.createdAt),
-        'updated_at': _iso(attachment.updatedAt),
-      });
-    }
-
-    if (rows.isNotEmpty) {
-      await client.from('task_attachments').upsert(
-        rows,
-        onConflict: 'user_id,id',
-      );
-    }
-    return rows.length;
   }
 
   Future<void> _upsertRows(
@@ -1051,58 +929,55 @@ class CloudSyncService {
     SupabaseClient client,
     List<Map<String, dynamic>> remote,
   ) async {
+    final database = _database.raw;
+
     for (final row in remote) {
-      await _mergeRemoteAttachment(client, row);
+      final id = row['id']! as String;
+      final updatedAt = _millis(row['updated_at']);
+      final existing = database.select(
+        'SELECT updated_at FROM task_attachments WHERE id = ? LIMIT 1;',
+        [id],
+      );
+
+      if (existing.isNotEmpty &&
+          (existing.first['updated_at']! as int) >= updatedAt) {
+        continue;
+      }
+
+      final path = row['storage_path']! as String;
+      final data = await client.storage.from('task-attachments').download(path);
+
+      final statement = database.prepare('''
+        INSERT INTO task_attachments (
+          id, task_id, name, mime_type, size_bytes, data, remote_path,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          task_id = excluded.task_id,
+          name = excluded.name,
+          mime_type = excluded.mime_type,
+          size_bytes = excluded.size_bytes,
+          data = excluded.data,
+          remote_path = excluded.remote_path,
+          updated_at = excluded.updated_at
+        WHERE excluded.updated_at > task_attachments.updated_at;
+      ''');
+      try {
+        statement.execute([
+          id,
+          row['task_id']! as String,
+          row['name']! as String,
+          row['mime_type']! as String,
+          (row['size_bytes'] as num).toInt(),
+          data,
+          path,
+          _millis(row['created_at']),
+          updatedAt,
+        ]);
+      } finally {
+        statement.close();
+      }
     }
-  }
-
-  /// Descarga y guarda un adjunto remoto si es más reciente que el local.
-  /// Devuelve si la copia local cambió. Lo usan la sincronización completa
-  /// (todos) y Realtime ([applyRemoteAttachment], uno solo).
-  Future<bool> _mergeRemoteAttachment(
-    SupabaseClient client,
-    Map<String, dynamic> row,
-  ) async {
-    final id = row['id']! as String;
-    final updatedAt = _millis(row['updated_at']);
-    final before = _localUpdatedAt('task_attachments', id);
-    if (before != null && before >= updatedAt) return false;
-
-    final path = row['storage_path']! as String;
-    final data = await client.storage.from('task-attachments').download(path);
-
-    final statement = _database.raw.prepare('''
-      INSERT INTO task_attachments (
-        id, task_id, name, mime_type, size_bytes, data, remote_path,
-        created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        task_id = excluded.task_id,
-        name = excluded.name,
-        mime_type = excluded.mime_type,
-        size_bytes = excluded.size_bytes,
-        data = excluded.data,
-        remote_path = excluded.remote_path,
-        updated_at = excluded.updated_at
-      WHERE excluded.updated_at > task_attachments.updated_at;
-    ''');
-    try {
-      statement.execute([
-        id,
-        row['task_id']! as String,
-        row['name']! as String,
-        row['mime_type']! as String,
-        (row['size_bytes'] as num).toInt(),
-        data,
-        path,
-        _millis(row['created_at']),
-        updatedAt,
-      ]);
-    } finally {
-      statement.close();
-    }
-
-    return _localUpdatedAt('task_attachments', id) != before;
   }
 
   void _mergeRemoteDeletions(List<Map<String, dynamic>> remote) {

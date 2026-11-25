@@ -190,9 +190,7 @@ void main() {
       expect(await fresh.task('t1'), isNull);
     });
 
-    test('las preferencias y un adjunto incompleto necesitan la sincronización completa', () {
-      // Los adjuntos completos se descargan uno a uno: ver
-      // attachment_sync_test.dart.
+    test('adjuntos y preferencias necesitan la sincronización completa', () {
       expect(
         phone.receive(RemoteChange.tableAttachments, {'user_id': _user, 'id': 'a1'}),
         RemoteChangeOutcome.needsFullSync,
