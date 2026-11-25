@@ -167,6 +167,56 @@ void main() {
       expect(version.downloadUri.toString(), orbitaskReleasesUrl);
     });
 
+    test('una etiqueta estable igual a la versión no repite «Basada en»', () {
+      const version = OrbitaskVersion(
+        version: '1.1.0',
+        buildNumber: '14',
+        tag: 'v1.1.0',
+      );
+      expect(version.isPrerelease, isFalse);
+      expect(version.label, '1.1.0');
+      expect(version.detail, 'Compilación 14');
+      expect(
+        version.downloadUri.toString(),
+        '$orbitaskReleasesUrl/latest',
+      );
+    });
+
+    test('una etiqueta igual a la versión pero sin «v» también coincide', () {
+      const version = OrbitaskVersion(
+        version: '1.1.0',
+        buildNumber: '14',
+        tag: '1.1.0',
+      );
+      expect(version.label, '1.1.0');
+      expect(version.detail, 'Compilación 14');
+    });
+
+    test('una versión de prueba sobre la 1.1.0 sigue diciendo «Basada en»',
+        () {
+      const version = OrbitaskVersion(
+        version: '1.1.0',
+        buildNumber: '14',
+        tag: 'v0.26-dev',
+      );
+      expect(version.isPrerelease, isTrue);
+      expect(version.label, 'v0.26-dev');
+      expect(version.detail, 'Basada en 1.1.0+14');
+      expect(version.downloadUri.toString(), orbitaskReleasesUrl);
+    });
+
+    test('una etiqueta estable distinta de la versión mantiene «Basada en»',
+        () {
+      const version = OrbitaskVersion(
+        version: '1.1.0',
+        buildNumber: '14',
+        tag: 'v1.2.0',
+      );
+      expect(version.isPrerelease, isFalse);
+      expect(version.label, 'v1.2.0');
+      expect(version.detail, 'Basada en 1.1.0+14');
+    });
+
     test('sin etiqueta se muestra la versión y se enlaza la última estable',
         () {
       const version = OrbitaskVersion(version: '1.1.0', buildNumber: '14');

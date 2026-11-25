@@ -32,13 +32,27 @@ class OrbitaskVersion {
   /// Las etiquetas con guion (`v0.19-dev`) son versiones de prueba.
   bool get isPrerelease => tag.contains('-');
 
-  /// Texto principal: la etiqueta si existe; si no, la versión.
-  String get label => tag.isNotEmpty ? tag : version;
+  /// La etiqueta, sin la `v` inicial, coincide con la versión del `pubspec`
+  /// (`v1.1.0` y `1.1.0`): es la release estable de esa versión.
+  bool get _tagMatchesVersion {
+    final bare = tag.startsWith('v') ? tag.substring(1) : tag;
+    return bare.isNotEmpty && bare == version;
+  }
 
-  /// Detalle: la versión del `pubspec` y su número de compilación.
+  /// Muestra la versión tal cual, sin «Basada en»: no hay etiqueta o la
+  /// etiqueta es la misma versión.
+  bool get _showsPlainVersion => tag.isEmpty || _tagMatchesVersion;
+
+  /// Texto principal: la versión si no hay etiqueta o coincide con ella
+  /// (`1.1.0`, como en la web); si no, la etiqueta (`v0.26-dev`).
+  String get label => _showsPlainVersion ? version : tag;
+
+  /// Detalle: el número de compilación o, en las versiones de prueba, la
+  /// versión del `pubspec` en la que se basan.
   String get detail {
+    if (_showsPlainVersion) return 'Compilación $buildNumber';
     final base = buildNumber.isEmpty ? version : '$version+$buildNumber';
-    return tag.isNotEmpty ? 'Basada en $base' : 'Compilación $buildNumber';
+    return 'Basada en $base';
   }
 
   /// Página de descarga.

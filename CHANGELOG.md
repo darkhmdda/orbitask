@@ -8,9 +8,17 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 - Los adjuntos pasan de un dispositivo a otro en lo que tarda subir y bajar el archivo. Antes la tarea aparecía enseguida pero el adjunto esperaba a dos sincronizaciones completas (una al subir y otra al recibir). Ahora la subida rápida sube el archivo a Storage justo después de su tarea, y el otro dispositivo, al recibir el aviso de Realtime, descarga solo ese archivo. Si la tarea del adjunto todavía no ha llegado, o la subida o la descarga fallan, se sigue recurriendo a la sincronización completa.
 
+### Corregido
+
+- En Ajustes → Acerca de, una versión estable ya no repite «Basada en 1.1.0+14» bajo la etiqueta: muestra `1.1.0 · Compilación 14`, igual que la web. Las versiones de prueba siguen mostrando «Basada en …».
+
+### Documentación
+
+- La introducción de la 1.1.0 incluye también la v0.25-dev entre las versiones de prueba que reúne.
+
 ## [1.1.0] - 2026-11-25
 
-Primera versión estable desde la 1.0.0. Reúne todo lo probado en las versiones de prueba v0.10-dev a v0.24-dev para Android, Windows, Linux y la web. (La 1.0.1 de este historial no llegó a publicarse como release; sus correcciones van incluidas aquí).
+Primera versión estable desde la 1.0.0. Reúne todo lo probado en las versiones de prueba v0.10-dev a v0.25-dev para Android, Windows, Linux y la web. (La 1.0.1 de este historial no llegó a publicarse como release; sus correcciones van incluidas aquí).
 
 ### Importante
 

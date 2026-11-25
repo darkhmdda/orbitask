@@ -45,7 +45,7 @@ Detalle en `docs/ARQUITECTURA.md`, `docs/SINCRONIZACION.md` y `docs/DATOS_Y_SUPA
 
 ## Pendiente (noviembre de 2026)
 
-1. Acelerar la sincronización de adjuntos: hoy un adjunto nuevo fuerza una sincronización completa al subir y otra al recibir. Subirlo en `pushLocalChanges` y aplicarlo fila a fila al llegar por Realtime.
+1. Probar con una `vX.Y-dev` la sincronización rápida de adjuntos (#92) en Android, Windows y web: la parte web no tiene tests automáticos.
 2. Opcional: mostrar «Sincronizando…» solo cuando hay cambios propios por subir, no en cada sincronización periódica.
 3. Opcional: descarga incremental en la sincronización (requiere una migración en Supabase).
 
