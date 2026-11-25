@@ -20,6 +20,8 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ### Corregido
 
+- Las imágenes adjuntas se pueden descargar: tienen botón de descarga junto al de ver, también dentro de la vista previa. Antes solo se podían ver, en todas las plataformas.
+- Al descargar un adjunto en Windows o Linux, el archivo conserva su nombre con acentos, eñes y espacios. Antes se cambiaban por `_` (`Planificación del año.pdf` se guardaba como `Planificaci_n_del_a_o.pdf`); ahora solo se cambian los caracteres que el sistema no admite.
 - El tema ya no se revierte al cambiarlo mientras hay una sincronización en curso (se aplicaba el tema leído al empezar). Además, un tema elegido en un dispositivo ya no pierde frente a otro dispositivo con el reloj adelantado.
 - Los recordatorios de una tarea borrada en otro dispositivo se cancelan al sincronizar. Antes seguían programados hasta reiniciar la app.
 - Los widgets de Android ya no abren la base de datos local desde Kotlin. En la versión de prueba v0.10-dev lo hacían a la vez que la app, con dos copias distintas de SQLite en el mismo proceso, y eso podía corromper la base local ("database disk image is malformed"). Ahora la app les pasa las tareas y guarda ella misma lo que se marca en el widget.

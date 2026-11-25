@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/task_attachment.dart';
+import 'attachment_filename.dart';
 
 class AttachmentOpener {
   static Future<String?> download(TaskAttachment attachment) async {
@@ -33,10 +34,7 @@ class AttachmentOpener {
       await dir.create(recursive: true);
     }
 
-    final safeName = attachment.name.replaceAll(
-      RegExp(r'[^A-Za-z0-9._-]+'),
-      '_',
-    );
+    final safeName = safeAttachmentFileName(attachment.name);
     var file = File('${dir.path}${Platform.pathSeparator}$safeName');
     if (await file.exists()) {
       final dot = safeName.lastIndexOf('.');
