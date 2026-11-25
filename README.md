@@ -15,7 +15,7 @@ Orbitask es una aplicación de tareas multiplataforma hecha con Flutter. Organiz
 
 ## Estado
 
-La versión del código en `main` es **1.0.1+13**. Es un hotfix de estabilidad de la sincronización sobre la v1.0.0 (consulta el [CHANGELOG](CHANGELOG.md)). La versión Web se despliega desde `main`, por lo que siempre refleja el código más reciente.
+La última versión estable es la **1.1.0** (consulta el [CHANGELOG](CHANGELOG.md)). La versión Web se despliega desde `main`, por lo que siempre refleja el código más reciente.
 
 | Plataforma | Estado |
 | ---------- | ------ |
@@ -35,7 +35,8 @@ La versión del código en `main` es **1.0.1+13**. Es un hotfix de estabilidad d
 - Cuenta con correo y contraseña, perfil (nombre visible, username y avatar) y preferencias sincronizadas.
 - Sincronización entre dispositivos con Supabase (Realtime más sondeo periódico) y modo local sin conexión.
 - 14 temas de color, adaptables a escritorio, móvil y navegador.
-- Widgets de pantalla de inicio en Android (calendario, resumen y "hoy"). Están en el código pero todavía no forman parte de ninguna release, y su diseño está pendiente de revisión.
+- Widgets de pantalla de inicio en Android: Todas las tareas, Próximas entregas y Calendario, con los colores del tema activo.
+- Pestaña «Acerca de» en Ajustes con la versión instalada, sus notas y el enlace de descarga.
 
 ## Instalación
 
@@ -44,6 +45,8 @@ Las compilaciones oficiales se publican en [GitHub Releases](https://github.com/
 ### Android
 
 Descarga el APK, ábrelo y confirma la instalación. Si Android lo pide, permite temporalmente instalar desde esa fuente.
+
+**Si tienes la 1.0.0:** la 1.1.0 está firmada con otra clave y no se instala encima. Inicia sesión, espera a que sincronice, desinstala la 1.0.0 e instala la nueva. Tus tareas vuelven al iniciar sesión.
 
 ### Windows x64
 

@@ -4,6 +4,14 @@ Todos los cambios importantes de Orbitask se documentan en este archivo.
 
 ## [Sin publicar]
 
+## [1.1.0] - 2026-11-25
+
+Primera versión estable desde la 1.0.0. Reúne todo lo probado en las versiones de prueba v0.10-dev a v0.24-dev para Android, Windows, Linux y la web. (La 1.0.1 de este historial no llegó a publicarse como release; sus correcciones van incluidas aquí).
+
+### Importante
+
+- **Android, si tienes instalada la 1.0.0:** esta versión está firmada con otra clave, así que Android no la instala encima. Antes de actualizar, inicia sesión y espera a que diga «Sincronizado»; después desinstala la 1.0.0 e instala la 1.1.0. Tus tareas vuelven al iniciar sesión. Lo que no esté sincronizado (por ejemplo, si usabas la app sin cuenta) se pierde al desinstalar. Si ya tenías alguna versión de prueba v0.11-dev o posterior, se instala encima sin problema.
+
 ### Añadido
 
 - Nueva pestaña **Acerca de** en Ajustes, después de Notificaciones (en el móvil, «Info», para que quepan las cuatro pestañas). Muestra la versión instalada (en las versiones de prueba, su etiqueta, como `v0.19-dev`), las notas de esa versión y las de las anteriores, y un botón para descargar la última versión. En las versiones de prueba el botón lleva a la lista completa de versiones, porque la página de la última versión se salta las de prueba. En la web, el botón ofrece descargar la app.

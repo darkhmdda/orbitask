@@ -45,6 +45,11 @@ Detalle en `docs/ARQUITECTURA.md`, `docs/SINCRONIZACION.md` y `docs/DATOS_Y_SUPA
 
 ## Pendiente (noviembre de 2026)
 
-1. Probar `release_linux.yml` y `release_windows.yml` con una `vX.Y-dev` (en Windows, comprobar adjuntar y descargar: `win32` subió a la 6).
-2. Sacar la **1.1.0** estable para todas las plataformas con lo que hay en `[Sin publicar]`.
+1. Acelerar la sincronización de adjuntos: hoy un adjunto nuevo fuerza una sincronización completa al subir y otra al recibir. Subirlo en `pushLocalChanges` y aplicarlo fila a fila al llegar por Realtime.
+2. Opcional: mostrar «Sincronizando…» solo cuando hay cambios propios por subir, no en cada sincronización periódica.
 3. Opcional: descarga incremental en la sincronización (requiere una migración en Supabase).
+
+## Historia que conviene saber
+
+- **Clave de firma de Android:** la 1.0.0 se firmó con otra clave. Desde las versiones de prueba (y la 1.1.0) se usa la de los secretos de GitHub. **No volver a cambiarla nunca:** Android no instala una actualización firmada con otra clave.
+- No existe la release `v1.0.1`: la sección `[1.0.1]` del CHANGELOG se publicó dentro de la 1.1.0.
