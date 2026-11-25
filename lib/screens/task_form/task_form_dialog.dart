@@ -516,7 +516,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                             children: [
                               Text(
                                 attachment.name,
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
@@ -524,9 +524,9 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                attachment.isImage
-                                    ? '${_formatBytes(attachment.sizeBytes)} · Toca para ver'
-                                    : '${_formatBytes(attachment.sizeBytes)} · Toca para descargar',
+                                _formatBytes(attachment.sizeBytes),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
@@ -537,16 +537,22 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                         if (attachment.isImage)
                           IconButton(
                             tooltip: 'Ver imagen',
+                            visualDensity: VisualDensity.compact,
+                            iconSize: 22,
                             onPressed: () => _previewImage(attachment),
                             icon: const Icon(Icons.visibility_outlined),
                           ),
                         IconButton(
                           tooltip: 'Descargar archivo',
+                          visualDensity: VisualDensity.compact,
+                          iconSize: 22,
                           onPressed: () => _downloadAttachment(attachment),
                           icon: const Icon(Icons.download_rounded),
                         ),
                         IconButton(
                           tooltip: 'Eliminar adjunto',
+                          visualDensity: VisualDensity.compact,
+                          iconSize: 22,
                           onPressed: () =>
                               setState(() => _attachments.removeAt(index)),
                           icon: const Icon(Icons.delete_outline_rounded),
